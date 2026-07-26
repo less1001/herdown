@@ -344,10 +344,14 @@ export default {
 
       let sourceHtml = rawHtml;
       if (!sourceHtml && targetUrl) {
-        const fetchRes = await fetch(targetUrl).catch(() => null);
-        if (fetchRes && fetchRes.ok) {
-          sourceHtml = await fetchRes.text();
+        const fetchRes = await safeFetchPageHtml(targetUrl, undefined, 5000).catch(() => null);
+        if (fetchRes) {
+          sourceHtml = fetchRes.html;
         }
+      }
+
+      if (sourceHtml.length > 10000) {
+        sourceHtml = sourceHtml.slice(0, 10000);
       }
 
       const parsed = parseMarkdown(sourceHtml, targetUrl);
@@ -357,6 +361,7 @@ export default {
         success: true,
         title: parsed.title,
         total_chunks: chunks.length,
+        notice: '单次向量切分限制最高 10,000 字，超长部分已自动截断以保障服务稳定',
         chunks,
       });
     }
@@ -609,8 +614,8 @@ export default {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-Byo5ZNci.js?v=${Date.now()}"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DGMad8LL.css">
+    <script type="module" crossorigin src="/assets/index-etH23X3Z.js?v=${Date.now()}"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-MJ0M7kl1.css">
   </head>
   <body class="bg-[#090d10] text-[#e1e7ec] antialiased selection:bg-[#0f6b4f] selection:text-white">
     <div id="root"></div>
