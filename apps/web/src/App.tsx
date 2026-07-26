@@ -319,6 +319,17 @@ export function App() {
               <Terminal className="w-3.5 h-3.5" />
               CLI 工具
             </button>
+            <button
+              onClick={() => setActiveTab('skill')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'skill'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              ⚡ Agent Skill
+            </button>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -833,6 +844,57 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx"
 
 # 保存输出到本地 output.md 文件
 npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: SKILL */}
+        {activeTab === 'skill' && (
+          <div className="space-y-8 max-w-4xl mx-auto">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                标准 Agent Skill 扩展包 (SKILL.md)
+              </div>
+              <h2 className="text-2xl font-bold text-white">一键为 AI Agent 安装 mdforagents 技能</h2>
+              <p className="text-slate-400 text-xs mt-1">
+                兼容 Hermes Agent, Claude Code, OpenClaw, QClaw, Antigravity 等所有标准 Agent。直接将 Skill 内容配置到你的 Agent 中即可。
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300">packages/cli/SKILL.md</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`---
+name: mdforagents
+description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
+---
+
+# MD for Agents — AI Agent Skill Reference
+
+npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`);
+                    alert('SKILL.md 已成功复制到剪贴板！');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  一键复制 SKILL.md
+                </button>
+              </div>
+
+              <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
+{`---
+name: mdforagents
+description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
+---
+
+# MD for Agents — AI Agent Skill Reference
+
+当用户需要读取网页、微信公众号长文、知乎回答或小红书笔记时，请直接在终端执行：
+npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               </pre>
             </div>
           </div>
