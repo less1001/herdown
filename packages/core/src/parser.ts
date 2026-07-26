@@ -45,14 +45,28 @@ export const detectPlatform = (url: string): PlatformType => {
 };
 
 const extractTitle = (html: string, fallbackUrl: string): string => {
-  const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html) ||
-    /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i.exec(html) ||
-    /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+  const msgTitleMatch = /var\s+msg_title\s*=\s*["']([^"']+)["']/i.exec(html);
+  if (msgTitleMatch?.[1] && msgTitleMatch[1].trim()) {
+    return decodeEntities(normalizeSpaces(msgTitleMatch[1].trim()));
+  }
 
-  if (titleMatch?.[1]) {
-    const cleaned = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+  const h1Match = /<h1[^>]*activity-name[^>]*>([\s\S]*?)<\/h1>/i.exec(html) || /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+  if (h1Match?.[1]) {
+    const cleaned = h1Match[1].replace(/<[^>]+>/g, '').trim();
     if (cleaned) return decodeEntities(normalizeSpaces(cleaned));
   }
+
+  const ogTitleMatch = /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i.exec(html);
+  if (ogTitleMatch?.[1] && ogTitleMatch[1].trim()) {
+    return decodeEntities(normalizeSpaces(ogTitleMatch[1].trim()));
+  }
+
+  const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  if (titleMatch?.[1]) {
+    const cleaned = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+    if (cleaned && !cleaned.includes('微信公众号')) return decodeEntities(normalizeSpaces(cleaned));
+  }
+
   return fallbackUrl || 'Untitled Page';
 };
 
@@ -86,16 +100,37 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
   let bodyHtml = '';
   const galleryImages = extractWeChatPhotoGalleryImages(html);
 
-  const startIdx = html.indexOf('id="js_content"');
-  if (startIdx >= 0) {
-    const contentStart = html.indexOf('>', startIdx) + 1;
-    const contentEnd = html.indexOf('id="js_to_share_div"', contentStart);
-    if (contentEnd > contentStart) {
-      bodyHtml = html.slice(contentStart, contentEnd);
-    } else {
-      const scriptEnd = html.indexOf('<script', contentStart);
-      bodyHtml = scriptEnd > contentStart ? html.slice(contentStart, scriptEnd) : html.slice(contentStart);
+  const startMatch = /<div[^>]*id=["']js_content["'][^>]*>/i.exec(html);
+  if (startMatch) {
+    const startPos = startMatch.index + startMatch[0].length;
+    const endMarkers = [
+      'class="rich_media_area_extra"',
+      'id="js_to_share_div"',
+      'id="js_content_bottom_area"',
+      'id="js_bottom_ad_area"',
+      'id="js_profile_qrcode"',
+      'id="js_cmt_area"'
+    ];
+
+    let endPos = -1;
+    for (const marker of endMarkers) {
+      const p = html.indexOf(marker, startPos);
+      if (p > startPos && (endPos === -1 || p < endPos)) {
+        endPos = p;
+      }
     }
+
+    if (endPos > startPos) {
+      const sub = html.lastIndexOf('<', endPos);
+      if (sub > startPos) endPos = sub;
+      bodyHtml = html.slice(startPos, endPos);
+    } else {
+      bodyHtml = html.slice(startPos);
+    }
+
+    bodyHtml = bodyHtml
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '');
   }
 
   if (!bodyHtml || bodyHtml.trim().length < 50) {
@@ -200,9 +235,12 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
 
   clean = clean.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, text) => `\n- ${stripTags(text)}`);
 
+  const noisyPhrases = ['预览时标签不可点', '微信扫一扫使用小程序', '知道了', '轻点两下取消赞', '轻点两下取消在看'];
+
   const result = clean
     .split('\n')
-    .map(line => normalizeSpaces(line).trim())
+    .map(line => stripTags(normalizeSpaces(line)).trim())
+    .filter(line => line && !noisyPhrases.some(phrase => line.includes(phrase)))
     .filter((line, idx, arr) => line || (idx > 0 && arr[idx - 1]))
     .join('\n')
     .trim();
