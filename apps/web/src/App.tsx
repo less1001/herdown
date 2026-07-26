@@ -17,10 +17,6 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  Layers,
-  BookOpen,
-  ArrowRight,
-  CheckCircle2,
   AlertCircle
 } from 'lucide-react';
 
@@ -61,7 +57,7 @@ export function App() {
   const [creatingKey, setCreatingKey] = useState(false);
 
   // Usage stats state
-  const [stats, setStats] = useState({ today_requests: 0, daily_quota: 50000, active_keys: 1 });
+  const [stats, setStats] = useState({ today_requests: 0, daily_quota: 100000, active_keys: 0 });
 
   useEffect(() => {
     fetchKeys();
@@ -76,10 +72,7 @@ export function App() {
         setApiKeys(data.keys || []);
       }
     } catch {
-      // Fallback local initial key
-      setApiKeys([
-        { key: 'sk_live_REDACTED', name: 'Default Production Key', status: 'active', created_at: new Date().toISOString() }
-      ]);
+      // ignore
     }
   };
 
@@ -103,14 +96,14 @@ export function App() {
     setErrorMessage('');
     setResult(null);
 
-    const startTime = Date.now();
-
     try {
+      const activeUserKey = apiKeys.find(k => k.status === 'active')?.key;
+
       const res = await fetch('/v1/parse', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer sk_live_REDACTED',
+          ...(activeUserKey ? { 'Authorization': `Bearer ${activeUserKey}` } : {}),
         },
         body: JSON.stringify({
           url: inputMode === 'url' ? inputUrl.trim() : undefined,
@@ -121,9 +114,10 @@ export function App() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMessage(data.message || '转换失败，请检查网址或 HTML 结构');
+        setErrorMessage(data.message || '转换失败，请检查网址或频率限制');
       } else {
         setResult(data);
+        fetchStats();
       }
     } catch (err: any) {
       setErrorMessage(err?.message || '网络请求异常，请稍后重试');
@@ -187,9 +181,11 @@ export function App() {
     setInputUrl(url);
   };
 
+  const activeApiKeySample = apiKeys.find(k => k.status === 'active')?.key || 'sk_live_YOUR_API_KEY';
+
   return (
     <div className="min-h-screen bg-[#070a0e] text-[#e2e8f0] font-sans antialiased selection:bg-[#0f6b4f] selection:text-white flex flex-col">
-      {/* Background Subtle Gradient & Grid */}
+      {/* Background Grid */}
       <div className="fixed inset-0 pointer-events-none opacity-25 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px]" />
 
       {/* Top Header */}
@@ -206,7 +202,7 @@ export function App() {
                 MD <span className="text-emerald-400">for Agents</span>
               </span>
               <span className="hidden sm:inline-block ml-2.5 px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
-                v2.4.0 Live
+                v2.4.0 Hardened
               </span>
             </div>
           </div>
@@ -262,7 +258,7 @@ export function App() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              System Ready
+              Rate Limiting Enabled
             </div>
             <a
               href="https://github.com/less1001/mdforagents"
@@ -483,7 +479,7 @@ export function App() {
                         if (block.startsWith('## ')) {
                           return <h2 key={idx} className="text-lg font-bold text-white border-b border-[#1e293b] pb-1">{block.slice(3)}</h2>;
                         }
-                        if (block.startsWith('![') && block.includes('](')) {
+                        if (block.startsWith('![')) {
                           const urlMatch = /\]\((.*?)\)/.exec(block);
                           if (urlMatch?.[1]) {
                             return (
@@ -532,21 +528,21 @@ export function App() {
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
               <h2 className="text-2xl font-bold text-white">API 密钥控制台</h2>
-              <p className="text-slate-400 text-xs mt-1">创建与管理用于 REST API 及远程 MCP 调用的 Bearer Token</p>
+              <p className="text-slate-400 text-xs mt-1">生成与管理专属 API Key (可突破匿名 IP 频控，享受 2,000 次/日全速接口调用)</p>
             </div>
 
             {/* Usage Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">今日解析请求</span>
+                <span className="text-xs text-slate-400 font-medium">今日全局解析请求</span>
                 <p className="text-2xl font-extrabold text-white mt-1">{stats.today_requests} 次</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">每日配额 (Quota)</span>
+                <span className="text-xs text-slate-400 font-medium">每日总可用配额 (Quota)</span>
                 <p className="text-2xl font-extrabold text-emerald-400 mt-1">{stats.daily_quota.toLocaleString()} 次</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">活跃 API Key</span>
+                <span className="text-xs text-slate-400 font-medium">已生效 API Key</span>
                 <p className="text-2xl font-extrabold text-white mt-1">{apiKeys.filter(k => k.status === 'active').length} 个</p>
               </div>
             </div>
@@ -557,7 +553,7 @@ export function App() {
                 type="text"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="输入 Key 名称 (如: Claude Agent / Cursor)"
+                placeholder="输入 Key 名称 (如: Claude Agent / Cursor Pro)"
                 className="flex-1 px-4 py-2 rounded-lg bg-[#090d12] border border-[#1e293b] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
               <button
@@ -583,42 +579,50 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1e293b] text-xs">
-                  {apiKeys.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-[#111823]/50 transition">
-                      <td className="p-4 font-semibold text-white">{item.name}</td>
-                      <td className="p-4 font-mono text-emerald-400">
-                        {item.key.slice(0, 10)}****************
-                      </td>
-                      <td className="p-4 text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
-                      <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                          item.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right space-x-2">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(item.key);
-                            setCopiedKeyIndex(idx);
-                            setTimeout(() => setCopiedKeyIndex(null), 2000);
-                          }}
-                          className="px-2 py-1 rounded bg-[#1e293b] text-slate-300 hover:text-white"
-                        >
-                          {copiedKeyIndex === idx ? '已复制' : '复制'}
-                        </button>
-                        {item.status === 'active' && (
-                          <button
-                            onClick={() => handleRevokeKey(item.key)}
-                            className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
-                          >
-                            撤销
-                          </button>
-                        )}
+                  {apiKeys.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                        尚无活跃 API Key，点击上方“生成新 Key”创建专属密钥
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    apiKeys.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-[#111823]/50 transition">
+                        <td className="p-4 font-semibold text-white">{item.name}</td>
+                        <td className="p-4 font-mono text-emerald-400">
+                          {item.key.slice(0, 10)}****************
+                        </td>
+                        <td className="p-4 text-slate-400">{new Date(item.created_at).toLocaleDateString()}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                            item.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.key);
+                              setCopiedKeyIndex(idx);
+                              setTimeout(() => setCopiedKeyIndex(null), 2000);
+                            }}
+                            className="px-2 py-1 rounded bg-[#1e293b] text-slate-300 hover:text-white"
+                          >
+                            {copiedKeyIndex === idx ? '已复制' : '复制 Token'}
+                          </button>
+                          {item.status === 'active' && (
+                            <button
+                              onClick={() => handleRevokeKey(item.key)}
+                              className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
+                            >
+                              撤销
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -650,7 +654,7 @@ export function App() {
       "command": "npx",
       "args": ["-y", "@mdforagents/mcp", "https://allto.agentok.top/mcp"],
       "env": {
-        "MDFORAGENTS_API_KEY": "sk_live_REDACTED"
+        "MDFORAGENTS_API_KEY": "${activeApiKeySample}"
       }
     }
   }
@@ -670,7 +674,7 @@ export function App() {
                 <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto">
 {`curl -X POST "https://allto.agentok.top/v1/parse" \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer sk_live_REDACTED" \\
+  -H "Authorization: Bearer ${activeApiKeySample}" \\
   -d '{
     "url": "https://mp.weixin.qq.com/s/xxxxxx"
   }'`}
@@ -684,7 +688,7 @@ export function App() {
 
 response = requests.post(
     "https://allto.agentok.top/v1/parse",
-    headers={"Authorization": "Bearer sk_live_REDACTED"},
+    headers={"Authorization": "Bearer ${activeApiKeySample}"},
     json={"url": "https://mp.weixin.qq.com/s/xxxxxx"}
 )
 data = response.json()
@@ -717,7 +721,7 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx"
 npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md
 
 # 使用自定义 API Key
-npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" --key "sk_live_xxxx"`}
+npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" --key "${activeApiKeySample}"`}
               </pre>
             </div>
           </div>

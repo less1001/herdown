@@ -1,4 +1,4 @@
-name = "mdforagents-worker"
+name = "allto-agentok-top"
 main = "src/index.ts"
 compatibility_date = "2026-07-26"
 
@@ -15,4 +15,4 @@ command = "pnpm build"
 [[d1_databases]]
 binding = "DB"
 database_name = "mdforagents"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "7478e1ef-3a30-4abf-9184-29a0cc4785ed"
