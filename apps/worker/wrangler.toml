@@ -2,6 +2,10 @@ name = "allto-agentok-top"
 main = "src/index.ts"
 compatibility_date = "2026-07-26"
 
+routes = [
+  { pattern = "allto.agentok.top", custom_domain = true }
+]
+
 [vars]
 APP_NAME = "mdforagents"
 

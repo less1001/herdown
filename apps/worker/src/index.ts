@@ -553,7 +553,33 @@ export default {
       }
     }
 
-    // Static Assets Fallback (Serves TanStack Web SPA)
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      const htmlContent = `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MD for Agents (mdforagents.com) - 给 AI Agent 用的干净 Markdown 入口</title>
+    <meta name="description" content="专为 AI Agent、开发者与自动化工作流打造的网页转 Markdown 工具链、REST API 与远程 MCP 平台。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-DRuUnWG2.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DUUznHQF.css">
+  </head>
+  <body class="bg-[#090d10] text-[#e1e7ec] antialiased selection:bg-[#0f6b4f] selection:text-white">
+    <div id="root"></div>
+  </body>
+</html>`;
+      return new Response(htmlContent, {
+        headers: {
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-cache, no-store, must-revalidate',
+        },
+      });
+    }
+
+    // Static Assets Fallback (Serves JS/CSS bundles)
     if (env.ASSETS) {
       try {
         return await env.ASSETS.fetch(request);
