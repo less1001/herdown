@@ -614,8 +614,8 @@ export default {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-etH23X3Z.js?v=${Date.now()}"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-MJ0M7kl1.css">
+    <script type="module" crossorigin src="/assets/index-Cdc-Gcav.js?v=${Date.now()}"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Bh3JPuA3.css">
   </head>
   <body class="bg-[#090d10] text-[#e1e7ec] antialiased selection:bg-[#0f6b4f] selection:text-white">
     <div id="root"></div>
