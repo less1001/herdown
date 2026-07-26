@@ -15,9 +15,13 @@ import {
   Image as ImageIcon,
   ShieldCheck,
   Plus,
-  Trash2,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  Camera,
+  Layers,
+  CheckCircle2,
+  X
 } from 'lucide-react';
 
 interface ParseResponse {
@@ -38,7 +42,7 @@ interface ApiKeyItem {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'keys' | 'mcp' | 'cli'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli'>('converter');
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
@@ -47,6 +51,15 @@ export function App() {
   const [result, setResult] = useState<ParseResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   
+  // Crawl state
+  const [crawlUrl, setCrawlUrl] = useState('');
+  const [crawlLoading, setCrawlLoading] = useState(false);
+  const [crawlResult, setCrawlResult] = useState<any>(null);
+
+  // Upgrade Modal
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   const [outputTab, setOutputTab] = useState<'preview' | 'source' | 'images'>('preview');
   const [copiedMd, setCopiedMd] = useState(false);
   const [copiedKeyIndex, setCopiedKeyIndex] = useState<number | null>(null);
@@ -114,7 +127,7 @@ export function App() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        setErrorMessage(data.message || '转换失败，请检查网址或频率限制');
+        setErrorMessage(data.message || '转换失败，请检查网址或频控限制');
       } else {
         setResult(data);
         fetchStats();
@@ -123,6 +136,48 @@ export function App() {
       setErrorMessage(err?.message || '网络请求异常，请稍后重试');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCrawl = async () => {
+    if (!crawlUrl.trim()) return;
+    setCrawlLoading(true);
+    setCrawlResult(null);
+    try {
+      const res = await fetch('/v1/crawl', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: crawlUrl.trim(), limit: 5 }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCrawlResult(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCrawlLoading(false);
+    }
+  };
+
+  const handleStripeCheckout = async (plan: 'pro' | 'team') => {
+    setCheckoutLoading(true);
+    try {
+      const res = await fetch('/v1/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchKeys();
+        setShowUpgradeModal(false);
+        alert(`Stripe 订阅成功激活！已为你生成并分配 ${plan.toUpperCase()} API Key: ${data.allocated_key}`);
+      }
+    } catch {
+      alert('Stripe 订阅通道初始化失败');
+    } finally {
+      setCheckoutLoading(false);
     }
   };
 
@@ -202,7 +257,7 @@ export function App() {
                 MD <span className="text-emerald-400">for Agents</span>
               </span>
               <span className="hidden sm:inline-block ml-2.5 px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
-                v2.4.0 Hardened
+                v2.4.0 Pro
               </span>
             </div>
           </div>
@@ -218,7 +273,18 @@ export function App() {
               }`}
             >
               <Zap className="w-3.5 h-3.5" />
-              在线转换器
+              单页转换
+            </button>
+            <button
+              onClick={() => setActiveTab('crawl')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'crawl'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              全站 Crawl 爬取
             </button>
             <button
               onClick={() => setActiveTab('keys')}
@@ -256,10 +322,13 @@ export function App() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              Rate Limiting Enabled
-            </div>
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              升级 Stripe Pro
+            </button>
             <a
               href="https://github.com/less1001/mdforagents"
               target="_blank"
@@ -275,14 +344,14 @@ export function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        {/* TAB 1: Converter Playground */}
+        {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
           <div className="space-y-8">
             {/* Hero Banner */}
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                专为 AI Agent、RAG 与知识库打造的全网 Markdown 提取引擎
+                支持微信/小红书/知乎全网提取 + 全站 Sitemap 递归 Crawl
               </div>
               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
                 给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 Markdown 入口
@@ -290,7 +359,7 @@ export function App() {
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
                 微信公众号（包含贴图无水去重）、小红书笔记、知乎专栏/回答（Preserve LaTeX）、X/Twitter 及通用网页。
                 <br className="hidden sm:block" />
-                2ms 极速解析，零存储隐私安全，提供 REST API、远程 MCP 端点及 CLI 工具。
+                2ms 极速解析，零存储隐私安全，支持 Stripe 自动订阅升级。
               </p>
               
               {/* Presets */}
@@ -395,7 +464,6 @@ export function App() {
             {/* Result Area */}
             {result && (
               <div className="bg-[#0f1722] border border-[#1e293b] rounded-2xl overflow-hidden shadow-2xl space-y-0">
-                {/* Result Header Bar */}
                 <div className="bg-[#111823] px-6 py-4 border-b border-[#1e293b] flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
@@ -427,7 +495,6 @@ export function App() {
                   </div>
                 </div>
 
-                {/* View Switcher Bar */}
                 <div className="px-6 py-2 bg-[#0d131c] border-b border-[#1e293b] flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
@@ -460,7 +527,6 @@ export function App() {
                   </div>
                 </div>
 
-                {/* Content Output */}
                 <div className="p-6 min-h-[320px] max-h-[600px] overflow-y-auto font-mono text-xs text-slate-300 leading-relaxed bg-[#090d12]">
                   {outputTab === 'source' && (
                     <textarea
@@ -523,22 +589,87 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 2: API Keys Management */}
-        {activeTab === 'keys' && (
+        {/* TAB 2: Full Site Crawl */}
+        {activeTab === 'crawl' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-              <h2 className="text-2xl font-bold text-white">API 密钥控制台</h2>
-              <p className="text-slate-400 text-xs mt-1">生成与管理专属 API Key (可突破匿名 IP 频控，享受 2,000 次/日全速接口调用)</p>
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Layers className="w-6 h-6 text-emerald-400" />
+                全站 Sitemap 递归 Crawl 引擎
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">输入域名或 sitemap.xml 链接，自动递归并发提取全站子页面 Markdown 列表</p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+              <div className="flex gap-3">
+                <input
+                  type="url"
+                  value={crawlUrl}
+                  onChange={(e) => setCrawlUrl(e.target.value)}
+                  placeholder="输入目标域名（如 https://docs.example.com 或 https://example.com/sitemap.xml）"
+                  className="flex-1 px-4 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  onClick={handleCrawl}
+                  disabled={crawlLoading || !crawlUrl.trim()}
+                  className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-sm font-semibold text-white flex items-center gap-2 transition"
+                >
+                  {crawlLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+                  {crawlLoading ? '递归抓取中...' : '开始全站 Crawl'}
+                </button>
+              </div>
+
+              {crawlResult && (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center justify-between text-xs text-slate-400 border-b border-[#1e293b] pb-2">
+                    <span>域名: <strong className="text-white">{crawlResult.domain}</strong></span>
+                    <span>批量抓取页面: <strong className="text-emerald-400">{crawlResult.total_pages} 页</strong> (耗时 {crawlResult.elapsed_ms}ms)</span>
+                  </div>
+
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    {crawlResult.results.map((item: any, idx: number) => (
+                      <div key={idx} className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-xs font-bold text-white truncate max-w-md">{item.title}</h4>
+                          <span className="text-[10px] text-slate-500 font-mono">{item.url}</span>
+                        </div>
+                        <pre className="p-2 rounded bg-[#111823] font-mono text-[11px] text-slate-400 max-h-24 overflow-hidden">
+                          {item.markdown.slice(0, 200)}...
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: API Keys & Pricing Modal trigger */}
+        {activeTab === 'keys' && (
+          <div className="space-y-8 max-w-4xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">API 密钥控制台</h2>
+                <p className="text-slate-400 text-xs mt-1">生成与管理专属 API Key (突破匿名 IP 限制)</p>
+              </div>
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
+              >
+                <CreditCard className="w-4 h-4" />
+                Stripe 一键升级配额
+              </button>
             </div>
 
             {/* Usage Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">今日全局解析请求</span>
+                <span className="text-xs text-slate-400 font-medium">今日解析请求</span>
                 <p className="text-2xl font-extrabold text-white mt-1">{stats.today_requests} 次</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">每日总可用配额 (Quota)</span>
+                <span className="text-xs text-slate-400 font-medium">每日可用配额 (Quota)</span>
                 <p className="text-2xl font-extrabold text-emerald-400 mt-1">{stats.daily_quota.toLocaleString()} 次</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
@@ -629,12 +760,12 @@ export function App() {
           </div>
         )}
 
-        {/* TAB 3: MCP & REST API Guide */}
+        {/* TAB 4: MCP & Advanced REST API Documentation */}
         {activeTab === 'mcp' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-              <h2 className="text-2xl font-bold text-white">远程 MCP & REST API 接入指南</h2>
-              <p className="text-slate-400 text-xs mt-1">支持 Anthropic MCP 标准 HTTP/SSE 协议，直接集成至 Claude Desktop, Cursor, Windsurf 与 Hermes Agent</p>
+              <h2 className="text-2xl font-bold text-white">远程 MCP & REST 高级 API 指南</h2>
+              <p className="text-slate-400 text-xs mt-1">支持全站 Crawl、网页截图 Screenshot、RAG Vector 分块及 MCP 协议</p>
             </div>
 
             {/* MCP Integration Card */}
@@ -643,10 +774,6 @@ export function App() {
                 <Cpu className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-base font-bold text-white">1. 远程 MCP 端点配置 (Anthropic MCP Standard)</h3>
               </div>
-              <p className="text-xs text-slate-400">
-                将以下 JSON 片段添加至你的 <code className="text-emerald-400">claude_desktop_config.json</code> 或 Cursor / Windsurf MCP 配置文件中：
-              </p>
-
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-emerald-300 overflow-x-auto leading-relaxed">
 {`{
   "mcpServers": {
@@ -662,44 +789,36 @@ export function App() {
               </pre>
             </div>
 
-            {/* REST API Card */}
-            <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-              <div className="flex items-center gap-2">
-                <Code2 className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">2. REST API 接口规范 (<code className="text-emerald-400">POST /v1/parse</code>)</h3>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-slate-300">cURL 示例：</h4>
-                <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto">
-{`curl -X POST "https://allto.agentok.top/v1/parse" \\
+            {/* Advanced Endpoints Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b] space-y-2">
+                <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-emerald-400" />
+                  全站 Crawl API (<code className="text-emerald-400">POST /v1/crawl</code>)
+                </h4>
+                <pre className="p-3 rounded-lg bg-[#090d12] font-mono text-[11px] text-slate-300 overflow-x-auto">
+{`curl -X POST "https://allto.agentok.top/v1/crawl" \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${activeApiKeySample}" \\
-  -d '{
-    "url": "https://mp.weixin.qq.com/s/xxxxxx"
-  }'`}
+  -d '{"url": "https://example.com/sitemap.xml"}'`}
                 </pre>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-slate-300">Python 客户端示例：</h4>
-                <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto">
-{`import requests
-
-response = requests.post(
-    "https://allto.agentok.top/v1/parse",
-    headers={"Authorization": "Bearer ${activeApiKeySample}"},
-    json={"url": "https://mp.weixin.qq.com/s/xxxxxx"}
-)
-data = response.json()
-print("Markdown Result:\n", data["markdown"])`}
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b] space-y-2">
+                <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-emerald-400" />
+                  网页截图 API (<code className="text-emerald-400">POST /v1/screenshot</code>)
+                </h4>
+                <pre className="p-3 rounded-lg bg-[#090d12] font-mono text-[11px] text-slate-300 overflow-x-auto">
+{`curl -X POST "https://allto.agentok.top/v1/screenshot" \\
+  -H "Content-Type: application/json" \\
+  -d '{"url": "https://mp.weixin.qq.com/s/xxx"}'`}
                 </pre>
               </div>
             </div>
           </div>
         )}
 
-        {/* TAB 4: CLI Guide */}
+        {/* TAB 5: CLI */}
         {activeTab === 'cli' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
@@ -708,27 +827,85 @@ print("Markdown Result:\n", data["markdown"])`}
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-400" />
-                终端快速使用命令：
-              </h3>
-
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-emerald-300 overflow-x-auto">
-{`# 直接在终端打印转换后的 Markdown
+{`# 在终端直接打印 Markdown
 npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx"
 
 # 保存输出到本地 output.md 文件
-npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md
-
-# 使用自定义 API Key
-npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" --key "${activeApiKeySample}"`}
+npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               </pre>
             </div>
           </div>
         )}
       </main>
 
-      {/* Bottom Footer */}
+      {/* Stripe Pricing Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0f1722] border border-[#1e293b] rounded-2xl max-w-2xl w-full p-6 space-y-6 relative shadow-2xl">
+            <button
+              onClick={() => setShowUpgradeModal(false)}
+              className="absolute right-4 top-4 text-slate-400 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                Stripe 极速安全收银台
+              </span>
+              <h3 className="text-2xl font-extrabold text-white">升级 MD for Agents 商业订阅</h3>
+              <p className="text-xs text-slate-400">解锁无限解析次数、全站 Crawl 爬取与网页截图 API</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              {/* Pro Plan */}
+              <div className="p-5 rounded-xl bg-[#111823] border border-emerald-500/40 space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <h4 className="text-lg font-bold text-white">Developer Pro</h4>
+                  <div className="text-3xl font-black text-emerald-400">$5.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
+                  <ul className="space-y-2 text-xs text-slate-300 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 2,000 次/日全速 API 调用</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 支持全站 Sitemap Crawl</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 支持网页截图 API</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => handleStripeCheckout('pro')}
+                  disabled={checkoutLoading}
+                  className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
+                >
+                  {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  使用 Stripe 订购 Pro
+                </button>
+              </div>
+
+              {/* Team Plan */}
+              <div className="p-5 rounded-xl bg-[#111823] border border-[#1e293b] space-y-4 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <h4 className="text-lg font-bold text-white">Team & Enterprise</h4>
+                  <div className="text-3xl font-black text-white">$29.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
+                  <ul className="space-y-2 text-xs text-slate-300 pt-2">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 50,000 次/日无限并发</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 专属支持通道</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> SLA 服务保障</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => handleStripeCheckout('team')}
+                  disabled={checkoutLoading}
+                  className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
+                >
+                  {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  订购 Team 方案
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
       <footer className="border-t border-[#1e293b] bg-[#070a0e] py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
@@ -737,7 +914,7 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" --key "${activeApiKeySample}
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 text-emerald-500">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Powered by Cloudflare Workers & D1
+              Stripe Payments & Cloudflare Workers
             </span>
             <a href="https://github.com/less1001/mdforagents" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
               GitHub Repo

@@ -9,6 +9,20 @@ export type ParseResult = {
   elapsed_ms: number;
 };
 
+export type CrawlResult = {
+  success: boolean;
+  domain: string;
+  total_pages: number;
+  results: { url: string; title: string; markdown: string; elapsed_ms: number }[];
+  elapsed_ms: number;
+};
+
+export type VectorChunk = {
+  chunk_index: number;
+  content: string;
+  word_count: number;
+};
+
 const normalizeSpaces = (value: string): string =>
   value.replace(/[\t\r]+/g, ' ').replace(/\u00a0/g, ' ');
 
@@ -51,7 +65,6 @@ const extractWeChatPhotoGalleryImages = (html: string): string[] => {
 
   if (!listMatch) return images;
 
-  // PRD 5.2: Strip watermark_info & share_cover sub-objects first to prevent duplication
   const cleanListBlock = listMatch[1]
     .replace(/watermark_info\s*:\s*\{[\s\S]*?\}/gi, '')
     .replace(/share_cover\s*:\s*\{[\s\S]*?\}/gi, '');
@@ -73,7 +86,6 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
   let bodyHtml = '';
   const galleryImages = extractWeChatPhotoGalleryImages(html);
 
-  // 1. Try js_content element
   const startIdx = html.indexOf('id="js_content"');
   if (startIdx >= 0) {
     const contentStart = html.indexOf('>', startIdx) + 1;
@@ -86,7 +98,6 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
     }
   }
 
-  // 2. Fallback to content_noencode JS variable
   if (!bodyHtml || bodyHtml.trim().length < 50) {
     const fallback = /content_noencode\s*:\s*(["'])([\s\S]*?)\1\s*,/i.exec(html);
     if (fallback?.[2]) {
@@ -99,7 +110,6 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
     }
   }
 
-  // Collect image URLs from data-src or src
   const allImages: string[] = [...galleryImages];
   const imgRegex = /<img[^>]+(?:data-src|src)=["']([^"']+)["']/gi;
   let imgMatch: RegExpExecArray | null;
@@ -117,13 +127,11 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
 const extractXiaohongshuBody = (html: string): { content: string; images: string[] } => {
   const images: string[] = [];
 
-  // Extract meta tags or state JSON for Xiaohongshu
   const descMatch = /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i.exec(html) ||
     /<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i.exec(html);
   
   const contentStr = descMatch?.[1] ? decodeEntities(descMatch[1]) : '';
 
-  // Extract Xiaohongshu CDN images
   const cdnRegex = /(https?:\/\/[^"'\s]+\.xhscdn\.com\/[^"'\s]+)/gi;
   let match: RegExpExecArray | null;
   while ((match = cdnRegex.exec(html)) !== null) {
@@ -150,15 +158,13 @@ const extractZhihuBody = (html: string): { content: string; images: string[] } =
     contentHtml = html;
   }
 
-  // Preserve LaTeX formulas encoded in data-tex attributes
   contentHtml = contentHtml.replace(/<span[^>]+data-tex=["']([^"']+)["'][^>]*>[\s\S]*?<\/span>/gi, (_, tex) => {
     return ` $${tex.trim()}$ `;
   });
 
-  // Extract images
   const imgRegex = /<img[^>]+(?:data-actualsrc|src)=["']([^"']+)["']/gi;
   let match: RegExpExecArray | null;
-  while ((match = imgRegex.exec(contentHtml)) !== null) {
+  while ((match = match = imgRegex.exec(contentHtml)) !== null) {
     const url = match[1].replace(/&amp;/g, '&');
     if (url.startsWith('http') && !images.includes(url)) {
       images.push(url);
@@ -176,31 +182,24 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
     .replace(/<div[^>]*id=["']js_pc_qr_code["'][\s\S]*?<\/div>/gi, '')
     .replace(/<div[^>]*class=["'][^"']*rich_media_tool[^"']*["'][\s\S]*?<\/div>/gi, '');
 
-  // Convert Headings
   clean = clean.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, text) => `\n\n# ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, text) => `\n\n#### ${stripTags(text)}\n\n`);
 
-  // Convert Bold & Italic
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => `**${stripTags(text)}**`);
   clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => `*${stripTags(text)}*`);
 
-  // Convert Code blocks
   clean = clean.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => `\n\n\`\`\`\n${decodeEntities(stripTags(code))}\n\`\`\`\n\n`);
   clean = clean.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_, code) => ` \`${decodeEntities(stripTags(code))}\` `);
 
-  // Convert Blockquotes
   clean = clean.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, text) => `\n\n> ${stripTags(text).split('\n').join('\n> ')}\n\n`);
 
-  // Convert Paragraphs & Line Breaks
   clean = clean.replace(/<br\s*\/?>/gi, '\n');
   clean = clean.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, text) => `\n\n${stripTags(text)}\n\n`);
 
-  // Convert List Items
   clean = clean.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, text) => `\n- ${stripTags(text)}`);
 
-  // Final cleanup of extra whitespace and tabs
   const result = clean
     .split('\n')
     .map(line => normalizeSpaces(line).trim())
@@ -239,7 +238,6 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
 
-  // Fallback: If markdown body is sparse but images exist, append Markdown images
   if (images.length > 0) {
     const imageMarkdown = images.map((url, idx) => `![图片 ${idx + 1}](${url})`).join('\n\n');
     if (!markdown.includes('![')) {
@@ -263,3 +261,72 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     elapsed_ms: Math.max(1, elapsed_ms),
   };
 }
+
+// Extract Sitemap URLs or internal page links from HTML/XML
+export const extractSitemapUrls = (xmlOrHtml: string, baseUrl: string, limit = 10): string[] => {
+  const urls: string[] = [];
+  
+  // 1. Try <loc> tags in XML Sitemap
+  const locRegex = /<loc>([\s\S]*?)<\/loc>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = locRegex.exec(xmlOrHtml)) !== null) {
+    const url = match[1].trim();
+    if (url.startsWith('http') && !urls.includes(url)) {
+      urls.push(url);
+      if (urls.length >= limit) return urls;
+    }
+  }
+
+  // 2. Fallback to <a href="..."> internal links
+  let domain = baseUrl;
+  try {
+    domain = new URL(baseUrl).origin;
+  } catch {
+    // ignore
+  }
+
+  const hrefRegex = /<a\s+[^>]*href=["']([^"']+)["']/gi;
+  while ((match = hrefRegex.exec(xmlOrHtml)) !== null) {
+    let href = match[1].trim();
+    if (href.startsWith('/')) {
+      href = `${domain}${href}`;
+    }
+    if (href.startsWith(domain) && !urls.includes(href) && !href.includes('#')) {
+      urls.push(href);
+      if (urls.length >= limit) return urls;
+    }
+  }
+
+  return urls.length > 0 ? urls : [baseUrl];
+};
+
+// Split Markdown into RAG Chunks
+export const chunkMarkdownForRAG = (markdown: string, maxChunkSize = 500): VectorChunk[] => {
+  const paragraphs = markdown.split(/\n\n+/);
+  const chunks: VectorChunk[] = [];
+  let currentChunk = '';
+  let chunkIdx = 1;
+
+  for (const para of paragraphs) {
+    if ((currentChunk + '\n\n' + para).length > maxChunkSize && currentChunk) {
+      chunks.push({
+        chunk_index: chunkIdx++,
+        content: currentChunk.trim(),
+        word_count: currentChunk.trim().split(/\s+/).length,
+      });
+      currentChunk = para;
+    } else {
+      currentChunk = currentChunk ? `${currentChunk}\n\n${para}` : para;
+    }
+  }
+
+  if (currentChunk.trim()) {
+    chunks.push({
+      chunk_index: chunkIdx,
+      content: currentChunk.trim(),
+      word_count: currentChunk.trim().split(/\s+/).length,
+    });
+  }
+
+  return chunks;
+};
