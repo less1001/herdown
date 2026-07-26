@@ -160,7 +160,7 @@ export function App() {
     }
   };
 
-  const handleStripeCheckout = async (plan: 'pro' | 'team') => {
+  const handleStripeCheckout = async (plan: 'pro' | 'team' | 'onetime') => {
     setCheckoutLoading(true);
     try {
       const res = await fetch('/v1/checkout', {
@@ -353,8 +353,8 @@ export function App() {
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                 支持微信/小红书/知乎全网提取 + 全站 Sitemap 递归 Crawl
               </div>
-              <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-                给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 Markdown 入口
+              <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-normal">
+                给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown 入口</span>
               </h1>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
                 微信公众号（包含贴图无水去重）、小红书笔记、知乎专栏/回答（Preserve LaTeX）、X/Twitter 及通用网页。
@@ -842,7 +842,7 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
       {/* Stripe Pricing Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0f1722] border border-[#1e293b] rounded-2xl max-w-2xl w-full p-6 space-y-6 relative shadow-2xl">
+          <div className="bg-[#0f1722] border border-[#1e293b] rounded-2xl max-w-4xl w-full p-6 space-y-6 relative shadow-2xl max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowUpgradeModal(false)}
               className="absolute right-4 top-4 text-slate-400 hover:text-white"
@@ -854,41 +854,72 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 Stripe 极速安全收银台
               </span>
-              <h3 className="text-2xl font-extrabold text-white">升级 MD for Agents 商业订阅</h3>
-              <p className="text-xs text-slate-400">解锁无限解析次数、全站 Crawl 爬取与网页截图 API</p>
+              <h3 className="text-2xl font-extrabold text-white">升级 MD for Agents 商业配额</h3>
+              <p className="text-xs text-slate-400">解锁高额度 API 解析、全站 Sitemap Crawl 与网页截图功能</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-              {/* Pro Plan */}
-              <div className="p-5 rounded-xl bg-[#111823] border border-emerald-500/40 space-y-4 flex flex-col justify-between">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {/* Option 1: WeChat Pay / Alipay One-Time Pack */}
+              <div className="p-5 rounded-xl bg-gradient-to-b from-[#132320] to-[#111823] border-2 border-emerald-500 space-y-4 flex flex-col justify-between relative shadow-lg shadow-emerald-950/40">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-black uppercase tracking-wider whitespace-nowrap">
+                  微信 / 支付宝扫码付
+                </div>
+                <div className="space-y-2 pt-1">
+                  <h4 className="text-base font-bold text-white flex items-center gap-1.5">
+                    微信/支付宝单次加油包
+                  </h4>
+                  <div className="text-2xl font-black text-emerald-400">¥68.00 <span className="text-xs text-slate-400 font-normal">/ 10,000次</span></div>
+                  <p className="text-[11px] text-emerald-300 font-medium bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
+                    💡 想用微信支付或支付宝请选择此选项（一次性买断，无自动续费）
+                  </p>
+                  <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 10,000 次 API 解析额度</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持微信扫码 & 支付宝</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 额度永不过期，不自动续费</li>
+                  </ul>
+                </div>
+                <button
+                  onClick={() => handleStripeCheckout('onetime')}
+                  disabled={checkoutLoading}
+                  className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
+                >
+                  {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                  微信 / 支付宝买断点数
+                </button>
+              </div>
+
+              {/* Option 2: Pro Subscription */}
+              <div className="p-5 rounded-xl bg-[#111823] border border-[#1e293b] space-y-4 flex flex-col justify-between">
                 <div className="space-y-2">
-                  <h4 className="text-lg font-bold text-white">Developer Pro</h4>
-                  <div className="text-3xl font-black text-emerald-400">$5.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
-                  <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 2,000 次/日全速 API 调用</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 支持全站 Sitemap Crawl</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 支持网页截图 API</li>
+                  <h4 className="text-base font-bold text-white">Developer Pro 订阅</h4>
+                  <div className="text-2xl font-black text-white">$5.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
+                  <p className="text-[11px] text-slate-400">双币信用卡 / Apple Pay 按月扣款</p>
+                  <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 2,000 次/日全速 API 调用</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持全站 Sitemap Crawl</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持网页截图 API</li>
                   </ul>
                 </div>
                 <button
                   onClick={() => handleStripeCheckout('pro')}
                   disabled={checkoutLoading}
-                  className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
                 >
                   {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  使用 Stripe 订购 Pro
+                  Stripe 订阅 Pro ($5.99/月)
                 </button>
               </div>
 
-              {/* Team Plan */}
+              {/* Option 3: Team Plan */}
               <div className="p-5 rounded-xl bg-[#111823] border border-[#1e293b] space-y-4 flex flex-col justify-between">
                 <div className="space-y-2">
-                  <h4 className="text-lg font-bold text-white">Team & Enterprise</h4>
-                  <div className="text-3xl font-black text-white">$29.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
-                  <ul className="space-y-2 text-xs text-slate-300 pt-2">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 50,000 次/日无限并发</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> 专属支持通道</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> SLA 服务保障</li>
+                  <h4 className="text-base font-bold text-white">Team & Enterprise</h4>
+                  <div className="text-2xl font-black text-white">$29.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
+                  <p className="text-[11px] text-slate-400">企业卡 / 团队共享多并发</p>
+                  <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 50,000 次/日无限并发</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 专属支持通道</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> SLA 服务保障</li>
                   </ul>
                 </div>
                 <button
@@ -897,7 +928,7 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                   className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
                 >
                   {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  订购 Team 方案
+                  订阅 Team 方案 ($29.99/月)
                 </button>
               </div>
             </div>

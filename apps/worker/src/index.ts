@@ -315,17 +315,20 @@ export default {
     // Feature 4: Stripe Integration - POST /v1/checkout
     if (url.pathname === '/v1/checkout' && request.method === 'POST') {
       const body = (await request.json().catch(() => ({}))) as { plan?: string; key_name?: string };
-      const plan = body.plan === 'team' ? 'team' : 'pro';
+      const plan = body.plan || 'pro';
       
-      const checkoutUrl = plan === 'team' 
-        ? 'https://buy.stripe.com/test_28EaEX6sRd7gb8v10u3Ru01'
-        : 'https://buy.stripe.com/test_6oU28r3gFffo1xVgZs3Ru00';
+      let checkoutUrl = 'https://buy.stripe.com/test_6oU28r3gFffo1xVgZs3Ru00';
+      if (plan === 'team') {
+        checkoutUrl = 'https://buy.stripe.com/test_28EaEX6sRd7gb8v10u3Ru01';
+      } else if (plan === 'onetime') {
+        checkoutUrl = 'https://buy.stripe.com/test_28EcN56sR0ku0tR24y3Ru02';
+      }
 
       return json({
         success: true,
         plan,
         checkout_url: checkoutUrl,
-        message: `正在为您跳转至 Stripe 官方 ${plan.toUpperCase()} 订阅收银台...`,
+        message: `正在为您跳转至 Stripe 官方收银台...`,
       });
     }
 
@@ -338,43 +341,43 @@ export default {
       const newKey = `sk_live_stripe_${Date.now().toString(36)}`;
       if (env.DB) {
         try {
-          await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, 'usr_stripe', 'Stripe Subscriber Key', 'active').run();
+          await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, 'usr_stripe_paid', 'Stripe Paid Key', 'active').run();
         } catch {
           // ignore
         }
       }
 
-      return json({ received: true, created_key: newKey, status: 'subscription_active' });
+      return json({ received: true, key: newKey });
     }
 
     // Dashboard API: API Key Management
-    if (url.pathname === '/v1/keys' && request.method === 'GET') {
-      if (!env.DB) {
-        return json({ keys: [] });
-      }
-      try {
-        const { results } = await env.DB.prepare('SELECT key, name, status, created_at FROM api_keys WHERE status != "revoked" ORDER BY created_at DESC').all();
-        return json({ keys: results || [] });
-      } catch {
-        return json({ keys: [] });
-      }
-    }
-
-    if (url.pathname === '/v1/keys' && request.method === 'POST') {
-      const body = (await request.json().catch(() => ({}))) as { name?: string };
-      const keyName = (body.name || 'API Key').trim();
-      const newKey = `sk_live_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
-      const userId = 'usr_default';
-
-      if (env.DB) {
+    if (url.pathname === '/v1/keys') {
+      if (request.method === 'GET') {
+        if (!env.DB) return json({ keys: [] });
         try {
-          await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
-        } catch (e: any) {
-          return json({ success: false, message: e?.message || '数据库写入失败' }, { status: 500 });
+          const { results } = await env.DB.prepare('SELECT id, name, key, status, created_at FROM api_keys WHERE status != "revoked" ORDER BY created_at DESC').all();
+          return json({ keys: results || [] });
+        } catch {
+          return json({ keys: [] });
         }
       }
 
-      return json({ success: true, key: newKey, name: keyName, created_at: new Date().toISOString() });
+      if (request.method === 'POST') {
+        const body = (await request.json().catch(() => ({}))) as { name?: string };
+        const keyName = (body.name || 'API Key').trim();
+        const newKey = `sk_live_free_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
+        const userId = 'usr_default';
+
+        if (env.DB) {
+          try {
+            await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
+          } catch (e: any) {
+            return json({ success: false, message: e?.message || '数据库写入失败' }, { status: 500 });
+          }
+        }
+
+        return json({ success: true, key: newKey, name: keyName, created_at: new Date().toISOString() });
+      }
     }
 
     if (url.pathname.startsWith('/v1/keys/') && request.method === 'DELETE') {
@@ -409,7 +412,8 @@ export default {
 
       return json({
         today_requests: todayCount,
-        daily_quota: 100000,
+        daily_quota: 20,
+        quota_tier: "按凭证等级限制 (免费 20次/天, Pro 2,000次/天)",
         active_keys: totalKeys,
       });
     }
@@ -556,8 +560,8 @@ export default {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-C6pxphcE.js?v=${Date.now()}"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DUUznHQF.css">
+    <script type="module" crossorigin src="/assets/index-Byo5ZNci.js?v=${Date.now()}"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DGMad8LL.css">
   </head>
   <body class="bg-[#090d10] text-[#e1e7ec] antialiased selection:bg-[#0f6b4f] selection:text-white">
     <div id="root"></div>
