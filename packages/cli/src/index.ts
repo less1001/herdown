@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { parseMarkdown, detectPlatform } from '@mdforagents/core';
+import { parseMarkdown, detectPlatform } from '../../core/dist/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
