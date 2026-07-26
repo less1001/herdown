@@ -1,0 +1,14 @@
+name = "mdforagents-worker"
+main = "src/index.ts"
+compatibility_date = "2026-07-26"
+
+[vars]
+APP_NAME = "mdforagents"
+
+[build]
+command = "pnpm build"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mdforagents"
+database_id = "00000000-0000-0000-0000-000000000000"
