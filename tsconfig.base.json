@@ -10,7 +10,7 @@
     "esModuleInterop": true,
     "baseUrl": ".",
     "paths": {
-      "@mdforagents/core": ["packages/core/src/index.ts"]
+      "@mdforagents/core": ["packages/core/dist/index.d.ts", "packages/core/src/index.ts"]
     }
   }
 }
