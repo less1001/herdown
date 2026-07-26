@@ -114,6 +114,48 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
   return { allowed: true };
 };
 
+const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB 防爆内存限制
+
+async function safeFetchPageHtml(targetUrl: string, referer?: string, timeoutMs = 8000): Promise<{ html: string; status: number }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const fetchRes = await fetch(targetUrl, {
+      signal: controller.signal,
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        ...(referer ? { 'referer': referer } : {}),
+      },
+    });
+
+    clearTimeout(timer);
+
+    if (!fetchRes.ok) {
+      return { html: '', status: fetchRes.status };
+    }
+
+    const contentLength = fetchRes.headers.get('content-length');
+    if (contentLength && parseInt(contentLength, 10) > MAX_PAYLOAD_BYTES) {
+      throw new Error(`目标网页体积超出 10MB 安全解析上限`);
+    }
+
+    const text = await fetchRes.text();
+    if (text.length > MAX_PAYLOAD_BYTES) {
+      return { html: text.slice(0, MAX_PAYLOAD_BYTES), status: fetchRes.status };
+    }
+
+    return { html: text, status: fetchRes.status };
+  } catch (err: any) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') {
+      throw new Error('抓取目标网页响应超时 (超过 8 秒安全限制)');
+    }
+    throw err;
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -145,28 +187,28 @@ export default {
       if (!rateLimitResult.allowed) {
         return json({
           success: false,
-          code: 'RATE_LIMIT',
-          message: rateLimitResult.reason || '请求过于频繁，已被系统限制',
+          code: 'RATE_LIMIT_EXCEEDED',
+          message: rateLimitResult.reason,
         }, { status: 429 });
       }
 
       const body = (await request.json().catch(() => ({}))) as { url?: string; html?: string };
       const targetUrl = (body.url || '').trim();
-      const rawHtml = body.html || '';
+      const rawHtml = (body.html || '').trim();
 
       if (!targetUrl && !rawHtml) {
         return json({
           success: false,
-          code: 'INVALID_URL',
-          message: '请传入 url 参数或 html 源码',
+          code: 'INVALID_INPUT',
+          message: '请提供有效的 url 或 html 参数',
         }, { status: 400 });
       }
 
       if (targetUrl && isForbiddenUrl(targetUrl)) {
         return json({
           success: false,
-          code: 'INVALID_URL',
-          message: '禁止解析内网、本地或非法协议 URL',
+          code: 'FORBIDDEN_TARGET',
+          message: '安全防火墙已拦截该目标地址 (禁止内网/私有 IP 访问)',
         }, { status: 400 });
       }
 
@@ -176,23 +218,17 @@ export default {
           const platform = detectPlatform(targetUrl);
           const referer = platform === 'xiaohongshu' ? 'https://www.xiaohongshu.com/' : 'https://mp.weixin.qq.com/';
 
-          const fetchRes = await fetch(targetUrl, {
-            headers: {
-              'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-              'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'referer': referer,
-            },
-          });
+          const fetchResult = await safeFetchPageHtml(targetUrl, referer, 8000);
 
-          if (!fetchRes.ok) {
+          if (fetchResult.status !== 200 && fetchResult.status !== 0) {
             return json({
               success: false,
               code: 'PARSE_FAILED',
-              message: `目标网页返回 HTTP 错误码 ${fetchRes.status}`,
+              message: `目标网页返回 HTTP 错误码 ${fetchResult.status}`,
             }, { status: 500 });
           }
 
-          sourceHtml = await fetchRes.text();
+          sourceHtml = fetchResult.html;
         }
 
         const result: ParseResult = parseMarkdown(sourceHtml, targetUrl);
@@ -216,9 +252,15 @@ export default {
 
     // Feature 1: Crawl Endpoint (Sitemap & Recursive Crawl) - POST /v1/crawl
     if (url.pathname === '/v1/crawl' && request.method === 'POST') {
+      const authInfo = await verifyApiKeyOrIp(request, env);
+      const rateLimitResult = await checkAndLogRateLimit(authInfo.keyOrIp, authInfo.isKey, env);
+      if (!rateLimitResult.allowed) {
+        return json({ success: false, message: rateLimitResult.reason }, { status: 429 });
+      }
+
       const body = (await request.json().catch(() => ({}))) as { url?: string; limit?: number };
       const targetUrl = (body.url || '').trim();
-      const limit = Math.min(10, Math.max(1, body.limit || 5));
+      const limit = Math.min(20, Math.max(1, body.limit || 5));
 
       if (!targetUrl || isForbiddenUrl(targetUrl)) {
         return json({ success: false, message: '请传入有效的公网目标域名 URL' }, { status: 400 });
@@ -232,21 +274,19 @@ export default {
           sitemapUrl = `${origin}/sitemap.xml`;
         }
 
-        const res = await fetch(sitemapUrl, {
-          headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        }).catch(() => null);
-
-        let content = res && res.ok ? await res.text() : '';
+        const sitemapRes = await safeFetchPageHtml(sitemapUrl, undefined, 5000).catch(() => null);
+        let content = sitemapRes?.html || '';
+        
         if (!content) {
-          const mainRes = await fetch(targetUrl).catch(() => null);
-          content = mainRes && mainRes.ok ? await mainRes.text() : '';
+          const mainRes = await safeFetchPageHtml(targetUrl, undefined, 5000).catch(() => null);
+          content = mainRes?.html || '';
         }
 
         const subUrls = extractSitemapUrls(content, targetUrl, limit);
         const crawlResults = await Promise.all(
           subUrls.map(async (u) => {
-            const pageRes = await fetch(u).catch(() => null);
-            const html = pageRes && pageRes.ok ? await pageRes.text() : '';
+            const pageRes = await safeFetchPageHtml(u, undefined, 5000).catch(() => null);
+            const html = pageRes?.html || '';
             const parsed = parseMarkdown(html, u);
             return {
               url: u,
@@ -256,6 +296,15 @@ export default {
             };
           })
         );
+
+        // Deduct Quota for Crawled Subpages
+        if (env.DB && crawlResults.length > 1) {
+          const dateStr = new Date().toISOString().slice(0, 10);
+          const dailyKey = `day:${authInfo.keyOrIp}:${dateStr}`;
+          await env.DB.prepare(`
+            UPDATE usage_logs SET count = count + ? WHERE key_or_ip = ? AND parse_date = ?
+          `).bind(crawlResults.length - 1, dailyKey, dateStr).run().catch(() => null);
+        }
 
         return json({
           success: true,
