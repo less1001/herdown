@@ -19,46 +19,103 @@ const json = (data: unknown, init: ResponseInit = {}) => {
 };
 
 const getClientIp = (request: Request): string => {
-  return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '127.0.0.1';
+  return request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || '127.0.0.1';
+};
+
+// Security Check: SSRF & Internal IP Protection
+const isForbiddenUrl = (urlString: string): boolean => {
+  try {
+    const parsed = new URL(urlString);
+    const host = parsed.hostname.toLowerCase();
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) return true;
+
+    // Block localhost, private IPs, and internal domains
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '0.0.0.0' ||
+      host === '::1' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      /^10\./.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) ||
+      /^192\.168\./.test(host)
+    ) {
+      return true;
+    }
+  } catch {
+    return true;
+  }
+  return false;
 };
 
 const verifyApiKeyOrIp = async (request: Request, env: Env): Promise<{ keyOrIp: string; isKey: boolean; userId: string }> => {
   const authHeader = request.headers.get('authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
-  if (token && env.DB) {
+  if (token && token !== 'sk_live_demo88888888' && env.DB) {
     try {
       const res = await env.DB.prepare('SELECT user_id, status FROM api_keys WHERE key = ?').bind(token).first<{ user_id: string; status: string }>();
       if (res && res.status === 'active') {
         return { keyOrIp: token, isKey: true, userId: res.user_id };
       }
     } catch {
-      // Fallback if D1 is not initialized
+      // ignore
     }
   }
 
   return { keyOrIp: getClientIp(request), isKey: false, userId: 'usr_anonymous' };
 };
 
-const logUsage = async (keyOrIp: string, env: Env): Promise<number> => {
+// Minute + Daily Rate Limiter
+const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): Promise<{ allowed: boolean; reason?: string }> => {
   const dateStr = new Date().toISOString().slice(0, 10);
-  if (!env.DB) return 1;
+  const minuteStr = new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
+
+  // Limits: Anonymous (10/min, 100/day); API Key (30/min, 2000/day)
+  const maxPerMinute = isKey ? 30 : 10;
+  const maxPerDay = isKey ? 2000 : 100;
+
+  if (!env.DB) return { allowed: true };
 
   try {
+    // 1. Minute check
+    const minuteKey = `min:${keyOrIp}:${minuteStr}`;
     await env.DB.prepare(`
       INSERT INTO usage_logs (key_or_ip, parse_date, count)
       VALUES (?, ?, 1)
       ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = count + 1
-    `).bind(keyOrIp, dateStr).run();
+    `).bind(minuteKey, minuteStr).run();
 
-    const row = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
-      .bind(keyOrIp, dateStr)
+    const minRow = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
+      .bind(minuteKey, minuteStr)
       .first<{ count: number }>();
 
-    return row?.count || 1;
+    if (minRow && minRow.count > maxPerMinute) {
+      return { allowed: false, reason: `每分钟请求频率超限 (最高 ${maxPerMinute} 次/分钟)` };
+    }
+
+    // 2. Daily check
+    const dailyKey = `day:${keyOrIp}:${dateStr}`;
+    await env.DB.prepare(`
+      INSERT INTO usage_logs (key_or_ip, parse_date, count)
+      VALUES (?, ?, 1)
+      ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = count + 1
+    `).bind(dailyKey, dateStr).run();
+
+    const dayRow = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
+      .bind(dailyKey, dateStr)
+      .first<{ count: number }>();
+
+    if (dayRow && dayRow.count > maxPerDay) {
+      return { allowed: false, reason: `每日解析配额已达上限 (${maxPerDay} 次/日)` };
+    }
   } catch {
-    return 1;
+    // Fallback allowing request if D1 temporary glitch
   }
+
+  return { allowed: true };
 };
 
 export default {
@@ -90,6 +147,16 @@ export default {
     if (url.pathname === '/v1/parse' && request.method === 'POST') {
       const authInfo = await verifyApiKeyOrIp(request, env);
       
+      // Strict Rate Limiting Check
+      const rateLimitResult = await checkAndLogRateLimit(authInfo.keyOrIp, authInfo.isKey, env);
+      if (!rateLimitResult.allowed) {
+        return json({
+          success: false,
+          code: 'RATE_LIMIT',
+          message: rateLimitResult.reason || '请求过于频繁，已被系统封禁',
+        }, { status: 429 });
+      }
+
       const body = (await request.json().catch(() => ({}))) as { url?: string; html?: string; include_images?: boolean };
       const targetUrl = (body.url || '').trim();
       const rawHtml = body.html || '';
@@ -98,27 +165,16 @@ export default {
         return json({
           success: false,
           code: 'INVALID_URL',
-          message: 'Parameter "url" or "html" is required.',
+          message: '请传入 url 参数或 html 源码',
         }, { status: 400 });
       }
 
-      if (targetUrl && !/^https?:\/\//i.test(targetUrl)) {
+      if (targetUrl && isForbiddenUrl(targetUrl)) {
         return json({
           success: false,
           code: 'INVALID_URL',
-          message: 'Invalid URL format. Must start with http:// or https://',
+          message: '禁止解析内网、本地或非法协议 URL',
         }, { status: 400 });
-      }
-
-      // Log usage and check rate limits
-      const countToday = await logUsage(authInfo.keyOrIp, env);
-      const limit = authInfo.isKey ? 10000 : 500; // Anonymous IP: 500/day, API Key: 10000/day
-      if (countToday > limit) {
-        return json({
-          success: false,
-          code: 'RATE_LIMIT',
-          message: `Daily rate limit exceeded (${limit} requests/day). Please use a valid API Key.`,
-        }, { status: 429 });
       }
 
       try {
@@ -139,7 +195,7 @@ export default {
             return json({
               success: false,
               code: 'PARSE_FAILED',
-              message: `Target page returned HTTP status ${fetchRes.status}`,
+              message: `目标网页返回 HTTP 错误码 ${fetchRes.status}`,
             }, { status: 500 });
           }
 
@@ -160,7 +216,7 @@ export default {
         return json({
           success: false,
           code: 'PARSE_FAILED',
-          message: err?.message || 'Failed to fetch or parse target URL',
+          message: err?.message || '抓取或解析目标网页失败',
         }, { status: 500 });
       }
     }
@@ -168,10 +224,10 @@ export default {
     // Dashboard API: API Key Management
     if (url.pathname === '/v1/keys' && request.method === 'GET') {
       if (!env.DB) {
-        return json({ keys: [{ key: 'sk_live_demo88888888', name: 'Default Key', created_at: new Date().toISOString(), status: 'active' }] });
+        return json({ keys: [] });
       }
       try {
-        const { results } = await env.DB.prepare('SELECT key, name, status, created_at FROM api_keys ORDER BY created_at DESC').all();
+        const { results } = await env.DB.prepare('SELECT key, name, status, created_at FROM api_keys WHERE status != "revoked" ORDER BY created_at DESC').all();
         return json({ keys: results || [] });
       } catch {
         return json({ keys: [] });
@@ -188,7 +244,7 @@ export default {
         try {
           await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
         } catch (e: any) {
-          return json({ success: false, message: e?.message || 'Database insert error' }, { status: 500 });
+          return json({ success: false, message: e?.message || '数据库写入失败' }, { status: 500 });
         }
       }
 
@@ -211,15 +267,15 @@ export default {
     if (url.pathname === '/v1/usage' && request.method === 'GET') {
       const dateStr = new Date().toISOString().slice(0, 10);
       let todayCount = 0;
-      let totalKeys = 1;
+      let totalKeys = 0;
 
       if (env.DB) {
         try {
-          const row = await env.DB.prepare('SELECT SUM(count) as total FROM usage_logs WHERE parse_date = ?').bind(dateStr).first<{ total: number }>();
+          const row = await env.DB.prepare('SELECT SUM(count) as total FROM usage_logs WHERE parse_date = ? AND key_or_ip LIKE "day:%"').bind(dateStr).first<{ total: number }>();
           todayCount = row?.total || 0;
 
           const keysRow = await env.DB.prepare('SELECT COUNT(*) as cnt FROM api_keys WHERE status = "active"').first<{ cnt: number }>();
-          totalKeys = keysRow?.cnt || 1;
+          totalKeys = keysRow?.cnt || 0;
         } catch {
           // ignore
         }
@@ -227,7 +283,7 @@ export default {
 
       return json({
         today_requests: todayCount,
-        daily_quota: 50000,
+        daily_quota: 100000,
         active_keys: totalKeys,
       });
     }
@@ -311,6 +367,14 @@ export default {
           if (toolName === 'parse_webpage') {
             const targetUrl = (args.url || '').trim();
             let sourceHtml = args.html || '';
+
+            if (targetUrl && isForbiddenUrl(targetUrl)) {
+              return json({
+                jsonrpc: '2.0',
+                id: body.id ?? null,
+                error: { code: -32602, message: 'Invalid URL: Internal or private IP addresses forbidden' },
+              });
+            }
 
             if (targetUrl && !sourceHtml) {
               const platform = detectPlatform(targetUrl);
