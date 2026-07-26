@@ -4,3 +4,7 @@ dist
 .DS_Store
 .env
 .env.*
+
+# Private Strategy Files
+冷启动.md
+*.internal.md
