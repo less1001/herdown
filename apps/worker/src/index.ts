@@ -317,11 +317,11 @@ export default {
       const body = (await request.json().catch(() => ({}))) as { plan?: string; key_name?: string };
       const plan = body.plan || 'pro';
       
-      let checkoutUrl = 'https://buy.stripe.com/test_6oU28r3gFffo1xVgZs3Ru00';
+      let checkoutUrl = 'https://buy.stripe.com/4gM14n18xc3c6SfaB43Ru0a';
       if (plan === 'team') {
-        checkoutUrl = 'https://buy.stripe.com/test_28EaEX6sRd7gb8v10u3Ru01';
+        checkoutUrl = 'https://buy.stripe.com/00w6oHbNbebkgsP24y3Ru0b';
       } else if (plan === 'onetime') {
-        checkoutUrl = 'https://buy.stripe.com/test_28EcN56sR0ku0tR24y3Ru02';
+        checkoutUrl = 'https://buy.stripe.com/5kQ3cvcRf5EOa4r7oS3Ru09';
       }
 
       return json({
