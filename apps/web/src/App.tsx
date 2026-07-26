@@ -932,6 +932,11 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </button>
               </div>
             </div>
+
+            <div className="text-center text-[11px] text-slate-400 pt-3 border-t border-[#1e293b]/60 leading-relaxed">
+              🔒 声明：数字 API 额度属于虚拟商品，开通/充值成功即完成交付，不支持无理由退款。<br />
+              项目采用零数据存储架构，仅作实时格式解析，绝不转存、托管或泄露第三方图片与隐私内容。
+            </div>
           </div>
         </div>
       )}
