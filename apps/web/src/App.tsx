@@ -169,10 +169,10 @@ export function App() {
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
-      if (data.success) {
-        await fetchKeys();
-        setShowUpgradeModal(false);
-        alert(`Stripe 订阅成功激活！已为你生成并分配 ${plan.toUpperCase()} API Key: ${data.allocated_key}`);
+      if (data.success && data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert('Stripe 订阅链接生成失败');
       }
     } catch {
       alert('Stripe 订阅通道初始化失败');

@@ -316,24 +316,16 @@ export default {
     if (url.pathname === '/v1/checkout' && request.method === 'POST') {
       const body = (await request.json().catch(() => ({}))) as { plan?: string; key_name?: string };
       const plan = body.plan === 'team' ? 'team' : 'pro';
-      const priceAmount = plan === 'team' ? '$29.99/mo' : '$5.99/mo';
-      const newProKey = `sk_live_pro_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
-
-      if (env.DB) {
-        try {
-          await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newProKey, 'usr_pro_subscriber', `Pro Key (${plan})`, 'active').run();
-        } catch {
-          // ignore
-        }
-      }
+      
+      const checkoutUrl = plan === 'team' 
+        ? 'https://buy.stripe.com/test_28EaEX6sRd7gb8v10u3Ru01'
+        : 'https://buy.stripe.com/test_6oU28r3gFffo1xVgZs3Ru00';
 
       return json({
         success: true,
         plan,
-        price: priceAmount,
-        checkout_url: `https://checkout.stripe.com/pay/cs_test_${Math.random().toString(36).substring(2)}#play`,
-        allocated_key: newProKey,
-        message: `即刻激活 ${plan.toUpperCase()} 方案！API Key 已准备就绪。`,
+        checkout_url: checkoutUrl,
+        message: `正在为您跳转至 Stripe 官方 ${plan.toUpperCase()} 订阅收银台...`,
       });
     }
 
