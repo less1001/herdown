@@ -68,14 +68,16 @@ const verifyApiKeyOrIp = async (request: Request, env: Env): Promise<{ keyOrIp: 
   return { keyOrIp: getClientIp(request), isKey: false, userId: 'usr_anonymous' };
 };
 
-// Minute + Daily Rate Limiter
+// Minute + Daily Rate Limiter (User Custom Limits)
 const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): Promise<{ allowed: boolean; reason?: string }> => {
   const dateStr = new Date().toISOString().slice(0, 10);
   const minuteStr = new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
 
-  // Limits: Anonymous (10/min, 100/day); API Key (30/min, 2000/day)
-  const maxPerMinute = isKey ? 30 : 10;
-  const maxPerDay = isKey ? 2000 : 100;
+  // User Specified Limits:
+  // Anonymous: 1 request/min, 5 requests/day
+  // API Key: 3 requests/min, 20 requests/day
+  const maxPerMinute = isKey ? 3 : 1;
+  const maxPerDay = isKey ? 20 : 5;
 
   if (!env.DB) return { allowed: true };
 
@@ -93,7 +95,7 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
       .first<{ count: number }>();
 
     if (minRow && minRow.count > maxPerMinute) {
-      return { allowed: false, reason: `每分钟请求频率超限 (最高 ${maxPerMinute} 次/分钟)` };
+      return { allowed: false, reason: `请求太频繁！已达到限制 (${maxPerMinute} 次/分钟)` };
     }
 
     // 2. Daily check
@@ -109,7 +111,7 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
       .first<{ count: number }>();
 
     if (dayRow && dayRow.count > maxPerDay) {
-      return { allowed: false, reason: `每日解析配额已达上限 (${maxPerDay} 次/日)` };
+      return { allowed: false, reason: `已达到今日解析配额上限 (${maxPerDay} 次/天)` };
     }
   } catch {
     // Fallback allowing request if D1 temporary glitch
@@ -153,7 +155,7 @@ export default {
         return json({
           success: false,
           code: 'RATE_LIMIT',
-          message: rateLimitResult.reason || '请求过于频繁，已被系统封禁',
+          message: rateLimitResult.reason || '请求过于频繁，已被系统限制',
         }, { status: 429 });
       }
 
