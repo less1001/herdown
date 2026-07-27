@@ -1,14 +1,5 @@
 export type PlatformType = 'wechat' | 'xiaohongshu' | 'zhihu' | 'twitter' | 'wikipedia' | 'general';
 
-export type ParseResult = {
-  success: boolean;
-  title: string;
-  markdown: string;
-  images: string[];
-  platform: PlatformType;
-  elapsed_ms: number;
-};
-
 export type CrawlResult = {
   success: boolean;
   domain: string;
@@ -259,10 +250,60 @@ const stripTags = (html: string): string => {
   return html.replace(/<(?!img\b|br\b)[^>]+>/g, '').trim();
 };
 
+export type ParseResult = {
+  success: boolean;
+  title: string;
+  markdown: string;
+  images: string[];
+  platform: PlatformType;
+  account?: string;
+  author?: string;
+  publish_date?: string;
+  elapsed_ms: number;
+};
+
+const extractMetadata = (html: string, platform: PlatformType): { account?: string; author?: string; publish_date?: string } => {
+  let account: string | undefined;
+  let author: string | undefined;
+  let publish_date: string | undefined;
+
+  if (platform === 'wechat') {
+    const nickMatch = /var\s+nickname\s*=\s*["']([^"']+)["']/i.exec(html) ||
+      /class=["'][^"']*rich_media_meta_nickname[^"']*["'][^>]*>([\s\S]*?)<\/a>/i.exec(html);
+    if (nickMatch?.[1]) account = decodeEntities(stripTags(nickMatch[1])).trim();
+
+    const authorMatch = /var\s+(?:author|msg_author)\s*=\s*["']([^"']+)["']/i.exec(html) ||
+      /class=["'][^"']*rich_media_meta_text[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(html);
+    if (authorMatch?.[1]) author = decodeEntities(stripTags(authorMatch[1])).trim();
+
+    const ctMatch = /var\s+ct\s*=\s*["']?(\d{10})["']?/i.exec(html) ||
+      /id=["']publish_time["'][^>]*>([\s\S]*?)<\/em>/i.exec(html);
+    if (ctMatch?.[1]) {
+      const val = ctMatch[1].trim();
+      if (/^\d{10}$/.test(val)) {
+        const d = new Date(parseInt(val, 10) * 1000);
+        publish_date = d.toISOString().split('T')[0];
+      } else {
+        publish_date = decodeEntities(stripTags(val)).trim();
+      }
+    }
+  } else {
+    const authorMeta = /<meta\s+name=["']author["']\s+content=["']([^"']+)["']/i.exec(html);
+    if (authorMeta?.[1]) author = decodeEntities(authorMeta[1]).trim();
+
+    const dateMeta = /<meta\s+property=["']article:published_time["']\s+content=["']([^"']+)["']/i.exec(html) ||
+      /<meta\s+name=["']pubdate["']\s+content=["']([^"']+)["']/i.exec(html);
+    if (dateMeta?.[1]) publish_date = dateMeta[1].split('T')[0];
+  }
+
+  return { account, author, publish_date };
+};
+
 export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   const startTime = Date.now();
   const platform = detectPlatform(targetUrl);
   const title = extractTitle(html, targetUrl);
+  const meta = extractMetadata(html, platform);
 
   let extractedContent = html;
   let images: string[] = [];
@@ -282,6 +323,25 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   }
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
+
+  // Prepend Title and Metadata Header to Markdown
+  let headerPrefix = '';
+  if (title && title !== 'Untitled Page') {
+    headerPrefix += `# ${title}\n\n`;
+  }
+  
+  const metaItems: string[] = [];
+  if (meta.account) metaItems.push(`**公众号/平台**: ${meta.account}`);
+  if (meta.author) metaItems.push(`**作者**: ${meta.author}`);
+  if (meta.publish_date) metaItems.push(`**发布时间**: ${meta.publish_date}`);
+
+  if (metaItems.length > 0) {
+    headerPrefix += `> ${metaItems.join(' | ')}\n\n---\n\n`;
+  }
+
+  if (headerPrefix && !markdown.startsWith('# ')) {
+    markdown = headerPrefix + markdown;
+  }
 
   // If no images were inserted in-place, fallback to append
   if (images.length > 0 && !markdown.includes('<img')) {
@@ -308,6 +368,9 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     markdown,
     images,
     platform,
+    account: meta.account,
+    author: meta.author,
+    publish_date: meta.publish_date,
     elapsed_ms: Math.max(1, elapsed_ms),
   };
 }
