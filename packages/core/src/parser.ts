@@ -26,12 +26,18 @@ const decodeEntities = (value: string): string =>
     .replace(/&#39;/g, "'")
     .replace(/&#x2F;/gi, '/');
 
-export const detectPlatform = (url: string): PlatformType => {
+export const detectPlatform = (url: string, html = ''): PlatformType => {
   if (url.includes('mp.weixin.qq.com')) return 'wechat';
-  if (url.includes('xiaohongshu.com') || url.includes('xhslink.com')) return 'xiaohongshu';
+  if (url.includes('xiaohongshu.com') || url.includes('xhslink.com') || url.includes('xhslink.cn')) return 'xiaohongshu';
   if (url.includes('zhihu.com')) return 'zhihu';
   if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
   if (url.includes('wikipedia.org')) return 'wikipedia';
+  // Fallback: detect from HTML content signatures
+  if (html) {
+    if (html.includes('xhscdn.com') || html.includes('xiaohongshu') || html.includes('__INITIAL_STATE__') && html.includes('imageList')) return 'xiaohongshu';
+    if (html.includes('mp.weixin.qq.com') || html.includes('js_content')) return 'wechat';
+    if (html.includes('zhihu.com') || html.includes('Post-RichText')) return 'zhihu';
+  }
   return 'general';
 };
 
@@ -149,26 +155,81 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
   return { content: bodyHtml || html, images: allImages };
 };
 
-// Xiaohongshu Note extraction
-const extractXiaohongshuBody = (html: string): { content: string; images: string[] } => {
+// Xiaohongshu Note extraction — parses __INITIAL_STATE__ embedded JSON
+const extractXiaohongshuBody = (html: string): { content: string; images: string[]; account?: string; author?: string; publish_date?: string } => {
   const images: string[] = [];
 
-  const descMatch = /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i.exec(html) ||
-    /<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i.exec(html);
-  
-  const contentStr = descMatch?.[1] ? decodeEntities(descMatch[1]) : '';
+  // Decode \u002F and similar unicode escapes in a raw string
+  const decodeUnicode = (s: string) => s.replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
 
-  const cdnRegex = /(https?:\/\/[^"'\s]+\.xhscdn\.com\/[^"'\s]+)/gi;
-  let match: RegExpExecArray | null;
-  while ((match = cdnRegex.exec(html)) !== null) {
-    const url = match[1];
-    if (!images.includes(url) && !url.includes('avatar')) {
+  // --- Extract images from imageList infoList ---
+  // Pattern: "imageScene":"H5_DTL","url":"..."  — may be unicode-escaped (\u002F = /)
+  const imgSceneRegex = /"imageScene"\s*:\s*"H5_DTL"\s*,\s*"url"\s*:\s*"([^"]+)"/g;
+  let imgMatch: RegExpExecArray | null;
+  while ((imgMatch = imgSceneRegex.exec(html)) !== null) {
+    const url = decodeUnicode(imgMatch[1]).replace(/\\/g, '');
+    if (url.startsWith('http') && !images.includes(url)) {
       images.push(url);
     }
   }
 
-  return { content: contentStr, images };
+  // Fallback: match any xhscdn note image URL (not avatar, not static assets)
+  if (images.length === 0) {
+    const cdnRegex = /https?:\\?\/\\?\/sns-(?:webpic-qc|na-i\d+)\.xhscdn\.com\\?\/[^\s"'\\,\]]+/g;
+    let m: RegExpExecArray | null;
+    while ((m = cdnRegex.exec(html)) !== null) {
+      const url = decodeUnicode(m[0]).replace(/\\/g, '');
+      if (!url.includes('avatar') && !images.includes(url)) {
+        images.push(url);
+      }
+    }
+  }
+
+  // --- Extract desc (note body text) ---
+  let desc = '';
+  const descMatches = [...html.matchAll(/"desc"\s*:\s*"((?:[^"\\]|\\.)*)"/g)];
+  if (descMatches.length > 0) {
+    // Pick the longest desc (most likely to be the actual note content)
+    const longest = descMatches.reduce((a, b) => a[1].length >= b[1].length ? a : b);
+    desc = decodeUnicode(longest[1])
+      .replace(/\\n\\t/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\\t/g, ' ')
+      .replace(/\[买爆R\]/g, '🛍️')
+      .replace(/\[赞R\]/g, '👍');
+  }
+
+  // Fallback to og:description meta tag
+  if (!desc) {
+    const metaMatch = /<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i.exec(html) ||
+      /<meta\s+property=["']og:description["']\s+content=["']([^"']+)["']/i.exec(html);
+    if (metaMatch?.[1]) desc = decodeEntities(metaMatch[1]);
+  }
+
+  // --- Extract title ---
+  let xhsTitle = '';
+  const titleMatches = [...html.matchAll(/"title"\s*:\s*"([^"]{5,})"/g)];
+  if (titleMatches.length > 0) {
+    const best = titleMatches.find(m => !m[1].includes('\\') && m[1].length > 5);
+    if (best) xhsTitle = decodeUnicode(best[1]);
+  }
+
+  // --- Extract author / nickname ---
+  let author = '';
+  let account = '';
+  const nickMatches = [...html.matchAll(/"nickname"\s*:\s*"([^"]+)"/g)];
+  if (nickMatches.length > 0) {
+    // First non-system nickname is usually the note author
+    author = decodeUnicode(nickMatches[0][1]);
+    account = author;
+  }
+
+  // --- Build content string ---
+  const content = desc;
+
+  return { content, images, account, author };
 };
+
 
 // Zhihu Column/Answer extraction with LaTeX preservation
 const extractZhihuBody = (html: string): { content: string; images: string[] } => {
@@ -302,7 +363,7 @@ const extractMetadata = (html: string, platform: PlatformType): { account?: stri
 
 export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   const startTime = Date.now();
-  const platform = detectPlatform(targetUrl);
+  const platform = detectPlatform(targetUrl, html);
   const title = extractTitle(html, targetUrl);
   const meta = extractMetadata(html, platform);
 
@@ -317,6 +378,8 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     const res = extractXiaohongshuBody(html);
     extractedContent = res.content;
     images = res.images;
+    if (res.account) meta.account = res.account;
+    if (res.author) meta.author = res.author;
   } else if (platform === 'zhihu') {
     const res = extractZhihuBody(html);
     extractedContent = res.content;
