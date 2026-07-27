@@ -175,7 +175,8 @@ const extractXiaohongshuBody = (html: string): { content: string; images: string
 
   // Fallback: match any xhscdn note image URL (not avatar, not static assets)
   if (images.length === 0) {
-    const cdnRegex = /https?:\\?\/\\?\/sns-(?:webpic-qc|na-i\d+)\.xhscdn\.com\\?\/[^\s"'\\,\]]+/g;
+    // Stop at quotes, spaces, backslashes, commas, brackets, parens, semicolons
+    const cdnRegex = /https?:\\?\/\\?\/sns-(?:webpic-qc|na-i\d+)\.xhscdn\.com\\?\/[^\s"'\\,\]\[)(;!]+(?:![^\s"'\\,\]\[)(;]+)?/g;
     let m: RegExpExecArray | null;
     while ((m = cdnRegex.exec(html)) !== null) {
       const url = decodeUnicode(m[0]).replace(/\\/g, '');
@@ -184,6 +185,19 @@ const extractXiaohongshuBody = (html: string): { content: string; images: string
       }
     }
   }
+
+  // De-duplicate: remove low-res preview variants (nd_prv) when a matching full-quality (nd_dft) exists
+  // Match by note file ID (after notes_pre_post/), not full URL, because CDN hash changes per request
+  const deduped = images.filter(url => {
+    if (url.includes('!nd_prv_')) {
+      const noteIdMatch = /notes_pre_post\/([^!]+)/.exec(url);
+      if (noteIdMatch) {
+        const noteId = noteIdMatch[1];
+        return !images.some(u => u.includes(`notes_pre_post/${noteId}`) && u.includes('!nd_dft_'));
+      }
+    }
+    return true;
+  });
 
   // --- Extract desc (note body text) ---
   let desc = '';
@@ -227,7 +241,7 @@ const extractXiaohongshuBody = (html: string): { content: string; images: string
   // --- Build content string ---
   const content = desc;
 
-  return { content, images, account, author };
+  return { content, images: deduped, account, author };
 };
 
 
