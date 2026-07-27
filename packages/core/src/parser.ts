@@ -277,8 +277,14 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   let markdown = htmlToMarkdownFast(extractedContent, platform);
 
   if (images.length > 0) {
-    const imageMarkdown = images.map((url, idx) => `![图片 ${idx + 1}](${url})`).join('\n\n');
-    if (!markdown.includes('![')) {
+    const imageMarkdown = images.map((url, idx) => {
+      if (platform === 'wechat' || platform === 'xiaohongshu' || url.includes('qpic.cn') || url.includes('xhscdn.com')) {
+        return `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`;
+      }
+      return `![图片 ${idx + 1}](${url})`;
+    }).join('\n\n');
+
+    if (!markdown.includes('!<img') && !markdown.includes('![')) {
       markdown = markdown ? `${markdown}\n\n${imageMarkdown}` : imageMarkdown;
     }
   }
