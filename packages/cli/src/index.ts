@@ -64,7 +64,10 @@ Options:
 
     if (outputFile) {
       const resolvedPath = path.resolve(process.cwd(), outputFile);
-      fs.writeFileSync(resolvedPath, result.markdown, 'utf-8');
+      const fileContent = result.frontmatter
+        ? `${result.frontmatter}\n\n# ${result.title}\n\n${result.markdown}`
+        : result.markdown;
+      fs.writeFileSync(resolvedPath, fileContent, 'utf-8');
       console.log(`[MD for Agents] Saved Markdown to ${resolvedPath}`);
     } else {
       console.log('\n--- MARKDOWN OUTPUT ---\n');
