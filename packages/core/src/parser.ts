@@ -254,6 +254,7 @@ export type ParseResult = {
   success: boolean;
   title: string;
   markdown: string;
+  frontmatter: string;
   images: string[];
   platform: PlatformType;
   account?: string;
@@ -324,25 +325,6 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
 
-  // Prepend Title and Metadata Header to Markdown
-  let headerPrefix = '';
-  if (title && title !== 'Untitled Page') {
-    headerPrefix += `# ${title}\n\n`;
-  }
-  
-  const metaItems: string[] = [];
-  if (meta.account) metaItems.push(`**公众号/平台**: ${meta.account}`);
-  if (meta.author) metaItems.push(`**作者**: ${meta.author}`);
-  if (meta.publish_date) metaItems.push(`**发布时间**: ${meta.publish_date}`);
-
-  if (metaItems.length > 0) {
-    headerPrefix += `> ${metaItems.join(' | ')}\n\n---\n\n`;
-  }
-
-  if (headerPrefix && !markdown.startsWith('# ')) {
-    markdown = headerPrefix + markdown;
-  }
-
   // If no images were inserted in-place, fallback to append
   if (images.length > 0 && !markdown.includes('<img')) {
     const imageMarkdown = images.map((url, idx) => {
@@ -360,12 +342,27 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
       images.map((url, idx) => `![图片 ${idx + 1}](${url})`).join('\n\n');
   }
 
+  // Build Obsidian YAML Frontmatter
+  const savedAt = new Date().toISOString();
+  const yamlLines: string[] = ['---'];
+  yamlLines.push(`source_url: "${targetUrl}"`);
+  yamlLines.push(`title: "${title.replace(/"/g, '\\"')}"`); 
+  if (meta.account) yamlLines.push(`account: "${meta.account.replace(/"/g, '\\"')}"`);
+  if (meta.author) yamlLines.push(`author: "${meta.author.replace(/"/g, '\\"')}"`);
+  if (meta.publish_date) yamlLines.push(`published_at: "${meta.publish_date}"`);
+  yamlLines.push(`saved_at: "${savedAt}"`);
+  yamlLines.push(`platform: ${platform}`);
+  yamlLines.push(`parse_status: ok`);
+  yamlLines.push('---');
+  const frontmatter = yamlLines.join('\n');
+
   const elapsed_ms = Date.now() - startTime;
 
   return {
     success: true,
     title,
     markdown,
+    frontmatter,
     images,
     platform,
     account: meta.account,
