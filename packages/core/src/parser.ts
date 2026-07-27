@@ -217,6 +217,13 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
     .replace(/<div[^>]*id=["']js_pc_qr_code["'][\s\S]*?<\/div>/gi, '')
     .replace(/<div[^>]*class=["'][^"']*rich_media_tool[^"']*["'][\s\S]*?<\/div>/gi, '');
 
+  // Preserve <img> tags in place, resolving data-src or src to referrerpolicy="no-referrer"
+  clean = clean.replace(/<img[^>]+(?:data-src|data-actualsrc|src)=["']([^"']+)["'][^>]*>/gi, (_, src) => {
+    const url = src.replace(/&amp;/g, '&');
+    if (!url.startsWith('http') || url.includes('qrcode') || url.includes('avatar')) return '';
+    return `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="图片" />\n\n`;
+  });
+
   clean = clean.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, text) => `\n\n# ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
@@ -249,7 +256,7 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
 };
 
 const stripTags = (html: string): string => {
-  return html.replace(/<[^>]+>/g, '').trim();
+  return html.replace(/<(?!img\b|br\b)[^>]+>/g, '').trim();
 };
 
 export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
@@ -276,7 +283,8 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
 
-  if (images.length > 0) {
+  // If no images were inserted in-place, fallback to append
+  if (images.length > 0 && !markdown.includes('<img')) {
     const imageMarkdown = images.map((url, idx) => {
       if (platform === 'wechat' || platform === 'xiaohongshu' || url.includes('qpic.cn') || url.includes('xhscdn.com')) {
         return `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`;
@@ -284,9 +292,7 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
       return `![图片 ${idx + 1}](${url})`;
     }).join('\n\n');
 
-    if (!markdown.includes('!<img') && !markdown.includes('![')) {
-      markdown = markdown ? `${markdown}\n\n${imageMarkdown}` : imageMarkdown;
-    }
+    markdown = markdown ? `${markdown}\n\n${imageMarkdown}` : imageMarkdown;
   }
 
   if (!markdown.trim()) {
