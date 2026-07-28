@@ -1,19 +1,21 @@
 {
   "name": "mdforagents",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "Convert any webpage to clean Markdown for AI agents — supports WeChat, Xiaohongshu, Zhihu, Wikipedia, and general sites",
   "bin": {
     "mdforagents": "dist/index.js"
   },
   "type": "module",
+  "files": [
+    "dist/index.js"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc -p tsconfig.json"
-  },
-  "dependencies": {
-    "@mdforagents/core": "workspace:*"
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js --banner:js='#!/usr/bin/env node'"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
+    "esbuild": "^0.28.1",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"
   }

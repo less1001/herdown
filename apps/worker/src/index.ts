@@ -237,8 +237,12 @@ export default {
           success: true,
           title: result.title,
           markdown: result.markdown,
+          frontmatter: result.frontmatter,
           images: result.images,
           platform: result.platform,
+          account: result.account,
+          author: result.author,
+          published_at: result.publish_date,
           elapsed_ms: result.elapsed_ms,
         });
       } catch (err: any) {
