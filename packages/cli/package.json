@@ -1,6 +1,6 @@
 {
   "name": "mdforagents",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Convert any webpage to clean Markdown for AI agents — supports WeChat, Xiaohongshu, Zhihu, Wikipedia, and general sites",
   "bin": {
     "mdforagents": "dist/index.js"
