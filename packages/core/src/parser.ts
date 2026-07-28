@@ -1,4 +1,4 @@
-export type PlatformType = 'wechat' | 'xiaohongshu' | 'zhihu' | 'twitter' | 'wikipedia' | 'general';
+export type PlatformType = 'wechat' | 'xiaohongshu' | 'zhihu' | 'sspai' | 'twitter' | 'wikipedia' | 'general';
 
 export type CrawlResult = {
   success: boolean;
@@ -30,6 +30,7 @@ export const detectPlatform = (url: string, html = ''): PlatformType => {
   if (url.includes('mp.weixin.qq.com')) return 'wechat';
   if (url.includes('xiaohongshu.com') || url.includes('xhslink.com') || url.includes('xhslink.cn')) return 'xiaohongshu';
   if (url.includes('zhihu.com')) return 'zhihu';
+  if (url.includes('sspai.com')) return 'sspai';
   if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
   if (url.includes('wikipedia.org')) return 'wikipedia';
   // Fallback: detect from HTML content signatures
@@ -275,6 +276,40 @@ const extractZhihuBody = (html: string): { content: string; images: string[] } =
   return { content: contentHtml, images };
 };
 
+// Sspai article extraction with image collection
+const extractSspaiBody = (html: string): { content: string; images: string[] } => {
+  const images: string[] = [];
+  let contentHtml = '';
+
+  const bodyMatch =
+    /<article[^>]*>([\s\S]*?)<\/article>/i.exec(html) ||
+    /<div[^>]*id=["']article-content["'][^>]*>([\s\S]*?)<\/div>/i.exec(html) ||
+    /<div[^>]*class=["'][^"']*(?:article-content|article__content|post-content|content-body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
+
+  if (bodyMatch?.[1]) {
+    contentHtml = bodyMatch[1];
+  } else {
+    contentHtml = html;
+  }
+
+  contentHtml = contentHtml
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+    .replace(/<figure[^>]*class=["'][^"']*(?:image|cover)[^"']*["'][\s\S]*?<\/figure>/gi, match => match);
+
+  const imgRegex = /<img[^>]+(?:data-src|data-original|src)=["']([^"']+)["'][^>]*>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = imgRegex.exec(contentHtml)) !== null) {
+    const url = match[1].replace(/&amp;/g, '&');
+    if (url.startsWith('http') && !images.includes(url)) {
+      images.push(url);
+    }
+  }
+
+  return { content: contentHtml, images };
+};
+
 // String-slicing Fast HTML-to-Markdown converter
 const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
   let clean = html
@@ -396,6 +431,10 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     if (res.author) meta.author = res.author;
   } else if (platform === 'zhihu') {
     const res = extractZhihuBody(html);
+    extractedContent = res.content;
+    images = res.images;
+  } else if (platform === 'sspai') {
+    const res = extractSspaiBody(html);
     extractedContent = res.content;
     images = res.images;
   }
