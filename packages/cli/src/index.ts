@@ -1,6 +1,4 @@
-#!/usr/bin/env node
-
-import { parseMarkdown, detectPlatform } from '../../core/dist/index.js';
+import { parseMarkdown, detectPlatform } from '../../core/src/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
