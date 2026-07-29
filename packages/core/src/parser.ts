@@ -326,7 +326,7 @@ const extractSspaiBody = (html: string): { content: string; images: string[]; au
   return { content: contentHtml, images, author, publish_date };
 };
 
-// String-slicing Fast HTML-to-Markdown converter
+// String-slicing Fast HTML-to-Markdown converter with Defuddle-style standardization
 const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
   let clean = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -334,14 +334,36 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
     .replace(/<div[^>]*id=["']js_pc_qr_code["'][\s\S]*?<\/div>/gi, '')
     .replace(/<div[^>]*class=["'][^"']*rich_media_tool[^"']*["'][\s\S]*?<\/div>/gi, '');
 
-  // Preserve <img> tags in place, resolving data-src or src to referrerpolicy="no-referrer"
+  // 1. Process Callout / Alert elements (Defuddle standardization)
+  // GitHub Markdown Alerts: <div class="markdown-alert markdown-alert-warning">
+  clean = clean.replace(/<div[^>]*class=["'][^"']*markdown-alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
+    const calloutType = type.toLowerCase() === 'warning' ? 'warning' : type.toLowerCase() === 'important' ? 'important' : 'note';
+    const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
+    return `\n\n> [!${calloutType}]\n> ${text}\n\n`;
+  });
+
+  // Obsidian Publish / Generic Callouts: <div class="callout" data-callout="info">
+  clean = clean.replace(/<div[^>]*data-callout=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
+    const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
+    return `\n\n> [!${type.toLowerCase()}]\n> ${text}\n\n`;
+  });
+
+  // Bootstrap Alerts: <div class="alert alert-info">
+  clean = clean.replace(/<div[^>]*class=["'][^"']*alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
+    const calloutType = type.includes('danger') ? 'warning' : type.includes('success') ? 'tip' : 'info';
+    const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
+    return `\n\n> [!${calloutType}]\n> ${text}\n\n`;
+  });
+
+  // 2. Preserve <img> tags in place with referrerpolicy="no-referrer"
   clean = clean.replace(/<img[^>]+(?:data-src|data-actualsrc|src)=["']([^"']+)["'][^>]*>/gi, (_, src) => {
     const url = src.replace(/&amp;/g, '&');
     if (!url.startsWith('http') || url.includes('qrcode') || url.includes('avatar')) return '';
     return `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="图片" />\n\n`;
   });
 
-  clean = clean.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, text) => `\n\n# ${stripTags(text)}\n\n`);
+  // 3. Headings Demotion (Defuddle rule: demote H1 to H2 to prevent duplicate main titles)
+  clean = clean.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, text) => `\n\n#### ${stripTags(text)}\n\n`);
@@ -349,7 +371,15 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => `**${stripTags(text)}**`);
   clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => `*${stripTags(text)}*`);
 
-  clean = clean.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => `\n\n\`\`\`\n${decodeEntities(stripTags(code))}\n\`\`\`\n\n`);
+  // 4. Codeblocks with language preservation & line number stripping (Defuddle rule)
+  clean = clean.replace(/<pre[^>]*><code[^>]*class=["'][^"']*language-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, lang, code) => {
+    const cleanCode = code.replace(/<span[^>]*class=["'][^"']*line-number[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, '');
+    return `\n\n\`\`\`${lang}\n${decodeEntities(stripTags(cleanCode))}\n\`\`\`\n\n`;
+  });
+  clean = clean.replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, code) => {
+    const cleanCode = code.replace(/<span[^>]*class=["'][^"']*line-number[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, '');
+    return `\n\n\`\`\`\n${decodeEntities(stripTags(cleanCode))}\n\`\`\`\n\n`;
+  });
   clean = clean.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_, code) => ` \`${decodeEntities(stripTags(code))}\` `);
 
   clean = clean.replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, text) => `\n\n> ${stripTags(text).split('\n').join('\n> ')}\n\n`);
@@ -458,6 +488,20 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   }
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
+
+  // Defuddle Rule: Remove duplicate main title from start of body if it matches title
+  if (markdown && title) {
+    const lines = markdown.split('\n');
+    const firstNonEmptyIdx = lines.findIndex(l => l.trim());
+    if (firstNonEmptyIdx !== -1) {
+      const firstLine = lines[firstNonEmptyIdx].trim().replace(/^#+\s*/, '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+      const cleanTitle = title.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+      if (firstLine && cleanTitle && (firstLine === cleanTitle || cleanTitle.includes(firstLine))) {
+        lines.splice(firstNonEmptyIdx, 1);
+        markdown = lines.join('\n').trim();
+      }
+    }
+  }
 
   // If no images were inserted in-place, fallback to append
   if (images.length > 0 && !markdown.includes('<img')) {
