@@ -94,7 +94,13 @@ Options:
     console.log(`[Herdown] Successfully parsed article "${result.title}" in ${result.elapsed_ms}ms`);
 
     if (outputFile) {
-      const resolvedPath = path.resolve(process.cwd(), outputFile);
+      let targetPath = outputFile;
+      // If outputFile ends with / or is a directory, derive filename from article title
+      if (fs.existsSync(outputFile) && fs.statSync(outputFile).isDirectory()) {
+        const cleanTitle = (result.title || 'article').replace(/[/\\?%*:|"<>]/g, '_').trim();
+        targetPath = path.join(outputFile, `${cleanTitle}.md`);
+      }
+      const resolvedPath = path.resolve(process.cwd(), targetPath);
       let fileContent = result.frontmatter
         ? `${result.frontmatter}\n\n# ${result.title}\n\n${result.markdown}`
         : result.markdown;
