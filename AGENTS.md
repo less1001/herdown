@@ -66,6 +66,22 @@
 - **作者（author）**：`var author = "..."` 或 `var msg_author = "..."` JS 变量；或 `class="rich_media_meta_text"` → `<span>` 文本
 - **发布时间**：`var ct = "..."` Unix 时间戳（10位数字）→ `new Date(ct * 1000).toISOString().split('T')[0]`；或 `id="publish_time"` → `<em>` 文本
 
+### 知乎（zhuanlan.zhihu.com / zhihu.com/question/...）
+
+*平台检测*：
+- URL 匹配 `zhuanlan.zhihu.com` 或 `zhihu.com/question/` 或 `zhihu.com/p/`
+
+*反爬网络规律 (2026 最新)*：
+- **`zse-ck` 挑战**：直接无 Cookie 请求 `zhuanlan.zhihu.com` 会触发知乎 `zse-ck` JS 盾牌网页。
+- **解决方案**：
+  1. 支持用户直接粘贴 HTML 源码转换（前端控制台零障碍）。
+  2. 请求时构造 `d_c0` 设备 Token 与桌面 Chrome User-Agent 标头。
+
+*正文与 LaTeX 公式提取*：
+- **正文定位**：优先匹配 `class="Post-RichText"`（专栏文章）或 `class="RichText"`（回答内容）。
+- **LaTeX 公式**：知乎使用 `<span class="ztext-math" data-tex="...">` 存储公式源码。解析时提取 `data-tex` 属性并转换为标准的 `$ ... $` 行内公式和 `$$ ... $$` 块级公式。
+- **图片**：提取 `data-actualsrc` 或 `src`，主图片源为 `pic*.zhimg.com`，防盗链采用 `<img referrerpolicy="no-referrer">` 正常渲染。
+
 ---
 
 ### 小红书（xiaohongshu.com / xhslink.cn 短链）
