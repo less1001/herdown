@@ -4,6 +4,7 @@ compatibility_date = "2026-07-26"
 
 routes = [
   { pattern = "api.herdown.com", custom_domain = true },
+  { pattern = "herdown.com", custom_domain = true },
   { pattern = "allto.agentok.top", custom_domain = true }
 ]
 
