@@ -4,7 +4,7 @@
 
 - **项目路径**：`/Volumes/Samsung T7/antigravity/herdown`
 - **API 部署地址**：`api.herdown.com`（Cloudflare Worker）
-- **GitHub**：`https://github.com/less1001/mdforagents`（重命名后为 `https://github.com/less1001/herdown`）
+- **GitHub**：`https://github.com/less1001/herdown`
 - **核心解析文件**：`packages/core/src/parser.ts`
 - **npm 包组织**：`@herdown/cli` / `@herdown/core` / `@herdown/mcp` / `@herdown/sdk`（账号 vkdefi，token 到期 2026-10-25）
 
