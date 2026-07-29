@@ -326,43 +326,84 @@ const extractSspaiBody = (html: string): { content: string; images: string[]; au
   return { content: contentHtml, images, author, publish_date };
 };
 
-// String-slicing Fast HTML-to-Markdown converter with Defuddle-style standardization
-const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
+// String-slicing Fast HTML-to-Markdown converter with Defuddle, Crawl4AI & Firecrawl standardization
+const htmlToMarkdownFast = (html: string, platform: PlatformType, generateReferences = false): string => {
   let clean = html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<div[^>]*id=["']js_pc_qr_code["'][\s\S]*?<\/div>/gi, '')
     .replace(/<div[^>]*class=["'][^"']*rich_media_tool[^"']*["'][\s\S]*?<\/div>/gi, '');
 
-  // 1. Process Callout / Alert elements (Defuddle standardization)
-  // GitHub Markdown Alerts: <div class="markdown-alert markdown-alert-warning">
+  // 1. Firecrawl Rule: Process <figure> with <figcaption> (Image Captions & Structured Alt)
+  clean = clean.replace(/<figure[^>]*>([\s\S]*?)<\/figure>/gi, (_, figContent) => {
+    const imgMatch = /<img[^>]+(?:data-src|data-original|data-actualsrc|src)=["']([^"']+)["'][^>]*>/i.exec(figContent);
+    const captionMatch = /<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i.exec(figContent);
+    
+    if (imgMatch?.[1]) {
+      const url = imgMatch[1].replace(/&amp;/g, '&');
+      if (!url.startsWith('http') || url.includes('qrcode') || url.includes('avatar')) return '';
+      const captionText = captionMatch?.[1] ? stripTags(captionMatch[1]).trim() : '';
+      const altText = captionText || '图片';
+      
+      let out = `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="${altText}" />\n\n`;
+      if (captionText) {
+        out += `\n*${captionText}*\n\n`;
+      }
+      return out;
+    }
+    return figContent;
+  });
+
+  // 2. Defuddle Rule: Process Callout / Alert elements
   clean = clean.replace(/<div[^>]*class=["'][^"']*markdown-alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
     const calloutType = type.toLowerCase() === 'warning' ? 'warning' : type.toLowerCase() === 'important' ? 'important' : 'note';
     const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
     return `\n\n> [!${calloutType}]\n> ${text}\n\n`;
   });
 
-  // Obsidian Publish / Generic Callouts: <div class="callout" data-callout="info">
   clean = clean.replace(/<div[^>]*data-callout=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
     const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
     return `\n\n> [!${type.toLowerCase()}]\n> ${text}\n\n`;
   });
 
-  // Bootstrap Alerts: <div class="alert alert-info">
   clean = clean.replace(/<div[^>]*class=["'][^"']*alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
     const calloutType = type.includes('danger') ? 'warning' : type.includes('success') ? 'tip' : 'info';
     const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
     return `\n\n> [!${calloutType}]\n> ${text}\n\n`;
   });
 
-  // 2. Preserve <img> tags in place with referrerpolicy="no-referrer"
+  // 3. Standalone <img> tags with referrerpolicy="no-referrer"
   clean = clean.replace(/<img[^>]+(?:data-src|data-actualsrc|src)=["']([^"']+)["'][^>]*>/gi, (_, src) => {
     const url = src.replace(/&amp;/g, '&');
     if (!url.startsWith('http') || url.includes('qrcode') || url.includes('avatar')) return '';
     return `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="图片" />\n\n`;
   });
 
-  // 3. Headings Demotion (Defuddle rule: demote H1 to H2 to prevent duplicate main titles)
+  // 4. Crawl4AI Rule: Extract & Process Links (Inline vs References)
+  const referencesList: string[] = [];
+  if (generateReferences) {
+    clean = clean.replace(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, anchorText) => {
+      const cleanHref = href.replace(/&amp;/g, '&');
+      const text = stripTags(anchorText).trim();
+      if (!cleanHref.startsWith('http') || !text) return text;
+      
+      let refIdx = referencesList.indexOf(cleanHref) + 1;
+      if (refIdx === 0) {
+        referencesList.push(cleanHref);
+        refIdx = referencesList.length;
+      }
+      return `${text} [${refIdx}]`;
+    });
+  } else {
+    clean = clean.replace(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, anchorText) => {
+      const cleanHref = href.replace(/&amp;/g, '&');
+      const text = stripTags(anchorText).trim();
+      if (!cleanHref.startsWith('http') || !text) return text;
+      return `[${text}](${cleanHref})`;
+    });
+  }
+
+  // 5. Headings Demotion (Defuddle rule: demote H1 to H2 to prevent duplicate main titles)
   clean = clean.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
@@ -371,7 +412,7 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => `**${stripTags(text)}**`);
   clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => `*${stripTags(text)}*`);
 
-  // 4. Codeblocks with language preservation & line number stripping (Defuddle rule)
+  // 6. Codeblocks with language preservation & line number stripping
   clean = clean.replace(/<pre[^>]*><code[^>]*class=["'][^"']*language-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, lang, code) => {
     const cleanCode = code.replace(/<span[^>]*class=["'][^"']*line-number[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, '');
     return `\n\n\`\`\`${lang}\n${decodeEntities(stripTags(cleanCode))}\n\`\`\`\n\n`;
@@ -391,13 +432,19 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType): string => {
 
   const noisyPhrases = ['预览时标签不可点', '微信扫一扫使用小程序', '知道了', '轻点两下取消赞', '轻点两下取消在看'];
 
-  const result = clean
+  let result = clean
     .split('\n')
     .map(line => stripTags(normalizeSpaces(line)).trim())
     .filter(line => line && !noisyPhrases.some(phrase => line.includes(phrase)))
     .filter((line, idx, arr) => line || (idx > 0 && arr[idx - 1]))
     .join('\n')
     .trim();
+
+  // Crawl4AI Rule: Append References Section if enabled
+  if (generateReferences && referencesList.length > 0) {
+    const refSection = `\n\n## References\n\n` + referencesList.map((url, i) => `[${i + 1}] ${url}`).join('\n');
+    result += refSection;
+  }
 
   return decodeEntities(result);
 };
