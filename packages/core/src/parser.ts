@@ -276,38 +276,54 @@ const extractZhihuBody = (html: string): { content: string; images: string[] } =
   return { content: contentHtml, images };
 };
 
-// Sspai article extraction with image collection
-const extractSspaiBody = (html: string): { content: string; images: string[] } => {
+// Sspai article extraction — uses real HTML selectors from sspai.com page structure
+const extractSspaiBody = (html: string): { content: string; images: string[]; author?: string; publish_date?: string } => {
   const images: string[] = [];
-  let contentHtml = '';
 
-  const bodyMatch =
-    /<article[^>]*>([\s\S]*?)<\/article>/i.exec(html) ||
-    /<div[^>]*id=["']article-content["'][^>]*>([\s\S]*?)<\/div>/i.exec(html) ||
-    /<div[^>]*class=["'][^"']*(?:article-content|article__content|post-content|content-body)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
+  // --- Author: class="ss__user__card__nickname" ---
+  let author = '';
+  const nickMatch = /class="ss__user__card__nickname"[^>]*>([^<]+)</.exec(html);
+  if (nickMatch?.[1]) author = nickMatch[1].trim();
 
-  if (bodyMatch?.[1]) {
-    contentHtml = bodyMatch[1];
-  } else {
-    contentHtml = html;
+  // --- Date: class="article__header__date" e.g. "2026年07月28日" → "2026-07-28" ---
+  let publish_date = '';
+  const dateMatch = /class="article__header__date"[^>]*>\s*([\d年月日]+)\s*</.exec(html);
+  if (dateMatch?.[1]) {
+    publish_date = dateMatch[1].trim().replace(/(\d{4})年(\d{2})月(\d{2})日/, '$1-$2-$3');
   }
 
+  // --- Article body: from first real content tag after "article-body" to "article__footer" ---
+  const bodyStart = html.indexOf('class="article-body"');
+  const footerStart = html.indexOf('class="article__footer', bodyStart > 0 ? bodyStart : 0);
+  const articleRegion = bodyStart >= 0
+    ? (footerStart > bodyStart ? html.slice(bodyStart, footerStart) : html.slice(bodyStart))
+    : html;
+
+  // Skip div wrapper attrs and benefits notice — jump to first real content tag
+  const firstTag = articleRegion.search(/<(p|h[1-6]|blockquote|ul|ol)[^>]*>/i);
+  let contentHtml = firstTag >= 0 ? articleRegion.slice(firstTag) : articleRegion;
+
+  // Remove scripts, styles, noscripts
   contentHtml = contentHtml
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
-    .replace(/<figure[^>]*class=["'][^"']*(?:image|cover)[^"']*["'][\s\S]*?<\/figure>/gi, match => match);
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '');
 
-  const imgRegex = /<img[^>]+(?:data-src|data-original|src)=["']([^"']+)["'][^>]*>/gi;
-  let match: RegExpExecArray | null;
-  while ((match = imgRegex.exec(contentHtml)) !== null) {
-    const url = match[1].replace(/&amp;/g, '&');
-    if (url.startsWith('http') && !images.includes(url)) {
-      images.push(url);
+  // Replace <figure class="ss-img-wrapper"> with plain <img>, prefer data-original (clean URL)
+  contentHtml = contentHtml.replace(
+    /<figure[^>]*class="[^"]*ss-img-wrapper[^"]*"[^>]*>[\s\S]*?<\/figure>/gi,
+    (figHtml) => {
+      const origMatch = /data-original="([^"]+)"/.exec(figHtml) || /src="([^"]+)"/.exec(figHtml);
+      if (origMatch?.[1]) {
+        const url = origMatch[1].replace(/&amp;/g, '&');
+        if (url.startsWith('http') && !images.includes(url)) images.push(url);
+        return `<img src="${url}" referrerpolicy="no-referrer" alt="图片" />`;
+      }
+      return '';
     }
-  }
+  );
 
-  return { content: contentHtml, images };
+  return { content: contentHtml, images, author, publish_date };
 };
 
 // String-slicing Fast HTML-to-Markdown converter
@@ -437,6 +453,8 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     const res = extractSspaiBody(html);
     extractedContent = res.content;
     images = res.images;
+    if (res.author) meta.author = res.author;
+    if (res.publish_date) meta.publish_date = res.publish_date;
   }
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
@@ -444,7 +462,7 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   // If no images were inserted in-place, fallback to append
   if (images.length > 0 && !markdown.includes('<img')) {
     const imageMarkdown = images.map((url, idx) => {
-      if (platform === 'wechat' || platform === 'xiaohongshu' || url.includes('qpic.cn') || url.includes('xhscdn.com')) {
+      if (platform === 'wechat' || platform === 'xiaohongshu' || platform === 'sspai' || url.includes('qpic.cn') || url.includes('xhscdn.com') || url.includes('sspai.com')) {
         return `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`;
       }
       return `![图片 ${idx + 1}](${url})`;

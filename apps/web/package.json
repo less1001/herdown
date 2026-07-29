@@ -1,5 +1,5 @@
 {
-  "name": "@mdforagents/web",
+  "name": "@herdown/web",
   "private": true,
   "type": "module",
   "scripts": {
