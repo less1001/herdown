@@ -8,6 +8,11 @@
 - **核心解析文件**：`packages/core/src/parser.ts`
 - **npm 包组织**：`@herdown/cli` / `@herdown/core` / `@herdown/mcp` / `@herdown/sdk`（账号 vkdefi，token 到期 2026-10-25）
 
+## 核心工作规范（用户铁律）
+
+1. **Obsidian 预览验证**：**每个平台测试转换完成后，必须将生成的 Markdown 保存到用户的 Obsidian Vault 中，并在 Obsidian 中打开展示渲染效果图给用户手动验证**，未经用户验证绝不出具完成报告。
+2. **知识沉淀**：把每个平台的 HTML 选择器、防盗链策略、LaTeX 处理与坑点实时记录到本 `AGENTS.md`。
+
 ## 部署流程
 
 1. 修改 `packages/core/src/parser.ts`
