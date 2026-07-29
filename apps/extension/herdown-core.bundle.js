@@ -619,17 +619,15 @@ ${stripTags(text)}
       if (res.publish_date) meta.publish_date = res.publish_date;
     }
     let markdown = htmlToMarkdownFast(extractedContent, platform);
-    if (markdown && title) {
-      const lines = markdown.split("\n");
-      const firstNonEmptyIdx = lines.findIndex((l) => l.trim());
-      if (firstNonEmptyIdx !== -1) {
-        const firstLine = lines[firstNonEmptyIdx].trim().replace(/^#+\s*/, "").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, "");
-        const cleanTitle = title.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, "");
-        if (firstLine && cleanTitle && (firstLine === cleanTitle || cleanTitle.includes(firstLine))) {
-          lines.splice(firstNonEmptyIdx, 1);
-          markdown = lines.join("\n").trim();
+    if (markdown) {
+      markdown = markdown.split("\n").map((line) => {
+        let l = line.trim();
+        const count = (l.match(/\*\*/g) || []).length;
+        if (count % 2 !== 0) {
+          l = l.replace(/\*\*\s+/g, "").replace(/\s+\*\*/g, "").replace(/\*\*/g, "");
         }
-      }
+        return l;
+      }).join("\n");
     }
     if (images.length > 0 && !markdown.includes("<img")) {
       const imageMarkdown = images.map((url, idx) => {
