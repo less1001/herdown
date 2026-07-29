@@ -133,9 +133,16 @@
 2. JSON-LD / Schema.org（`<script type="application/ld+json">`）— 结构化数据
 3. 平台特定 DOM 选择器（需针对每个平台单独分析）
 
-**Markdown 输出规范**：
+**Markdown 输出与标准化规范 (Defuddle + Crawl4AI + Firecrawl 引擎)**：
 - 所有平台统一输出 YAML frontmatter（source_url, title, account, author, published_at, saved_at, platform, parse_status）
-- 图片：防盗链平台用 `<img referrerpolicy="no-referrer" src="...">` 或本地下载；开放平台用 `![](url)`
-- 加粗/斜体/代码块：通过 `htmlToMarkdownFast` 函数统一处理，保留 `<strong>`, `<em>`, `<code>` 转换
+- **Defuddle 规则**：
+  - 提示框标准化：识别 GitHub Alert、Obsidian Callout、Bootstrap Alert 自动转为 Obsidian `> [!note]` / `> [!warning]`
+  - 标题去重与降级：自动剔除正文开头与 Title 重复的主标题；正文 `<h1>` 统一降级为 `##` (H2)
+  - 代码块高亮：保留编程语言标注（如 ` ```typescript `），清除 `<span class="line-number">` 等无用行号
+- **Firecrawl 规则**：
+  - 图注保留：解析 `<figure><figcaption>` 结构，转换为 `![图注](url)` + `*图注*` 语义标注
+  - Alt 智能补充：非空 alt 保护，缺失时根据平台 context 自动填充语义
+- **Crawl4AI 规则**：
+  - 尾注模式：支持转换内联超链接为 `[1]`, `[2]` 并自动生成尾部 `## References` 列表
 - 数学公式（知乎等）：保留 `$...$` 行内和 `$$...$$` 块级格式
 - 表格：HTML `<table>` 转 Markdown 表格格式
