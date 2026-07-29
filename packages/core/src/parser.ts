@@ -57,20 +57,23 @@ const extractTitle = (html: string, fallbackUrl: string): string => {
     return decodeEntities(normalizeSpaces(msgTitleMatch[1].trim()));
   }
 
-  const h1Match = /<h1[^>]*activity-name[^>]*>([\s\S]*?)<\/h1>/i.exec(html) || /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
+  const h1Match = /<h1[^>]*QuestionHeader-title[^>]*>([\s\S]*?)<\/h1>/i.exec(html) ||
+                  /<h1[^>]*Post-Title[^>]*>([\s\S]*?)<\/h1>/i.exec(html) ||
+                  /<h1[^>]*activity-name[^>]*>([\s\S]*?)<\/h1>/i.exec(html) ||
+                  /<h1[^>]*>([\s\S]*?)<\/h1>/i.exec(html);
   if (h1Match?.[1]) {
-    const cleaned = h1Match[1].replace(/<[^>]+>/g, '').trim();
+    const cleaned = h1Match[1].replace(/<[^>]+>/g, '').replace(/- 知乎$/, '').trim();
     if (cleaned) return decodeEntities(normalizeSpaces(cleaned));
   }
 
   const ogTitleMatch = /<meta\s+property=["']og:title["']\s+content=["']([^"']+)["']/i.exec(html);
   if (ogTitleMatch?.[1] && ogTitleMatch[1].trim()) {
-    return decodeEntities(normalizeSpaces(ogTitleMatch[1].trim()));
+    return decodeEntities(normalizeSpaces(ogTitleMatch[1].trim().replace(/- 知乎$/, '')));
   }
 
   const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
   if (titleMatch?.[1]) {
-    const cleaned = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+    const cleaned = titleMatch[1].replace(/<[^>]+>/g, '').replace(/- 知乎$/, '').trim();
     if (cleaned && !cleaned.includes('微信公众号')) return decodeEntities(normalizeSpaces(cleaned));
   }
 
@@ -255,10 +258,18 @@ const extractXiaohongshuBody = (html: string): { content: string; images: string
 };
 
 
-// Zhihu Column/Answer extraction with LaTeX preservation
-const extractZhihuBody = (html: string): { content: string; images: string[] } => {
+const extractZhihuBody = (html: string): { content: string; images: string[]; author?: string } => {
   const images: string[] = [];
   let contentHtml = '';
+
+  let author = '';
+  const authorMatch = /class=["'][^"']*AuthorInfo-name[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html) ||
+                      /class=["'][^"']*AuthorInfo-name[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(html) ||
+                      /class=["'][^"']*UserLink-link[^"']*["'][^>]*>([^<]+)</i.exec(html) ||
+                      /"author":\s*\{\s*"name":\s*"([^"]+)"/i.exec(html);
+  if (authorMatch?.[1]) {
+    author = stripTags(authorMatch[1]).trim();
+  }
 
   const postMatch = /class=["'][^"']*Post-RichText[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html) ||
     /class=["'][^"']*RichText[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html);
@@ -275,14 +286,14 @@ const extractZhihuBody = (html: string): { content: string; images: string[] } =
 
   const imgRegex = /<img[^>]+(?:data-actualsrc|src)=["']([^"']+)["']/gi;
   let match: RegExpExecArray | null;
-  while ((match = match = imgRegex.exec(contentHtml)) !== null) {
+  while ((match = imgRegex.exec(contentHtml)) !== null) {
     const url = match[1].replace(/&amp;/g, '&');
     if (url.startsWith('http') && !images.includes(url)) {
       images.push(url);
     }
   }
 
-  return { content: contentHtml, images };
+  return { content: contentHtml, images, author };
 };
 
 // Sspai article extraction — uses real HTML selectors from sspai.com page structure
