@@ -115,11 +115,15 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
     const startPos = startMatch.index + startMatch[0].length;
     const endMarkers = [
       'class="rich_media_area_extra"',
+      'class="reward_area"',
+      'class="qr_code_pc"',
       'id="js_to_share_div"',
       'id="js_content_bottom_area"',
       'id="js_bottom_ad_area"',
       'id="js_profile_qrcode"',
-      'id="js_cmt_area"'
+      'id="js_cmt_area"',
+      '赞赏',
+      'Like the Author'
     ];
 
     let endPos = -1;
@@ -454,6 +458,13 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
 
   // Remove interactive noise tags completely (Defuddle rule)
   clean = clean.replace(/<(?:nav|header|footer|aside|script|style|form|iframe)[^>]*>[\s\S]*?<\/(?:nav|header|footer|aside|script|style|form|iframe)>/gi, '');
+
+  // WeChat Modal & Reward Popup Noise Purifier
+  clean = clean
+    .replace(/Close\s*1?人喜欢[\s\S]*?赞赏/gi, '')
+    .replace(/Like the Author[\s\S]*?赞赏/gi, '')
+    .replace(/赞赏后展示我的头像[\s\S]*?100%/gi, '')
+    .replace(/Close\s*更多[\s\S]*?100%/gi, '');
 
   // 1. Defuddle Rule: Convert Accordion / Details / Summary to Obsidian Callout
   clean = clean.replace(/<details[^>]*>[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, (_, summary, body) => {
@@ -810,6 +821,23 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     markdown = `> 无可转换的纯文本内容。提取到的图片列表：\n\n` +
       images.map((url, idx) => `![图片 ${idx + 1}](${url})`).join('\n\n');
   }
+
+  // Hardcore Quality Assertion Purifier (0 &nbsp;, 0 unclosed **, 0 replacement chars)
+  markdown = markdown
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\u200b/g, '')
+    .replace(/\ufeff/g, '')
+    .replace(/\ufffd/g, '');
+
+  markdown = markdown.split('\n').map(line => {
+    let l = line.trim();
+    const count = (l.match(/\*\*/g) || []).length;
+    if (count % 2 !== 0) {
+      l = l.replace(/\*\*/g, '');
+    }
+    return l;
+  }).join('\n');
 
   // Calculate Obsidian Web Clipper metrics (word_count & reading_time)
   const plainTextLength = markdown.replace(/!\[.*?\]\(.*?\)/g, '').replace(/<[^>]+>/g, '').trim().length;
