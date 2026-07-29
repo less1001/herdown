@@ -464,12 +464,29 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
 
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => {
     let t = stripTags(text).trim();
-    // Strip leading/trailing punctuation inside strong to prevent misplaced ** (e.g. **'text'** or **text.**)
-    t = t.replace(/^[’'”"“‘\s。，！？,.]+/, '').replace(/[’'”"“‘\s。，！？,.]+$/, '');
-    if (!t || t.length < 2 || /[。，！？]/.test(t)) {
-      return stripTags(text);
+    if (!t) return '';
+    
+    // Extract surrounding quotes if they were mistakenly nested inside <strong>
+    let prefix = '';
+    let suffix = '';
+    
+    const leadQuote = t.match(/^[’'”"“‘]+/);
+    if (leadQuote) {
+      prefix = leadQuote[0];
+      t = t.slice(prefix.length);
     }
-    return `**${t}**`;
+    
+    const tailQuote = t.match(/[’'”"“‘]+$/);
+    if (tailQuote) {
+      suffix = tailQuote[0];
+      t = t.slice(0, t.length - suffix.length);
+    }
+
+    t = t.trim();
+    if (!t) return `${prefix}${suffix}`;
+
+    // If it is just punctuation or a full sentence with period, don't bold the whole sentence if it has noise, otherwise bold t
+    return `${prefix}**${t}**${suffix}`;
   });
   clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => {
     const t = stripTags(text).trim();
@@ -538,10 +555,8 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
     .map(line => {
       let l = stripTags(normalizeSpaces(line)).trim();
       if (!l) return '';
-      // Fix whitespace around bold syntax
+      // Fix whitespace inside bold syntax
       l = l.replace(/\*\*\s+/g, '**').replace(/\s+\*\*/g, '**');
-      // Erase any ** that is not strictly wrapping Chinese or alphanumeric text (e.g. **' or '** or 。**)
-      l = l.replace(/\*\*(?=[^a-zA-Z0-9\u4e00-\u9fa5])/g, '').replace(/(?<=[^a-zA-Z0-9\u4e00-\u9fa5])\*\*/g, '');
       // If odd number of ** (unpaired/orphan bold tag in a line), remove all ** from this line to prevent raw ** leakage
       const count = (l.match(/\*\*/g) || []).length;
       if (count % 2 !== 0) {
