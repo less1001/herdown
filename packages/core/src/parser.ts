@@ -15,7 +15,13 @@ export type VectorChunk = {
 };
 
 const normalizeSpaces = (value: string): string =>
-  value.replace(/[\t\r]+/g, ' ').replace(/\u00a0/g, ' ');
+  value
+    .replace(/[\t\r]+/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\u200b/g, '')
+    .replace(/\ufeff/g, '')
+    .replace(/\ufffd/g, '');
 
 const decodeEntities = (value: string): string =>
   value
@@ -24,7 +30,8 @@ const decodeEntities = (value: string): string =>
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&#x2F;/gi, '/');
+    .replace(/&#x2F;/gi, '/')
+    .replace(/&nbsp;/gi, ' ');
 
 export const detectPlatform = (url: string, html = ''): PlatformType => {
   if (url.includes('mp.weixin.qq.com')) return 'wechat';
@@ -347,7 +354,8 @@ const extract36KrBody = (html: string): { content: string; images: string[]; aut
   const contentStart = html.indexOf('articleDetailContent');
   if (contentStart >= 0) {
     const startTag = html.indexOf('>', contentStart);
-    let endTag = html.indexOf('class="article-footer"', startTag > 0 ? startTag : 0);
+    let endTag = html.indexOf('该文观点仅代表作者本人', startTag > 0 ? startTag : 0);
+    if (endTag < 0) endTag = html.indexOf('class="article-footer"', startTag > 0 ? startTag : 0);
     if (endTag < 0) endTag = html.indexOf('class="common-content-footer"', startTag > 0 ? startTag : 0);
     if (endTag < 0) endTag = html.indexOf('需要你的鼓励', startTag > 0 ? startTag : 0);
     
@@ -454,8 +462,14 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
   clean = clean.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, text) => `\n\n#### ${stripTags(text)}\n\n`);
 
-  clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => `**${stripTags(text)}**`);
-  clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => `*${stripTags(text)}*`);
+  clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => {
+    const t = stripTags(text).trim();
+    return t ? `**${t}**` : '';
+  });
+  clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => {
+    const t = stripTags(text).trim();
+    return t ? `*${t}*` : '';
+  });
 
   // 6. Microsoft MarkItDown Rule: Process HTML <table> elements into Markdown Tables
   clean = clean.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableHtml) => {
@@ -508,7 +522,11 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
 
   clean = clean.replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_, text) => `\n- ${stripTags(text)}`);
 
-  const noisyPhrases = ['预览时标签不可点', '微信扫一扫使用小程序', '知道了', '轻点两下取消赞', '轻点两下取消在看'];
+  const noisyPhrases = [
+    '预览时标签不可点', '微信扫一扫使用小程序', '知道了', '轻点两下取消赞', '轻点两下取消在看',
+    '该文观点仅代表作者本人', '36氪平台仅提供信息存储空间服务', '好文章，需要你的鼓励',
+    '打开微信“扫一扫”', '沉浸阅读', '返回顶部'
+  ];
 
   let result = clean
     .split('\n')
