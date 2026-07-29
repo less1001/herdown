@@ -539,10 +539,43 @@ const extractMetadata = (html: string, platform: PlatformType): { account?: stri
 export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   const startTime = Date.now();
   const platform = detectPlatform(targetUrl, html);
-  const title = extractTitle(html, targetUrl);
-  const meta = extractMetadata(html, platform);
 
-  let extractedContent = html;
+  // Special handling: If input HTML is JSON from Zhihu API (e.g. answer/question API)
+  let rawHtml = html;
+  let jsonTitle = '';
+  let jsonAuthor = '';
+  let jsonDate = '';
+
+  if (html.trim().startsWith('{') && (html.includes('"content"') || html.includes('"answer_type"'))) {
+    try {
+      const data = JSON.parse(html);
+      if (data.content) {
+        rawHtml = data.content;
+      }
+      const qTitle = data.question?.title || data.title || '';
+      const aAuthor = data.author?.name || '';
+      if (qTitle && aAuthor) {
+        jsonTitle = `${qTitle} - ${aAuthor}的回答`;
+      } else if (qTitle) {
+        jsonTitle = qTitle;
+      }
+
+      if (aAuthor) jsonAuthor = aAuthor;
+
+      const timeVal = data.updated_time || data.created_time;
+      if (timeVal) {
+        const d = new Date(timeVal * 1000);
+        jsonDate = d.toISOString().split('T')[0];
+      }
+    } catch {}
+  }
+
+  const title = jsonTitle || extractTitle(rawHtml, targetUrl);
+  const meta = extractMetadata(rawHtml, platform);
+  if (jsonAuthor) meta.author = jsonAuthor;
+  if (jsonDate) meta.publish_date = jsonDate;
+
+  let extractedContent = rawHtml;
   let images: string[] = [];
 
   if (platform === 'wechat') {

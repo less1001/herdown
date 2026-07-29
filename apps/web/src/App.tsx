@@ -788,11 +788,11 @@ export function App() {
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-emerald-300 overflow-x-auto leading-relaxed">
 {`{
   "mcpServers": {
-    "mdforagents": {
+    "herdown": {
       "command": "npx",
-      "args": ["-y", "@mdforagents/mcp", "https://allto.agentok.top/mcp"],
+      "args": ["-y", "@herdown/mcp", "https://api.herdown.com/mcp"],
       "env": {
-        "MDFORAGENTS_API_KEY": "${activeApiKeySample}"
+        "HERDOWN_API_KEY": "${activeApiKeySample}"
       }
     }
   }
@@ -808,7 +808,7 @@ export function App() {
                   全站 Crawl API (<code className="text-emerald-400">POST /v1/crawl</code>)
                 </h4>
                 <pre className="p-3 rounded-lg bg-[#090d12] font-mono text-[11px] text-slate-300 overflow-x-auto">
-{`curl -X POST "https://allto.agentok.top/v1/crawl" \\
+{`curl -X POST "https://api.herdown.com/v1/crawl" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "https://example.com/sitemap.xml"}'`}
                 </pre>
@@ -820,7 +820,7 @@ export function App() {
                   网页截图 API (<code className="text-emerald-400">POST /v1/screenshot</code>)
                 </h4>
                 <pre className="p-3 rounded-lg bg-[#090d12] font-mono text-[11px] text-slate-300 overflow-x-auto">
-{`curl -X POST "https://allto.agentok.top/v1/screenshot" \\
+{`curl -X POST "https://api.herdown.com/v1/screenshot" \\
   -H "Content-Type: application/json" \\
   -d '{"url": "https://mp.weixin.qq.com/s/xxx"}'`}
                 </pre>
@@ -833,17 +833,17 @@ export function App() {
         {activeTab === 'cli' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-              <h2 className="text-2xl font-bold text-white">npx mdforagents 命令行工具</h2>
+              <h2 className="text-2xl font-bold text-white">npx @herdown/cli 命令行工具</h2>
               <p className="text-slate-400 text-xs mt-1">无需全局安装，在终端一键抓取并生成干净 Markdown</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-emerald-300 overflow-x-auto">
 {`# 在终端直接打印 Markdown
-npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx"
+npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx"
 
 # 保存输出到本地 output.md 文件
-npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
+npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               </pre>
             </div>
           </div>
@@ -857,7 +857,7 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <Sparkles className="w-3.5 h-3.5" />
                 标准 Agent Skill 扩展包 (SKILL.md)
               </div>
-              <h2 className="text-2xl font-bold text-white">一键为 AI Agent 安装 mdforagents 技能</h2>
+              <h2 className="text-2xl font-bold text-white">一键为 AI Agent 安装 Herdown 技能</h2>
               <p className="text-slate-400 text-xs mt-1">
                 兼容 Hermes Agent, Claude Code, OpenClaw, QClaw, Antigravity 等所有标准 Agent。直接将 Skill 内容配置到你的 Agent 中即可。
               </p>
