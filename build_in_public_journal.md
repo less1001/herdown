@@ -1,6 +1,7 @@
-# 🪵 Build in Public — MD for Agents 项目创业与开发复盘全景日志
+# 🪵 Build in Public — Herdown 项目创业与开发复盘全景日志
 
 *创建时间：北京时间 2026年7月27日 01:46*  
+*更新时间：北京时间 2026年7月29日 13:45*  
 *核心规则：每完成 5 次深度对话交流后，自动归纳总结并累加追加至本文档，供项目复盘与公开构建 (Build in Public) 文章创作使用。*
 
 ---
@@ -52,3 +53,28 @@
 - 确立了企业文件解析的商业路径：
   - **电子版 Office/PDF**：集成微软开源 **`microsoft/markitdown`**，零成本解析 Word/PDF/PPT/Excel。
   - **扫描件/发票/单据**：集成百度开源 **`baidu/Unlimited-OCR`**，单次解析扣除 5 个点数，维持 80%+ 的超高利润率。
+
+---
+
+## 📅 阶段复盘日志 03：Herdown 品牌重构、独立域名部署与 Defuddle 规范落地
+
+### 1. 品牌重构与独立域名上线
+- **品牌命名**：从原先临时命名的 `mdforagents` 全量重构为全新的极简品牌 **Herdown**（官网：`herdown.com`，API 节点：`api.herdown.com`）。
+  - *命名故事*：Her 来自 Hermes（古希腊众神信使、连接者），down 来自 Markdown 与 Download 的动作感，寓意将混乱网页即刻 down 成干净 Markdown 递交给 AI 信使。
+- **独立域名绑定**：
+  - 在 Cloudflare 彻底解绑默认广告页，主站 [https://herdown.com](https://herdown.com) 与 API [https://api.herdown.com](https://api.herdown.com) 正式上线并开启 SSL 加速。
+- **全量 npm 组织包升级**：
+  - 发布全新包 `@herdown/cli@0.2.3`（全局安装后直接运行 `herdown <URL>`）。
+  - 核心架构升级为 `@herdown/core`、`@herdown/mcp` 与 `@herdown/worker`。
+
+### 2. 少数派防盗链突破与 CLI 本地下载
+- **图片防盗链解法**：对强依赖 `Referer: https://sspai.com/` 的少数派等平台，CLI 在解析保存时自动触发防盗链下载，存入本地 Obsidian 的 `attachments/` 目录，并自动替换相对路径，彻底解决 Obsidian 图片 403 问题。
+
+### 3. Defuddle 优秀排版规则落地
+- 吸收了 Obsidian CEO 开发的 Defuddle 核心转换理念：
+  - **Callout 提示框转换**：自动识别 GitHub Alert 与 Bootstrap Alert 转换为 Obsidian `> [!note]` / `> [!warning]` 规范语法。
+  - **正文标题智能去重与降级**：与 Frontmatter Title 重复的正文首标题自动剔除，正文 `<h1>` 自动降级为 `##` (H2)。
+  - **代码块清除无用行号**：保留语言（如 ` ```typescript `），清理冗余 `<span class="line-number">` 杂质。
+
+### 4. 率先落地 MCP 2026-07-28 无状态标准
+- 在 `api.herdown.com/mcp` 端点实现了 Anthropic 2026 年 7 月 28 日最新的 **MCP 无状态 (Stateless)** 标准，支持自包含 `_meta` 请求，全面兼容 Serverless 极速分发。
