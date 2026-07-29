@@ -463,8 +463,13 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   clean = clean.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, text) => `\n\n#### ${stripTags(text)}\n\n`);
 
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => {
-    const t = stripTags(text).trim();
-    return t ? `**${t}**` : '';
+    let t = stripTags(text).trim();
+    // Strip leading/trailing punctuation inside strong to prevent misplaced ** (e.g. **'text'** or **text.**)
+    t = t.replace(/^[’'”"“‘\s。，！？,.]+/, '').replace(/[’'”"“‘\s。，！？,.]+$/, '');
+    if (!t || t.length < 2 || /[。，！？]/.test(t)) {
+      return stripTags(text);
+    }
+    return `**${t}**`;
   });
   clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => {
     const t = stripTags(text).trim();
@@ -535,6 +540,8 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
       if (!l) return '';
       // Fix whitespace around bold syntax
       l = l.replace(/\*\*\s+/g, '**').replace(/\s+\*\*/g, '**');
+      // Erase any ** that is not strictly wrapping Chinese or alphanumeric text (e.g. **' or '** or 。**)
+      l = l.replace(/\*\*(?=[^a-zA-Z0-9\u4e00-\u9fa5])/g, '').replace(/(?<=[^a-zA-Z0-9\u4e00-\u9fa5])\*\*/g, '');
       // If odd number of ** (unpaired/orphan bold tag in a line), remove all ** from this line to prevent raw ** leakage
       const count = (l.match(/\*\*/g) || []).length;
       if (count % 2 !== 0) {
