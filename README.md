@@ -32,11 +32,11 @@
 
 ```bash
 # Run directly with npx
-npx @herdown/cli "https://sspai.com/post/112795" -o output.md
+npx @herdown/cli "https://example.com/article" -o output.md
 
 # Or install globally
 npm install -g @herdown/cli
-herdown "https://sspai.com/post/112795" -o output.md
+herdown "https://example.com/article" -o output.md
 ```
 
 ### Using REST API
@@ -44,7 +44,7 @@ herdown "https://sspai.com/post/112795" -o output.md
 ```bash
 curl -X POST "https://api.herdown.com/v1/parse" \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://sspai.com/post/112795"}'
+  -d '{"url":"https://example.com/article"}'
 ```
 
 ---
