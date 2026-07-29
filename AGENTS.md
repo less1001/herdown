@@ -188,8 +188,19 @@
 - 所有平台统一输出 YAML frontmatter（source_url, title, account, author, published_at, saved_at, platform, parse_status）
 - **Defuddle 规则**：
   - 提示框标准化：识别 GitHub Alert、Obsidian Callout、Bootstrap Alert 自动转为 Obsidian `> [!note]` / `> [!warning]`
-  - 标题去重与降级：自动剔除正文开头与 Title 重复的主标题；正文 `<h1>` 统一降级为 `##` (H2)
-  - 代码块高亮：保留编程语言标注（如 ` ```typescript `），清除 `<span class="line-number">` 等无用行号
+  - 标题去重与降级：自动剔除正文开头与 Title 重复的主标题；正文 `<h1>` 统一降级为 `##` (H2)，`<h2>` 降级为 `###` (H3)，确保整篇文档仅有一个 H1 主标题
+  - 代码块高亮与脱水：保留编程语言标注（如 ` ```typescript `），彻底清除 `<span class="token">` / `<span class="line-number">` 等杂质行号
+  - 交互组件语义转换：
+    - 折叠面板 `<details><summary>标题</summary>内容</details>` 转化为 Obsidian 折叠语法
+    - 任务列表 `<input type="checkbox">` 转换为 `- [ ]` 与 `- [x]`
+    - 删除线 `<del>` / `<s>` / `<strike>` 统一转换为 `~~文本~~`
+    - 上标/下标 `<sup>` / `<sub>` 转换为 `^上标^` 与 `~下标~`
+  - 网页交互元素黑名单：`<nav>`, `<header>`, `<footer>`, `<aside>`, `<script>`, `<style>`, `<form>` 以及各种弹窗一律自动静默抹除
+- **Obsidian Web Clipper 规则**：
+  - 阅读时长预估：全自动计算 `word_count`（字数）与 `reading_time`（预估阅读时间，如 `3 min`）并写入 YAML Frontmatter
+  - 站点元数据抽取：自动抽取 `site_name` 与 `domain`
+  - 媒体资源占位：`<video>` 和 `<audio>` 自动转为 `![视频](url)` 与 `> 🎵 [音频: filename](url)` 占位标注
+  - 终极字符卫生 (Char Hygiene)：全量擦除 `\u00A0`, `\u200B`, `\uFEFF`, `` 以及所有游离多余控制符
 - **Firecrawl 规则**：
   - 图注保留：解析 `<figure><figcaption>` 结构，转换为 `![图注](url)` + `*图注*` 语义标注
   - Alt 智能补充：非空 alt 保护，缺失时根据平台 context 自动填充语义
