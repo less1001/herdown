@@ -448,7 +448,11 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
     return `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="图片" />\n\n`;
   });
 
-  // 0. Remove interactive noise tags completely (Defuddle rule)
+  // 0. Paragraph & Container Double Linebreaks Protection
+  clean = clean.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, text) => `\n\n${text}\n\n`);
+  clean = clean.replace(/<br\s*\/?>/gi, '\n');
+
+  // Remove interactive noise tags completely (Defuddle rule)
   clean = clean.replace(/<(?:nav|header|footer|aside|script|style|form|iframe)[^>]*>[\s\S]*?<\/(?:nav|header|footer|aside|script|style|form|iframe)>/gi, '');
 
   // 1. Defuddle Rule: Convert Accordion / Details / Summary to Obsidian Callout
@@ -745,17 +749,24 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
 
-  // Purify single-line unclosed double-stars (Self-Healing Purifier)
+  // Global Double-Star Purifier & Paragraph Linebreak Sanitizer
   if (markdown) {
+    // 1. Remove orphan double stars after punctuation (e.g. 。** , ，** , ”** , ；**)
+    markdown = markdown.replace(/([。！？；，”’\)\s])\*\*/g, '$1');
+    markdown = markdown.replace(/\*\*([。！？；，”’\)\s])/g, '$1');
+
+    // 2. Line-level unclosed double star purifier
     markdown = markdown.split('\n').map(line => {
       let l = line.trim();
       const count = (l.match(/\*\*/g) || []).length;
       if (count % 2 !== 0) {
-        // Remove orphan leading or trailing ** if unclosed
-        l = l.replace(/\*\*\s+/g, '').replace(/\s+\*\*/g, '').replace(/\*\*/g, '');
+        l = l.replace(/\*\*/g, '');
       }
       return l;
     }).join('\n');
+
+    // 3. Compress 3+ linebreaks into standard paragraph double linebreaks
+    markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
   }
 
   // If no images were inserted in-place, fallback to append
