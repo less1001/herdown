@@ -176,8 +176,11 @@
 1. **空行保护铁律 (Paragraph Spacing)**：禁止过度使用 `.filter(line => line.trim())` 过滤空行！必须采用 `.replace(/\n{3,}/g, '\n\n')` 策略，严格保留 Markdown 标准段落双空行（`\n\n`）。
 2. **API 分段/分页拼接 (Segment Stitching)**：现代 SPA / API 接口中的 `content` 经常带 `content_need_truncated: true`（被系统人为截断 80%），必须优先检查并遍历 `segment_infos` 数组，将 `text` 字段按顺序 `\n\n` 拼接，保证全量无截断。
 3. **语义化文章标题命名 (Title Naming)**：导出 Markdown 文件名严禁使用 `zhihu-12345` 类似冷冰冰的数字 ID，必须清洗文章标题作为文件名（格式如：`文章标题 - 作者的回答.md`），确保 Obsidian 侧边栏一眼可见。
-4. **交付前自我校验 (Pre-Delivery Self-Verification)**：生成文件后， Agent 必须先用 `view_file` 亲自检查全文完整性（核对末尾句是否截断、是否误带 JSON/代码杂质、段落空行是否舒适），自检 100% 通过后才可交由用户验证。
-5. **加粗语法 (**) 单行自愈与孤立符号擦除**：对 Markdown 逐行统计 `**` 出现频次，若一行为奇数个（存在未能闭合的悬空/孤立 `**`），自动修复或剔除未配对的 `**`，彻底防止裸露 `**` 泄漏。
+4. **程序化硬核自动化断言 (Programmatic Automated Audit Assertions)**：生成 Markdown 后，必须自动运行程序断言脚本，扫描全文本：
+   - 绝无任何单行奇数个/错位/未匹配闭合的 `**`；
+   - 绝无任何 `&nbsp;` 实体字符与不可见字符（`\u00a0`, `\u200b`, `\ufeff`, ``）；
+   - 任何未通过断言的文件**直接阻断交付**并触发底层清洗。
+5. **交付前 `view_file` 终极自检**：通过自动化断言后， Agent 必须亲自用 `view_file` 查看生成的 Markdown 文本，核对最后一句是否完整结语，确认 100% 满分后才可交由用户验证。
 
 **Markdown 输出与标准化规范 (Defuddle + Crawl4AI + Firecrawl 引擎)**：
 - 所有平台统一输出 YAML frontmatter（source_url, title, account, author, published_at, saved_at, platform, parse_status）
