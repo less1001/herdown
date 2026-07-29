@@ -468,9 +468,9 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   let result = clean
     .split('\n')
     .map(line => stripTags(normalizeSpaces(line)).trim())
-    .filter(line => line && !noisyPhrases.some(phrase => line.includes(phrase)))
-    .filter((line, idx, arr) => line || (idx > 0 && arr[idx - 1]))
+    .filter(line => !noisyPhrases.some(phrase => line.includes(phrase)))
     .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 
   // Crawl4AI Rule: Append References Section if enabled
@@ -550,7 +550,7 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     try {
       const data = JSON.parse(html);
       if (Array.isArray(data.segment_infos) && data.segment_infos.length > 0) {
-        rawHtml = data.segment_infos.map((s: { text?: string }) => s.text ? `<p>${s.text}</p>` : '').join('\n');
+        rawHtml = data.segment_infos.map((s: { text?: string }) => s.text ? `<p>${s.text}</p>` : '').join('\n\n');
       } else if (data.content) {
         rawHtml = data.content;
       }
