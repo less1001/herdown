@@ -155,6 +155,12 @@
 2. JSON-LD / Schema.org（`<script type="application/ld+json">`）— 结构化数据
 3. 平台特定 DOM 选择器（需针对每个平台单独分析）
 
+**通用排版与抗坑四大铁律**：
+1. **空行保护铁律 (Paragraph Spacing)**：禁止过度使用 `.filter(line => line.trim())` 过滤空行！必须采用 `.replace(/\n{3,}/g, '\n\n')` 策略，严格保留 Markdown 标准段落双空行（`\n\n`）。
+2. **API 分段/分页拼接 (Segment Stitching)**：现代 SPA / API 接口中的 `content` 经常带 `content_need_truncated: true`（被系统人为截断 80%），必须优先检查并遍历 `segment_infos` 数组，将 `text` 字段按顺序 `\n\n` 拼接，保证全量无截断。
+3. **语义化文章标题命名 (Title Naming)**：导出 Markdown 文件名严禁使用 `zhihu-12345` 类似冷冰冰的数字 ID，必须清洗文章标题作为文件名（格式如：`文章标题 - 作者的回答.md`），确保 Obsidian 侧边栏一眼可见。
+4. **交付前自我校验 (Pre-Delivery Self-Verification)**：生成文件后， Agent 必须先用 `view_file` 亲自检查全文完整性（核对末尾句是否截断、是否误带 JSON/代码杂质、段落空行是否舒适），自检 100% 通过后才可交由用户验证。
+
 **Markdown 输出与标准化规范 (Defuddle + Crawl4AI + Firecrawl 引擎)**：
 - 所有平台统一输出 YAML frontmatter（source_url, title, account, author, published_at, saved_at, platform, parse_status）
 - **Defuddle 规则**：
