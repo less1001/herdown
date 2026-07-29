@@ -448,7 +448,31 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
     return `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="图片" />\n\n`;
   });
 
-  // 4. Crawl4AI Rule: Extract & Process Links (Inline vs References)
+  // 0. Remove interactive noise tags completely (Defuddle rule)
+  clean = clean.replace(/<(?:nav|header|footer|aside|script|style|form|iframe)[^>]*>[\s\S]*?<\/(?:nav|header|footer|aside|script|style|form|iframe)>/gi, '');
+
+  // 1. Defuddle Rule: Convert Accordion / Details / Summary to Obsidian Callout
+  clean = clean.replace(/<details[^>]*>[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, (_, summary, body) => {
+    const title = stripTags(summary).trim() || 'Details';
+    const content = stripTags(body).split('\n').map(l => l.trim()).filter(Boolean).join('\n> ');
+    return `\n\n> [!note]- ${title}\n> ${content}\n\n`;
+  });
+
+  // 2. Defuddle Rule: Convert Checkbox / Task Lists
+  clean = clean.replace(/<input[^>]+type=["']checkbox["'][^>]*>/gi, (tag) => {
+    return /checked/i.test(tag) ? '- [x] ' : '- [ ] ';
+  });
+
+  // 3. Defuddle Rule: Strikethrough & Sup/Sub
+  clean = clean.replace(/<(?:del|s|strike)[^>]*>([\s\S]*?)<\/(?:del|s|strike)>/gi, (_, text) => `~~${stripTags(text).trim()}~~`);
+  clean = clean.replace(/<sup[^>]*>([\s\S]*?)<\/sup>/gi, (_, text) => `^${stripTags(text).trim()}^`);
+  clean = clean.replace(/<sub[^>]*>([\s\S]*?)<\/sub>/gi, (_, text) => `~${stripTags(text).trim()}~`);
+
+  // 4. Obsidian Web Clipper Rule: Media & Audio Embeds
+  clean = clean.replace(/<video[^>]+src=["']([^"']+)["'][^>]*>[\s\S]*?<\/video>/gi, (_, src) => `\n\n![Video](${src})\n\n`);
+  clean = clean.replace(/<audio[^>]+src=["']([^"']+)["'][^>]*>[\s\S]*?<\/audio>/gi, (_, src) => `\n\n> 🎵 [Audio Track](${src})\n\n`);
+
+  // 5. Crawl4AI Rule: Extract & Process Links (Inline vs References)
   const referencesList: string[] = [];
   if (generateReferences) {
     clean = clean.replace(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, anchorText) => {
@@ -472,11 +496,10 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
     });
   }
 
-  // 5. Headings Demotion (Defuddle rule: demote H1 to H2 to prevent duplicate main titles)
+  // 6. Headings Demotion (Defuddle rule: demote H1 to H2 to prevent duplicate main titles)
   clean = clean.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
-  clean = clean.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, text) => `\n\n## ${stripTags(text)}\n\n`);
-  clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
-  clean = clean.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_, text) => `\n\n#### ${stripTags(text)}\n\n`);
+  clean = clean.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_, text) => `\n\n### ${stripTags(text)}\n\n`);
+  clean = clean.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_, text) => `\n\n#### ${stripTags(text)}\n\n`);
 
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => {
     let t = stripTags(text).trim();
@@ -753,6 +776,17 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
       images.map((url, idx) => `![图片 ${idx + 1}](${url})`).join('\n\n');
   }
 
+  // Calculate Obsidian Web Clipper metrics (word_count & reading_time)
+  const plainTextLength = markdown.replace(/!\[.*?\]\(.*?\)/g, '').replace(/<[^>]+>/g, '').trim().length;
+  const wordCount = plainTextLength;
+  const readingTimeMin = Math.max(1, Math.ceil(wordCount / 350));
+  let domain = '';
+  try {
+    if (targetUrl.startsWith('http')) {
+      domain = new URL(targetUrl).hostname;
+    }
+  } catch {}
+
   // Build Obsidian YAML Frontmatter
   const savedAt = new Date().toISOString();
   const yamlLines: string[] = ['---'];
@@ -763,6 +797,9 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   if (meta.publish_date) yamlLines.push(`published_at: "${meta.publish_date}"`);
   yamlLines.push(`saved_at: "${savedAt}"`);
   yamlLines.push(`platform: ${platform}`);
+  if (domain) yamlLines.push(`domain: "${domain}"`);
+  yamlLines.push(`word_count: ${wordCount}`);
+  yamlLines.push(`reading_time: "${readingTimeMin} min"`);
   yamlLines.push(`tags:`);
   yamlLines.push(`  - herdown`);
   yamlLines.push(`  - herdown/${platform}`);
