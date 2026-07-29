@@ -476,14 +476,17 @@ export default {
       });
     }
 
-    // Anthropic MCP Remote Endpoint: GET/POST /mcp
+    // MCP Remote Endpoint (MCP 2026-07-28 Stateless Protocol Standard)
     if (url.pathname === '/mcp') {
       if (request.method === 'GET') {
         return json({
-          name: env.APP_NAME || 'mdforagents',
+          name: 'herdown',
+          serverName: 'Herdown MCP Server',
           protocol: 'mcp',
+          protocolVersion: '2026-07-28',
+          stateless: true,
           transport: 'http',
-          endpoint: '/mcp',
+          endpoint: 'https://api.herdown.com/mcp',
           status: 'ready',
         });
       }
@@ -494,20 +497,23 @@ export default {
           id?: string | number | null;
           method?: string;
           params?: Record<string, unknown>;
+          _meta?: { protocolVersion?: string; clientCapabilities?: Record<string, unknown> };
         } | null;
 
         if (!body?.method) {
           return json({ jsonrpc: '2.0', id: body?.id ?? null, error: { code: -32600, message: 'Invalid Request' } }, { status: 400 });
         }
 
+        // Support both initialization handshake and direct stateless call (MCP 2026-07-28)
         if (body.method === 'initialize') {
           return json({
             jsonrpc: '2.0',
             id: body.id ?? null,
             result: {
-              protocolVersion: '2024-11-05',
-              serverInfo: { name: 'MD for Agents MCP Server', version: '2.4.0' },
-              capabilities: { tools: {} },
+              protocolVersion: body._meta?.protocolVersion || '2026-07-28',
+              serverInfo: { name: 'Herdown MCP Server', version: '2.4.0' },
+              capabilities: { tools: {}, stateless: true },
+              _meta: { stateless: true },
             },
           });
         }

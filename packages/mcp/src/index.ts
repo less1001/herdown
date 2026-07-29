@@ -1,11 +1,11 @@
-export function createMcpServerConfig(remoteEndpoint = 'https://allto.agentok.top/mcp', apiKey = 'sk_live_REDACTED') {
+export function createMcpServerConfig(remoteEndpoint = 'https://api.herdown.com/mcp', apiKey = 'sk_live_REDACTED') {
   return {
     mcpServers: {
-      mdforagents: {
+      herdown: {
         command: 'npx',
-        args: ['-y', '@mdforagents/mcp', remoteEndpoint],
+        args: ['-y', '@herdown/mcp', remoteEndpoint],
         env: {
-          MDFORAGENTS_API_KEY: apiKey,
+          HERDOWN_API_KEY: apiKey,
         },
       },
     },

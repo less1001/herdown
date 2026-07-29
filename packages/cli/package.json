@@ -1,6 +1,6 @@
 {
   "name": "@herdown/cli",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Convert any webpage to clean Markdown for AI agents — Herdown CLI",
   "bin": {
     "herdown": "dist/index.js"
