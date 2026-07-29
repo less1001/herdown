@@ -549,7 +549,9 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   if (html.trim().startsWith('{') && (html.includes('"content"') || html.includes('"answer_type"'))) {
     try {
       const data = JSON.parse(html);
-      if (data.content) {
+      if (Array.isArray(data.segment_infos) && data.segment_infos.length > 0) {
+        rawHtml = data.segment_infos.map((s: { text?: string }) => s.text ? `<p>${s.text}</p>` : '').join('\n');
+      } else if (data.content) {
         rawHtml = data.content;
       }
       const qTitle = data.question?.title || data.title || '';
@@ -589,7 +591,7 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     if (res.account) meta.account = res.account;
     if (res.author) meta.author = res.author;
   } else if (platform === 'zhihu') {
-    const res = extractZhihuBody(html);
+    const res = extractZhihuBody(rawHtml);
     extractedContent = res.content;
     images = res.images;
   } else if (platform === 'sspai') {
