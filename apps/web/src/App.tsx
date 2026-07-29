@@ -248,13 +248,13 @@ export function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0f6b4f] to-[#10b981] p-[1px] shadow-lg shadow-[#0f6b4f]/20">
-              <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-lg">
-                MD
+              <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-base">
+                HD
               </div>
             </div>
             <div>
-              <span className="font-extrabold text-lg tracking-tight text-white font-['Outfit']">
-                MD <span className="text-emerald-400">for Agents</span>
+              <span className="font-extrabold text-xl tracking-tight text-white font-['Outfit']">
+                Herdown
               </span>
               <span className="hidden sm:inline-block ml-2.5 px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
                 v2.4.0 Pro
@@ -284,7 +284,7 @@ export function App() {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              全站 Crawl 爬取
+              全站爬取
             </button>
             <button
               onClick={() => setActiveTab('keys')}
@@ -295,7 +295,7 @@ export function App() {
               }`}
             >
               <Key className="w-3.5 h-3.5" />
-              API 密钥
+              API Key
             </button>
             <button
               onClick={() => setActiveTab('mcp')}
@@ -306,7 +306,7 @@ export function App() {
               }`}
             >
               <Cpu className="w-3.5 h-3.5" />
-              远程 MCP / API
+              MCP
             </button>
             <button
               onClick={() => setActiveTab('cli')}
@@ -317,7 +317,7 @@ export function App() {
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
-              CLI 工具
+              CLI
             </button>
             <button
               onClick={() => setActiveTab('skill')}
@@ -328,7 +328,7 @@ export function App() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              ⚡ Agent Skill
+              Agent Skill
             </button>
           </nav>
 
@@ -341,7 +341,7 @@ export function App() {
               升级 Stripe Pro
             </button>
             <a
-              href="https://github.com/less1001/mdforagents"
+              href="https://github.com/less1001/herdown"
               target="_blank"
               rel="noreferrer"
               className="p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-400 hover:text-white hover:bg-slate-800 transition"
@@ -362,7 +362,7 @@ export function App() {
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                支持微信/小红书/知乎全网提取 + 全站 Sitemap 递归 Crawl
+                支持微信/小红书/知乎全网提取 + 全站 Sitemap 递归爬取
               </div>
               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-normal">
                 给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown 入口</span>
@@ -869,13 +869,13 @@ npx mdforagents "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(`---
-name: mdforagents
+name: herdown
 description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
 ---
 
-# MD for Agents — AI Agent Skill Reference
+# Herdown — AI Agent Skill Reference
 
-npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`);
+npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`);
                     alert('SKILL.md 已成功复制到剪贴板！');
                   }}
                   className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow"
@@ -887,14 +887,14 @@ npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`);
 
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
 {`---
-name: mdforagents
+name: herdown
 description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
 ---
 
-# MD for Agents — AI Agent Skill Reference
+# Herdown — AI Agent Skill Reference
 
 当用户需要读取网页、微信公众号长文、知乎回答或小红书笔记时，请直接在终端执行：
-npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
+npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               </pre>
             </div>
           </div>
@@ -916,7 +916,7 @@ npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 Stripe 极速安全收银台
               </span>
-              <h3 className="text-2xl font-extrabold text-white">升级 MD for Agents 商业配额</h3>
+              <h3 className="text-2xl font-extrabold text-white">升级 Herdown 商业配额</h3>
               <p className="text-xs text-slate-400">解锁高额度 API 解析、全站 Sitemap Crawl 与网页截图功能</p>
             </div>
 
@@ -1007,14 +1007,14 @@ npx mdforagents "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
       <footer className="border-t border-[#1e293b] bg-[#070a0e] py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
-            © 2026 <span className="text-slate-300 font-medium">MD for Agents</span> (mdforagents.com). All rights reserved.
+            © 2026 <span className="text-slate-300 font-medium">Herdown</span> (herdown.com). All rights reserved.
           </div>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 text-emerald-500">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Stripe Payments & Cloudflare Workers
+              End-to-End Privacy Preserved
             </span>
-            <a href="https://github.com/less1001/mdforagents" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
+            <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
               GitHub Repo
             </a>
           </div>
