@@ -1,4 +1,4 @@
-export type PlatformType = 'wechat' | 'xiaohongshu' | 'zhihu' | 'sspai' | 'twitter' | 'wikipedia' | 'general';
+export type PlatformType = 'wechat' | 'xiaohongshu' | 'zhihu' | 'sspai' | 'kr36' | 'twitter' | 'wikipedia' | 'general';
 
 export type CrawlResult = {
   success: boolean;
@@ -31,6 +31,7 @@ export const detectPlatform = (url: string, html = ''): PlatformType => {
   if (url.includes('xiaohongshu.com') || url.includes('xhslink.com') || url.includes('xhslink.cn')) return 'xiaohongshu';
   if (url.includes('zhihu.com')) return 'zhihu';
   if (url.includes('sspai.com')) return 'sspai';
+  if (url.includes('36kr.com')) return 'kr36';
   if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
   if (url.includes('wikipedia.org')) return 'wikipedia';
   // Fallback: detect from HTML content signatures
@@ -38,6 +39,7 @@ export const detectPlatform = (url: string, html = ''): PlatformType => {
     if (html.includes('xhscdn.com') || html.includes('xiaohongshu') || html.includes('__INITIAL_STATE__') && html.includes('imageList')) return 'xiaohongshu';
     if (html.includes('mp.weixin.qq.com') || html.includes('js_content')) return 'wechat';
     if (html.includes('zhihu.com') || html.includes('Post-RichText')) return 'zhihu';
+    if (html.includes('36kr.com') || html.includes('articleDetailContent')) return 'kr36';
   }
   return 'general';
 };
@@ -326,6 +328,49 @@ const extractSspaiBody = (html: string): { content: string; images: string[]; au
   return { content: contentHtml, images, author, publish_date };
 };
 
+// 36Kr article extraction — uses real DOM selectors & initialState JSON fallback
+const extract36KrBody = (html: string): { content: string; images: string[]; author?: string; publish_date?: string } => {
+  const images: string[] = [];
+
+  let author = '';
+  const authorMatch = /"author":"([^"]+)"/.exec(html) || /"userNick":"([^"]+)"/.exec(html);
+  if (authorMatch?.[1]) author = decodeEntities(authorMatch[1]).trim();
+
+  let publish_date = '';
+  const timeMatch = /"publishTime":(\d+)/.exec(html) || /"firstPublishTime":(\d+)/.exec(html);
+  if (timeMatch?.[1]) {
+    const d = new Date(parseInt(timeMatch[1], 10));
+    publish_date = d.toISOString().split('T')[0];
+  }
+
+  let contentHtml = '';
+  const contentStart = html.indexOf('articleDetailContent');
+  if (contentStart >= 0) {
+    const startTag = html.indexOf('>', contentStart);
+    let endTag = html.indexOf('class="article-footer"', startTag > 0 ? startTag : 0);
+    if (endTag < 0) endTag = html.indexOf('class="common-content-footer"', startTag > 0 ? startTag : 0);
+    if (endTag < 0) endTag = html.indexOf('需要你的鼓励', startTag > 0 ? startTag : 0);
+    
+    contentHtml = startTag >= 0
+      ? (endTag > startTag ? html.slice(startTag + 1, endTag) : html.slice(startTag + 1))
+      : html;
+  } else {
+    contentHtml = html;
+  }
+
+  // Extract images (36krcdn.com)
+  const imgRegex = /<img[^>]+(?:data-src|src)=["']([^"']+)["']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = imgRegex.exec(contentHtml)) !== null) {
+    const url = match[1].replace(/&amp;/g, '&');
+    if (url.startsWith('http') && !images.includes(url)) {
+      images.push(url);
+    }
+  }
+
+  return { content: contentHtml, images, author, publish_date };
+};
+
 // String-slicing Fast HTML-to-Markdown converter with Defuddle, Crawl4AI & Firecrawl standardization
 const htmlToMarkdownFast = (html: string, platform: PlatformType, generateReferences = false): string => {
   let clean = html
@@ -596,6 +641,12 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     images = res.images;
   } else if (platform === 'sspai') {
     const res = extractSspaiBody(html);
+    extractedContent = res.content;
+    images = res.images;
+    if (res.author) meta.author = res.author;
+    if (res.publish_date) meta.publish_date = res.publish_date;
+  } else if (platform === 'kr36') {
+    const res = extract36KrBody(html);
     extractedContent = res.content;
     images = res.images;
     if (res.author) meta.author = res.author;
