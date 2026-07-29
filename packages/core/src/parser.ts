@@ -530,7 +530,18 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
 
   let result = clean
     .split('\n')
-    .map(line => stripTags(normalizeSpaces(line)).trim())
+    .map(line => {
+      let l = stripTags(normalizeSpaces(line)).trim();
+      if (!l) return '';
+      // Fix whitespace around bold syntax
+      l = l.replace(/\*\*\s+/g, '**').replace(/\s+\*\*/g, '**');
+      // If odd number of ** (unpaired/orphan bold tag in a line), remove all ** from this line to prevent raw ** leakage
+      const count = (l.match(/\*\*/g) || []).length;
+      if (count % 2 !== 0) {
+        l = l.replace(/\*\*/g, '');
+      }
+      return l;
+    })
     .filter(line => !noisyPhrases.some(phrase => line.includes(phrase)))
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
