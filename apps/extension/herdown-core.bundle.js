@@ -342,6 +342,12 @@ var HerdownCore = (() => {
 
 `;
     });
+    clean = clean.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_, text) => `
+
+${text}
+
+`);
+    clean = clean.replace(/<br\s*\/?>/gi, "\n");
     clean = clean.replace(/<(?:nav|header|footer|aside|script|style|form|iframe)[^>]*>[\s\S]*?<\/(?:nav|header|footer|aside|script|style|form|iframe)>/gi, "");
     clean = clean.replace(/<details[^>]*>[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, (_, summary, body) => {
       const title = stripTags(summary).trim() || "Details";
@@ -620,14 +626,17 @@ ${stripTags(text)}
     }
     let markdown = htmlToMarkdownFast(extractedContent, platform);
     if (markdown) {
+      markdown = markdown.replace(/([。！？；，”’\)\s])\*\*/g, "$1");
+      markdown = markdown.replace(/\*\*([。！？；，”’\)\s])/g, "$1");
       markdown = markdown.split("\n").map((line) => {
         let l = line.trim();
         const count = (l.match(/\*\*/g) || []).length;
         if (count % 2 !== 0) {
-          l = l.replace(/\*\*\s+/g, "").replace(/\s+\*\*/g, "").replace(/\*\*/g, "");
+          l = l.replace(/\*\*/g, "");
         }
         return l;
       }).join("\n");
+      markdown = markdown.replace(/\n{3,}/g, "\n\n").trim();
     }
     if (images.length > 0 && !markdown.includes("<img")) {
       const imageMarkdown = images.map((url, idx) => {
