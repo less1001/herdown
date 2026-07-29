@@ -46,10 +46,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Obsidian Direct URI
   document.getElementById('btn-obsidian').addEventListener('click', () => {
     if (!currentMarkdown) return;
-    const cleanTitle = (currentTitle || 'Herdown Note').replace(/[/\\?%*:|"<>]/g, '_').trim();
-    const vault = ''; // default active vault
-    const obsidianUri = `obsidian://new?title=${encodeURIComponent(cleanTitle)}&content=${encodeURIComponent(currentMarkdown)}`;
-    window.open(obsidianUri, '_self');
+    const cleanFileName = (currentTitle || 'Herdown Article')
+      .replace(/["'“”‘’/\\?%*:|<>]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const obsidianUri = `obsidian://new?name=${encodeURIComponent(cleanFileName)}&content=${encodeURIComponent(currentMarkdown)}`;
+    window.open(obsidianUri, '_blank');
     showStatus('已成功呼出 Obsidian 并创建新笔记！');
   });
 

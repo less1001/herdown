@@ -745,18 +745,17 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
 
   let markdown = htmlToMarkdownFast(extractedContent, platform);
 
-  // Defuddle Rule: Remove duplicate main title from start of body if it matches title
-  if (markdown && title) {
-    const lines = markdown.split('\n');
-    const firstNonEmptyIdx = lines.findIndex(l => l.trim());
-    if (firstNonEmptyIdx !== -1) {
-      const firstLine = lines[firstNonEmptyIdx].trim().replace(/^#+\s*/, '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
-      const cleanTitle = title.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
-      if (firstLine && cleanTitle && (firstLine === cleanTitle || cleanTitle.includes(firstLine))) {
-        lines.splice(firstNonEmptyIdx, 1);
-        markdown = lines.join('\n').trim();
+  // Purify single-line unclosed double-stars (Self-Healing Purifier)
+  if (markdown) {
+    markdown = markdown.split('\n').map(line => {
+      let l = line.trim();
+      const count = (l.match(/\*\*/g) || []).length;
+      if (count % 2 !== 0) {
+        // Remove orphan leading or trailing ** if unclosed
+        l = l.replace(/\*\*\s+/g, '').replace(/\s+\*\*/g, '').replace(/\*\*/g, '');
       }
-    }
+      return l;
+    }).join('\n');
   }
 
   // If no images were inserted in-place, fallback to append
