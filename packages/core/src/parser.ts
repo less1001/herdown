@@ -763,6 +763,10 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   if (meta.publish_date) yamlLines.push(`published_at: "${meta.publish_date}"`);
   yamlLines.push(`saved_at: "${savedAt}"`);
   yamlLines.push(`platform: ${platform}`);
+  yamlLines.push(`tags:`);
+  yamlLines.push(`  - herdown`);
+  yamlLines.push(`  - herdown/${platform}`);
+  yamlLines.push(`  - clippings`);
   yamlLines.push(`parse_status: ok`);
   yamlLines.push('---');
   const frontmatter = yamlLines.join('\n');
