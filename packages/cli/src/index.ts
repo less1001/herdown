@@ -40,11 +40,12 @@ async function main() {
   if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
     console.log(`
 Herdown CLI (v0.2.2)
-Usage: npx @herdown/cli <url> [-o output.md] [--key <api_key>]
+Usage: npx @herdown/cli <url> [-o output.md] [--limit 5] [--key <api_key>]
    or: herdown <url> [-o output.md]
 
 Options:
   -o, --output <file>    Save Markdown result to specified file (images auto-downloaded for protected platforms)
+  -l, --limit <number>   Max answers to extract for Q&A sites like Zhihu (default: 5)
   -k, --key <api_key>    Use custom API Key for request
   -h, --help             Show help message
     `);
@@ -53,11 +54,15 @@ Options:
 
   const urlArg = args[0];
   let outputFile = '';
+  let maxAnswers = 5;
   let apiKey = 'sk_live_REDACTED';
 
   for (let i = 1; i < args.length; i++) {
     if ((args[i] === '-o' || args[i] === '--output') && args[i + 1]) {
       outputFile = args[i + 1];
+      i++;
+    } else if ((args[i] === '-l' || args[i] === '--limit') && args[i + 1]) {
+      maxAnswers = parseInt(args[i + 1], 10) || 5;
       i++;
     } else if ((args[i] === '-k' || args[i] === '--key') && args[i + 1]) {
       apiKey = args[i + 1];
