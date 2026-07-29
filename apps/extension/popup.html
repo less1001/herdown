@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Herdown Clipper</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 380px;
+      background-color: #070a0e;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 16px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .logo-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #0f6b4f, #10b981);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 13px;
+      color: #fff;
+    }
+    .brand-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+    }
+    .version-tag {
+      font-size: 10px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 2px 6px;
+      border-radius: 99px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .section {
+      margin-bottom: 12px;
+    }
+    .label {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .mode-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+    }
+    .btn-mode {
+      background-color: #0d131d;
+      border: 1px solid #1e293b;
+      color: #cbd5e1;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    .btn-mode.active, .btn-mode:hover {
+      border-color: #10b981;
+      color: #10b981;
+      background-color: rgba(16, 185, 129, 0.08);
+    }
+    .zhihu-panel {
+      background: #0d131d;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .zhihu-panel.show {
+      display: block;
+    }
+    .zhihu-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #34d399;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .control-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    select, input[type="number"] {
+      background: #070a0e;
+      border: 1px solid #1e293b;
+      color: #e2e8f0;
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      flex: 1;
+    }
+    .preview-box {
+      background-color: #090d13;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 10px;
+      max-height: 140px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 10px;
+      color: #94a3b8;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 14px;
+    }
+    .action-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0f6b4f, #10b981);
+      border: none;
+      color: #fff;
+      padding: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+    .btn-sub-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .btn-secondary {
+      background: #111823;
+      border: 1px solid #1e293b;
+      color: #cbd5e1;
+      padding: 8px;
+      font-size: 11px;
+
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover {
+      background: #1e293b;
+      color: #fff;
+    }
+    .status-bar {
+      margin-top: 10px;
+      font-size: 10px;
+      color: #64748b;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo-group">
+      <div class="logo-badge">HD</div>
+      <span class="brand-name">Herdown</span>
+      <span class="version-tag">v1.0 Plugin</span>
+    </div>
+    <div id="stats-info" style="font-size: 10px; color: #64748b;">本地 0 成本内核</div>
+  </div>
+
+  <div class="section">
+    <div class="label">
+      <span>剪藏范围</span>
+      <span id="char-info">准备中...</span>
+    </div>
+    <div class="mode-grid">
+      <button class="btn-mode active" id="btn-full">完整网页</button>
+      <button class="btn-mode" id="btn-selection">划选片段</button>
+      <button class="btn-mode" id="btn-picker">🎯 元素拾取</button>
+    </div>
+  </div>
+
+  <!-- Zhihu Special Options Panel -->
+  <div class="zhihu-panel" id="zhihu-panel">
+    <div class="zhihu-title">💡 知乎问答定制化提取</div>
+    <div class="control-row">
+      <span style="font-size: 10px; color: #94a3b8;">提取回答数:</span>
+      <input type="number" id="zhihu-limit" value="5" min="1" max="100" style="width: 50px;" />
+      <span style="font-size: 10px; color: #94a3b8;">排序:</span>
+      <select id="zhihu-sort">
+        <option value="votes">默认高赞排序</option>
+        <option value="date">最新时间排序</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="preview-box" id="preview-box">正在读取网页元素并转换为干净 Markdown...</div>
+
+  <div class="action-group">
+    <button class="btn-primary" id="btn-obsidian">
+      💜 一键存入 Obsidian (obsidian://)
+    </button>
+    <div class="btn-sub-row">
+      <button class="btn-secondary" id="btn-copy">📋 复制 Markdown</button>
+      <button class="btn-secondary" id="btn-download">💾 下载 .md 文件</button>
+    </div>
+  </div>
+
+  <div class="status-bar" id="status-bar">
+    支持智能生成 tags: [herdown, herdown/平台, clippings]
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
