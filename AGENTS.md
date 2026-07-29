@@ -86,7 +86,8 @@
 *正文与 LaTeX 公式提取*：
 - **正文定位**：优先匹配 `class="Post-RichText"`（专栏文章）或 `class="RichText"`（回答内容）。
 - **LaTeX 公式**：知乎使用 `<span class="ztext-math" data-tex="...">` 存储公式源码。解析时提取 `data-tex` 属性并转换为标准的 `$ ... $` 行内公式和 `$$ ... $$` 块级公式。
-- **图片**：提取 `data-actualsrc` 或 `src`，主图片源为 `pic*.zhimg.com`，防盗链采用 `<img referrerpolicy="no-referrer">` 正常渲染。
+- **SEO/营销词条脱壳**：知乎系统自动植入的 `zhida.zhihu.com`（带小星号的词条搜索链接，如 `[东野圭吾](https://zhida.zhihu.com/...)`），必须全量脱壳擦除 `href`，还原为干净的纯文本“东野圭吾”。
+- **问答多回答结构化分割**：针对问答类（Question），每个回答必须提取作者昵称与赞同数，使用 `## 👤 回答 N：[作者昵称] (X 人赞同)` 标题及 `---` 独立分割，严禁不同网友回答粘连。
 
 ---
 
