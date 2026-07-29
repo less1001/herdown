@@ -1,12 +1,12 @@
 {
-  "name": "mdforagents",
+  "name": "herdown",
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@10.12.1",
   "scripts": {
-    "dev:worker": "pnpm --filter @mdforagents/worker dev",
-    "dev:web": "pnpm --filter @mdforagents/web dev",
-    "dev:cli": "pnpm --filter @mdforagents/cli dev",
+    "dev:worker": "pnpm --filter @herdown/worker dev",
+    "dev:web": "pnpm --filter @herdown/web dev",
+    "dev:cli": "pnpm --filter @herdown/cli dev",
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "check": "pnpm -r check",

@@ -2,16 +2,49 @@ import { parseMarkdown, detectPlatform } from '../../core/src/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Platforms that require their own Referer to serve images (hotlink protection)
+const REFERER_MAP: Record<string, string> = {
+  wechat:      'https://mp.weixin.qq.com/',
+  xiaohongshu: 'https://www.xiaohongshu.com/',
+  sspai:       'https://sspai.com/',
+  zhihu:       'https://www.zhihu.com/',
+};
+
+// Download image to local file, returns local filename or null on failure
+async function downloadImage(url: string, destDir: string, referer: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'referer': referer,
+      },
+    });
+    if (!res.ok) return null;
+    const buffer = await res.arrayBuffer();
+    // Derive filename from URL path
+    const urlPath = new URL(url).pathname;
+    const ext = path.extname(urlPath).split('?')[0] || '.jpg';
+    const basename = path.basename(urlPath, ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(-40);
+    const filename = `${basename}${ext}`;
+    fs.mkdirSync(destDir, { recursive: true });
+    fs.writeFileSync(path.join(destDir, filename), Buffer.from(buffer));
+    return filename;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
     console.log(`
-MD for Agents CLI (v2.4.0)
-Usage: npx mdforagents <url> [-o output.md] [--key <api_key>]
+Herdown CLI (v0.2.2)
+Usage: npx @herdown/cli <url> [-o output.md] [--key <api_key>]
+   or: herdown <url> [-o output.md]
 
 Options:
-  -o, --output <file>    Save Markdown result to specified file
+  -o, --output <file>    Save Markdown result to specified file (images auto-downloaded for protected platforms)
   -k, --key <api_key>    Use custom API Key for request
   -h, --help             Show help message
     `);
@@ -37,16 +70,16 @@ Options:
     process.exit(1);
   }
 
-  console.log(`[MD for Agents] Fetching & parsing URL: ${urlArg}`);
+  console.log(`[Herdown] Fetching & parsing URL: ${urlArg}`);
 
   const platform = detectPlatform(urlArg);
-  const referer = platform === 'xiaohongshu' ? 'https://www.xiaohongshu.com/' : 'https://mp.weixin.qq.com/';
+  const pageReferer = REFERER_MAP[platform] || 'https://www.google.com/';
 
   try {
     const res = await fetch(urlArg, {
       headers: {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'referer': referer,
+        'referer': pageReferer,
       },
     });
 
@@ -58,15 +91,42 @@ Options:
     const html = await res.text();
     const result = parseMarkdown(html, urlArg);
 
-    console.log(`[MD for Agents] Successfully parsed article "${result.title}" in ${result.elapsed_ms}ms`);
+    console.log(`[Herdown] Successfully parsed article "${result.title}" in ${result.elapsed_ms}ms`);
 
     if (outputFile) {
       const resolvedPath = path.resolve(process.cwd(), outputFile);
-      const fileContent = result.frontmatter
+      let fileContent = result.frontmatter
         ? `${result.frontmatter}\n\n# ${result.title}\n\n${result.markdown}`
         : result.markdown;
+
+      // For platforms with hotlink-protected images, download images locally
+      const imgReferer = REFERER_MAP[platform];
+      if (imgReferer && result.images && result.images.length > 0) {
+        const attachDir = path.join(path.dirname(resolvedPath), 'attachments');
+        const downloaded: Record<string, string> = {};
+
+        console.log(`[Herdown] Downloading ${result.images.length} image(s) for ${platform}...`);
+        for (const imgUrl of result.images) {
+          const localName = await downloadImage(imgUrl, attachDir, imgReferer);
+          if (localName) {
+            downloaded[imgUrl] = `attachments/${localName}`;
+            process.stdout.write('.');
+          } else {
+            process.stdout.write('x');
+          }
+        }
+        if (result.images.length > 0) console.log('');
+
+        // Replace remote URLs with local paths in the markdown
+        for (const [remote, local] of Object.entries(downloaded)) {
+          const escapedUrl = remote.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          fileContent = fileContent.replace(new RegExp(escapedUrl, 'g'), local);
+        }
+        console.log(`[Herdown] Images saved to ${attachDir}/`);
+      }
+
       fs.writeFileSync(resolvedPath, fileContent, 'utf-8');
-      console.log(`[MD for Agents] Saved Markdown to ${resolvedPath}`);
+      console.log(`[Herdown] Saved Markdown to ${resolvedPath}`);
     } else {
       console.log('\n--- MARKDOWN OUTPUT ---\n');
       console.log(result.markdown);

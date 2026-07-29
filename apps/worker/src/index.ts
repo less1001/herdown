@@ -1,4 +1,4 @@
-import { parseMarkdown, detectPlatform, extractSitemapUrls, chunkMarkdownForRAG, ParseResult } from '@mdforagents/core';
+import { parseMarkdown, detectPlatform, extractSitemapUrls, chunkMarkdownForRAG, ParseResult } from '@herdown/core';
 
 export interface Env {
   DB?: D1Database;
@@ -288,7 +288,7 @@ export default {
 
         const subUrls = extractSitemapUrls(content, targetUrl, limit);
         const crawlResults = await Promise.all(
-          subUrls.map(async (u) => {
+          subUrls.map(async (u: string) => {
             const pageRes = await safeFetchPageHtml(u, undefined, 5000).catch(() => null);
             const html = pageRes?.html || '';
             const parsed = parseMarkdown(html, u);

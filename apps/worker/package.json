@@ -1,5 +1,5 @@
 {
-  "name": "@mdforagents/worker",
+  "name": "@herdown/worker",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,7 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "@mdforagents/core": "workspace:*"
+    "@herdown/core": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260722.1",

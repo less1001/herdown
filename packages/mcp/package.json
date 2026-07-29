@@ -1,6 +1,6 @@
 {
-  "name": "@mdforagents/mcp",
-  "private": true,
+  "name": "@herdown/mcp",
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",

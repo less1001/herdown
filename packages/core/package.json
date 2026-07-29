@@ -1,6 +1,6 @@
 {
-  "name": "@mdforagents/core",
-  "private": true,
+  "name": "@herdown/core",
+  "private": false,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
