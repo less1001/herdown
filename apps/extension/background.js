@@ -14,10 +14,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "herdown-clip-page" && tab?.id) {
     chrome.tabs.sendMessage(tab.id, { action: 'GET_PAGE_DATA' }, (response) => {
       if (response && response.html) {
-        // Broadcast to background storage or open popup
-        chrome.storage.local.set({ pendingClip: response }, () => {
-          chrome.action.openPopup();
-        });
+        chrome.storage.local.set({ pendingClip: response });
       }
     });
   }
