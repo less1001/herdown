@@ -181,6 +181,7 @@
    - 绝无任何 `&nbsp;` 实体字符与不可见字符（`\u00a0`, `\u200b`, `\ufeff`, ``）；
    - 任何未通过断言的文件**直接阻断交付**并触发底层清洗。
 5. **交付前 `view_file` 终极自检**：通过自动化断言后， Agent 必须亲自用 `view_file` 查看生成的 Markdown 文本，核对最后一句是否完整结语，确认 100% 满分后才可交由用户验证。
+6. **引号解包加粗算法 (Quote-Unwrapping Bold Parsing)**：遇到 `<strong>‘文本’</strong>` 结构时，禁止删除单/双引号或误投 `**` 标记。解析器必须自动将首尾引符号移至 `**` 语法外侧，生成 `‘**文本**’`，在 100% 忠实还原原文引语格式的同时实现精确汉字加粗。
 
 **Markdown 输出与标准化规范 (Defuddle + Crawl4AI + Firecrawl 引擎)**：
 - 所有平台统一输出 YAML frontmatter（source_url, title, account, author, published_at, saved_at, platform, parse_status）
