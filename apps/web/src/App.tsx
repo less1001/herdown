@@ -46,6 +46,7 @@ export function App() {
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
+  const [zhihuLimit, setZhihuLimit] = useState<number>(5);
   
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ParseResponse | null>(null);
@@ -441,6 +442,24 @@ export function App() {
                     {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-white" />}
                     {loading ? '正在解析中...' : '转换为 Markdown'}
                   </button>
+                  {inputUrl.includes('zhihu.com/question/') && (
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 animate-fadeIn">
+                      <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+                        <Layers className="w-3.5 h-3.5" /> 检测到知乎问答
+                      </span>
+                      <span className="text-slate-400">选择提取回答数：</span>
+                      <select
+                        value={zhihuLimit}
+                        onChange={(e) => setZhihuLimit(Number(e.target.value))}
+                        className="bg-[#090d12] border border-[#1e293b] text-emerald-300 font-medium rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500"
+                      >
+                        <option value={5}>默认精选 Top 5 高赞回答</option>
+                        <option value={10}>Top 10 高赞回答</option>
+                        <option value={20}>Top 20 高赞回答</option>
+                        <option value={50}>Top 50 详细回答</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">

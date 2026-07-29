@@ -280,6 +280,11 @@ const extractZhihuBody = (html: string): { content: string; images: string[]; au
     contentHtml = html;
   }
 
+  // Strip Zhihu system-generated marketing links (zhida.zhihu.com) to plain text
+  contentHtml = contentHtml.replace(/<a[^>]+href=["'][^"']*zhida\.zhihu\.com[^"']*["'][^>]*>([\s\S]*?)<\/a>/gi, (_, text) => {
+    return stripTags(text);
+  });
+
   contentHtml = contentHtml.replace(/<span[^>]+data-tex=["']([^"']+)["'][^>]*>[\s\S]*?<\/span>/gi, (_, tex) => {
     return ` $${tex.trim()}$ `;
   });
