@@ -42,7 +42,7 @@ interface ApiKeyItem {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli' | 'extension'>('converter');
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
@@ -321,15 +321,15 @@ export function App() {
               CLI
             </button>
             <button
-              onClick={() => setActiveTab('skill')}
+              onClick={() => setActiveTab('extension')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'skill'
+                activeTab === 'extension'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Agent Skill
+              <Layers className="w-3.5 h-3.5 text-emerald-400" />
+              🧩 浏览器插件
             </button>
           </nav>
 
@@ -915,6 +915,88 @@ description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting,
 当用户需要读取网页、微信公众号长文、知乎回答或小红书笔记时，请直接在终端执行：
 npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               </pre>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: Chrome Extension */}
+        {activeTab === 'extension' && (
+          <div className="space-y-8 max-w-4xl mx-auto">
+            <div className="text-center space-y-4 pt-4">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                <Layers className="w-4 h-4 text-emerald-400" />
+                Herdown 浏览器扩展 V1.0 (Obsidian 剪藏神器)
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
+                直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span>
+              </h1>
+              <p className="text-slate-400 text-sm max-w-2xl mx-auto">
+                免除一切云端服务器转算成本！通过浏览器原生 DOM 渲染，利用您已登录的 Cookie，100% 免疫知乎、微信公众号与小红书的防爬封锁。
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              <div className="p-6 rounded-2xl bg-[#0d131d] border border-[#1e293b] space-y-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+                  1
+                </div>
+                <h3 className="text-lg font-bold text-white">方式一：加载本地离线扩展包（立刻可用）</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  无需等待 Chrome 商店审核！下载解压包后，在 Chrome 打开 <code className="text-emerald-400">chrome://extensions/</code>，开启右上方“开发者模式”，点击“加载已解压的扩展程序”选择本目录即可！
+                </p>
+                <div className="pt-2">
+                  <a
+                    href="https://github.com/less1001/herdown/tree/main/apps/extension"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
+                  >
+                    <Download className="w-4 h-4" />
+                    下载 / 查看插件源码 ZIP
+                  </a>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-2xl bg-[#0d131d] border border-[#1e293b] space-y-4">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-lg">
+                  2
+                </div>
+                <h3 className="text-lg font-bold text-white">方式二：Chrome Web Store 官方商店安装</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  官方扩展商店审核与发布中。上架后只需点击一次“添加至 Chrome”，即可在全网任意网页通过快捷键 <code className="text-teal-300">Alt + Shift + H</code> 一秒唤起剪藏面板！
+                </p>
+                <div className="pt-2">
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold border border-slate-700">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Chrome Web Store 上市审核中...
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-[#0a0f16] border border-emerald-500/20 space-y-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-emerald-400" />
+                插件特色功能全览：
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-300">
+                <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
+                  <strong className="text-emerald-400 block mb-1">💜 Obsidian 直连 (obsidian://)</strong>
+                  无需下载保存文件，点击按钮一秒调起 Obsidian 原生软件生成带 YAML 属性与 Tags 标签的新笔记。
+                </div>
+                <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
+                  <strong className="text-emerald-400 block mb-1">💡 知乎定制化提取</strong>
+                  自动感应知乎问答，提供 <code className="text-slate-200">[Top N 回答数]</code> 与 <code className="text-slate-200">[高赞/最新排序]</code> 自由选框。
+                </div>
+                <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
+                  <strong className="text-emerald-400 block mb-1">🎯 网页元素 Inspector 拾取器</strong>
+                  当遇到复杂网页时，开启鼠标拾取模式，点击任意区域精确转换该 HTML 块。
+                </div>
+                <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
+                  <strong className="text-emerald-400 block mb-1">🏷️ 自动化字数与阅读时长统计</strong>
+                  全自动清洗不可见字符，智能预估 <code className="text-slate-200">word_count</code> 与 <code className="text-slate-200">reading_time</code> 并自动打上 <code className="text-slate-200">tags: [herdown, clippings]</code>。
+                </div>
+              </div>
             </div>
           </div>
         )}
