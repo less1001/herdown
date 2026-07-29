@@ -434,17 +434,32 @@ ${text}
       const t = stripTags(text).trim();
       return t ? `*${t}*` : "";
     });
-    clean = clean.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableHtml) => {
+    const convertHtmlTableToMarkdown = (tableHtml) => {
       const rows = [];
-      const rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
-      for (const rHtml of rowMatches) {
-        const cells = [];
-        const cellMatches = rHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi) || [];
-        for (const cHtml of cellMatches) {
-          const cellText = stripTags(cHtml).replace(/\s+/g, " ").replace(/\|/g, "\\|").trim();
-          cells.push(cellText);
+      let rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+      if (rowMatches && rowMatches.length > 0) {
+        for (const rHtml of rowMatches) {
+          const cells = [];
+          const cellMatches = rHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi) || [];
+          for (const cHtml of cellMatches) {
+            const cellText = stripTags(cHtml).replace(/\s+/g, " ").replace(/\|/g, "\\|").trim();
+            cells.push(cellText);
+          }
+          if (cells.length > 0) rows.push(cells);
         }
-        if (cells.length > 0) rows.push(cells);
+      } else {
+        const divRowMatches = tableHtml.match(/<(?:div|section|p)[^>]*class=["'][^"']*(?:row|tr|table_row|grid)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section|p)>/gi) || tableHtml.match(/<(?:div|section)[^>]*style=["'][^"']*flex[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/gi);
+        if (divRowMatches) {
+          for (const rHtml of divRowMatches) {
+            const cells = [];
+            const cellMatches = rHtml.match(/<(?:div|section|span|p|td|th)[^>]*>([\s\S]*?)<\/(?:div|section|span|p|td|th)>/gi) || [];
+            for (const cHtml of cellMatches) {
+              const cellText = stripTags(cHtml).replace(/\s+/g, " ").replace(/\|/g, "\\|").trim();
+              if (cellText) cells.push(cellText);
+            }
+            if (cells.length > 0) rows.push(cells);
+          }
+        }
       }
       if (rows.length === 0) return "";
       const maxCols = Math.max(...rows.map((r) => r.length));
@@ -462,7 +477,9 @@ ${delimiterRow}
 ${bodyRows.join("\n")}
 
 `;
-    });
+    };
+    clean = clean.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableHtml) => convertHtmlTableToMarkdown(tableHtml));
+    clean = clean.replace(/<section[^>]*class=["'][^"']*(?:table|grid|mp_profile_table)[^"']*["'][^>]*>([\s\S]*?)<\/section>/gi, (_, tableHtml) => convertHtmlTableToMarkdown(tableHtml));
     clean = clean.replace(/<pre[^>]*><code[^>]*class=["'][^"']*language-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, lang, code) => {
       const cleanCode = code.replace(/<span[^>]*class=["'][^"']*line-number[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, "");
       return `
@@ -531,7 +548,7 @@ ${stripTags(text)}
     return decodeEntities(result);
   };
   var stripTags = (html) => {
-    return html.replace(/<(?!img\b|br\b)[^>]+>/g, "").trim();
+    return html.replace(/<\/(?:td|th|div|span|p|section|li|h[1-6])>/gi, " ").replace(/<(?!img\b|br\b)[^>]+>/g, "").replace(/\s+/g, " ").trim();
   };
   var extractMetadata = (html, platform) => {
     let account;
