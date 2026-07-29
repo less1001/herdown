@@ -142,6 +142,23 @@
 
 ---
 
+### 36氪（36kr.com）
+
+*架构*：Next.js / React SSR，正文在 HTML 和 `window.initialState` JSON 中兼备
+
+*正文提取与页脚剥离*：
+- **正文起点**：匹配 `class="articleDetailContent"` 或 `class="kr-rich-text-wrapper"`。
+- **页脚防污染切片**：终止于 `class="article-footer"` 或 `class="common-content-footer"` 或 `需要你的鼓励` 标志，防止卷入底部的评论区、关注组件、推荐文章等垃圾 Div。
+
+*图片提取*：
+- `img.36krcdn.com` 域名，图片加 `referrerpolicy="no-referrer"` 渲染防盗链。
+
+*元数据*：
+- **作者**：`"author":"..."` 或 `"userNick":"..."`
+- **发布时间**：`"publishTime": Timestamp` → `new Date(ts).toISOString().split('T')[0]`
+
+---
+
 ## 通用提取经验
 
 **内容区域定位优先级**：
