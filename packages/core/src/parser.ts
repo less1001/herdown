@@ -412,7 +412,40 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   clean = clean.replace(/<(?:b|strong)[^>]*>([\s\S]*?)<\/(?:b|strong)>/gi, (_, text) => `**${stripTags(text)}**`);
   clean = clean.replace(/<(?:i|em)[^>]*>([\s\S]*?)<\/(?:i|em)>/gi, (_, text) => `*${stripTags(text)}*`);
 
-  // 6. Codeblocks with language preservation & line number stripping
+  // 6. Microsoft MarkItDown Rule: Process HTML <table> elements into Markdown Tables
+  clean = clean.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableHtml) => {
+    const rows: string[][] = [];
+    const rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+    
+    for (const rHtml of rowMatches) {
+      const cells: string[] = [];
+      const cellMatches = rHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi) || [];
+      for (const cHtml of cellMatches) {
+        const cellText = stripTags(cHtml).replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim();
+        cells.push(cellText);
+      }
+      if (cells.length > 0) rows.push(cells);
+    }
+
+    if (rows.length === 0) return '';
+
+    // Determine max columns
+    const maxCols = Math.max(...rows.map(r => r.length));
+    if (maxCols === 0) return '';
+
+    // Build header row and delimiter
+    const headerRow = `| ${rows[0].concat(Array(maxCols - rows[0].length).fill('')).join(' | ')} |`;
+    const delimiterRow = `| ${Array(maxCols).fill('---').join(' | ')} |`;
+
+    const bodyRows = rows.slice(1).map(r => {
+      const padded = r.concat(Array(maxCols - r.length).fill(''));
+      return `| ${padded.join(' | ')} |`;
+    });
+
+    return `\n\n${headerRow}\n${delimiterRow}\n${bodyRows.join('\n')}\n\n`;
+  });
+
+  // 7. Codeblocks with language preservation & line number stripping
   clean = clean.replace(/<pre[^>]*><code[^>]*class=["'][^"']*language-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, lang, code) => {
     const cleanCode = code.replace(/<span[^>]*class=["'][^"']*line-number[^"']*["'][^>]*>[\s\S]*?<\/span>/gi, '');
     return `\n\n\`\`\`${lang}\n${decodeEntities(stripTags(cleanCode))}\n\`\`\`\n\n`;
