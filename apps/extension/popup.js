@@ -91,56 +91,28 @@ function initView() {
 }
 
 function renderMarkdown(rawHtml) {
-  // Derive title & platform
-  let platform = 'general';
-  if (pageData.url.includes('weixin.qq.com')) platform = 'wechat';
-  else if (pageData.url.includes('xiaohongshu.com')) platform = 'xiaohongshu';
-  else if (pageData.url.includes('zhihu.com')) platform = 'zhihu';
-  else if (pageData.url.includes('36kr.com')) platform = 'kr36';
+  let result;
+  if (window.HerdownCore && typeof window.HerdownCore.parseMarkdown === 'function') {
+    result = window.HerdownCore.parseMarkdown(rawHtml, pageData.url);
+  } else {
+    // Fallback if bundle not present
+    result = {
+      title: pageData.title,
+      markdown: rawHtml.replace(/<[^>]+>/g, ''),
+      frontmatter: '---\nsource_url: "' + pageData.url + '"\n---'
+    };
+  }
 
-  let title = pageData.title.replace(/- 知乎$/, '').replace(/_36氪$/, '').trim();
-  currentTitle = title;
+  currentTitle = result.title || pageData.title;
+  
+  const fullMarkdown = result.frontmatter + '\n\n# ' + currentTitle + '\n\n' + result.markdown;
+  currentMarkdown = fullMarkdown;
 
-  // Simple pure HTML sanitizer -> Markdown for Extension Popup
-  let md = rawHtml
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '\n\n## $1\n\n')
-    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '\n\n### $1\n\n')
-    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '\n\n$1\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, '[$2]($1)')
-    .replace(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi, '![图片]($1)')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  // Remove orphan bold markers
-  md = md.replace(/\*\*\s+/g, '**').replace(/\s+\*\*/g, '**');
-
-  const wordCount = md.length;
+  const wordCount = result.markdown.length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 350));
 
-  const frontmatter = `---
-source_url: "${pageData.url}"
-title: "${title}"
-published_at: "${new Date().toISOString().split('T')[0]}"
-saved_at: "${new Date().toISOString()}"
-platform: ${platform}
-word_count: ${wordCount}
-reading_time: "${readingTime} min"
-tags:
-  - herdown
-  - herdown/${platform}
-  - clippings
-parse_status: ok
----`;
-
-  currentMarkdown = `${frontmatter}\n\n# ${title}\n\n${md}`;
-
   document.getElementById('char-info').innerText = `${wordCount} 字 | 约 ${readingTime} 分钟`;
-  document.getElementById('preview-box').innerText = currentMarkdown.slice(0, 500) + '\n\n... (更多内容导出后可见)';
+  document.getElementById('preview-box').innerText = fullMarkdown.slice(0, 600) + '\n\n... (更多内容导出后可见)';
 }
 
 function showStatus(text) {
