@@ -123,7 +123,6 @@ function showStatus(text) {
   sb.innerText = `✨ ${text}`;
   sb.style.color = '#34d399';
   setTimeout(() => {
-    sb.innerText = '支持智能生成 tags: [herdown, herdown/平台, clippings]';
-    sb.style.color = '#64748b';
+    sb.innerText = '';
   }, 3000);
 }
