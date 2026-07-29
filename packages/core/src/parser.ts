@@ -537,27 +537,45 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   });
 
   // 6. Microsoft MarkItDown Rule: Process HTML <table> elements into Markdown Tables
-  clean = clean.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableHtml) => {
+  // 6. Universal Table & WeChat Custom Flex/Section Table Converter
+  const convertHtmlTableToMarkdown = (tableHtml: string) => {
     const rows: string[][] = [];
-    const rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
     
-    for (const rHtml of rowMatches) {
-      const cells: string[] = [];
-      const cellMatches = rHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi) || [];
-      for (const cHtml of cellMatches) {
-        const cellText = stripTags(cHtml).replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim();
-        cells.push(cellText);
+    // 1. Try traditional <tr> rows first
+    let rowMatches = tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+    if (rowMatches && rowMatches.length > 0) {
+      for (const rHtml of rowMatches) {
+        const cells: string[] = [];
+        const cellMatches = rHtml.match(/<(?:td|th)[^>]*>([\s\S]*?)<\/(?:td|th)>/gi) || [];
+        for (const cHtml of cellMatches) {
+          const cellText = stripTags(cHtml).replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim();
+          cells.push(cellText);
+        }
+        if (cells.length > 0) rows.push(cells);
       }
-      if (cells.length > 0) rows.push(cells);
+    } else {
+      // 2. Fallback: WeChat Custom Section/Div Grid Rows
+      const divRowMatches = tableHtml.match(/<(?:div|section|p)[^>]*class=["'][^"']*(?:row|tr|table_row|grid)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section|p)>/gi)
+        || tableHtml.match(/<(?:div|section)[^>]*style=["'][^"']*flex[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|section)>/gi);
+      
+      if (divRowMatches) {
+        for (const rHtml of divRowMatches) {
+          const cells: string[] = [];
+          const cellMatches = rHtml.match(/<(?:div|section|span|p|td|th)[^>]*>([\s\S]*?)<\/(?:div|section|span|p|td|th)>/gi) || [];
+          for (const cHtml of cellMatches) {
+            const cellText = stripTags(cHtml).replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim();
+            if (cellText) cells.push(cellText);
+          }
+          if (cells.length > 0) rows.push(cells);
+        }
+      }
     }
 
     if (rows.length === 0) return '';
 
-    // Determine max columns
     const maxCols = Math.max(...rows.map(r => r.length));
     if (maxCols === 0) return '';
 
-    // Build header row and delimiter
     const headerRow = `| ${rows[0].concat(Array(maxCols - rows[0].length).fill('')).join(' | ')} |`;
     const delimiterRow = `| ${Array(maxCols).fill('---').join(' | ')} |`;
 
@@ -567,7 +585,10 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
     });
 
     return `\n\n${headerRow}\n${delimiterRow}\n${bodyRows.join('\n')}\n\n`;
-  });
+  };
+
+  clean = clean.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, (_, tableHtml) => convertHtmlTableToMarkdown(tableHtml));
+  clean = clean.replace(/<section[^>]*class=["'][^"']*(?:table|grid|mp_profile_table)[^"']*["'][^>]*>([\s\S]*?)<\/section>/gi, (_, tableHtml) => convertHtmlTableToMarkdown(tableHtml));
 
   // 7. Codeblocks with language preservation & line number stripping
   clean = clean.replace(/<pre[^>]*><code[^>]*class=["'][^"']*language-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/code><\/pre>/gi, (_, lang, code) => {
@@ -622,7 +643,11 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
 };
 
 const stripTags = (html: string): string => {
-  return html.replace(/<(?!img\b|br\b)[^>]+>/g, '').trim();
+  return html
+    .replace(/<\/(?:td|th|div|span|p|section|li|h[1-6])>/gi, ' ')
+    .replace(/<(?!img\b|br\b)[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 };
 
 export type ParseResult = {
