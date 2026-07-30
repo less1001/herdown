@@ -501,7 +501,7 @@ export default {
       if (request.method === 'GET') {
         if (!env.DB) return json({ keys: [] });
         try {
-          const { results } = await env.DB.prepare('SELECT id, name, key, status, created_at FROM api_keys WHERE status != "revoked" ORDER BY created_at DESC').all();
+          const { results } = await env.DB.prepare('SELECT name, key, status, created_at FROM api_keys WHERE status != "revoked" ORDER BY created_at DESC').all();
           return json({ keys: results || [] });
         } catch {
           return json({ keys: [] });
@@ -516,6 +516,11 @@ export default {
 
         if (env.DB) {
           try {
+            // Guarantee user existence first to satisfy D1 Foreign Key constraints
+            await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, plan) VALUES (?, ?, 'pro')")
+              .bind(userId, 'user@mdforagents.com')
+              .run();
+
             await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
           } catch (e: any) {
             return json({ success: false, message: e?.message || '数据库写入失败' }, { status: 500 });
