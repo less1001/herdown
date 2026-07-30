@@ -8,14 +8,56 @@ let hoverElement = null;
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'GET_PAGE_DATA') {
     const selection = window.getSelection() ? window.getSelection().toString().trim() : '';
-    sendResponse({
-      url: window.location.href,
-      title: document.title,
-      html: document.documentElement.outerHTML,
-      selection: selection,
-      isZhihuQuestion: window.location.href.includes('zhihu.com/question/')
-    });
-    return true;
+
+    // Handle Zhihu auto expander
+    if (window.location.href.includes('zhihu.com/question/')) {
+      // Find all "Show All / 显示全部" buttons and click them to force load complete HTML content
+      const showAllButtons = document.querySelectorAll('.ContentItem-more, button.QuestionMainAction');
+      showAllButtons.forEach(btn => {
+        if (btn && btn.innerText && btn.innerText.includes('显示全部')) {
+          btn.click();
+        }
+      });
+    }
+
+    // Give a short 100ms delay to let expanded HTML render in DOM, then return parsed HTML
+    setTimeout(() => {
+      let targetHtml = document.documentElement.outerHTML;
+
+      // WeChat specific precise extraction
+      if (window.location.href.includes('mp.weixin.qq.com')) {
+        const wechatContent = document.getElementById('js_content') || document.querySelector('.rich_media_content');
+        if (wechatContent) {
+          const metaArea = document.querySelector('.rich_media_meta_list');
+          targetHtml = `
+            <html>
+              <head>
+                <title>${document.title}</title>
+                <script>
+                  var nickname = "${(document.querySelector('.rich_media_meta_nickname')?.innerText || '').trim()}";
+                  var msg_author = "${(document.querySelector('.rich_media_meta_text')?.innerText || '').trim()}";
+                  var ct = "${Math.floor(Date.now() / 1000)}";
+                </script>
+              </head>
+              <body>
+                ${metaArea ? metaArea.outerHTML : ''}
+                <div id="js_content">${wechatContent.innerHTML}</div>
+              </body>
+            </html>
+          `;
+        }
+      }
+
+      sendResponse({
+        url: window.location.href,
+        title: document.title,
+        html: targetHtml,
+        selection: selection,
+        isZhihuQuestion: window.location.href.includes('zhihu.com/question/')
+      });
+    }, 120);
+
+    return true; // Keep message channel open for asynchronous sendResponse
   }
 
   if (request.action === 'START_ELEMENT_PICKER') {
