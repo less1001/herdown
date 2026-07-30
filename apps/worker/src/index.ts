@@ -116,7 +116,75 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
 
 const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB 防爆内存限制
 
-async function safeFetchPageHtml(targetUrl: string, referer?: string, timeoutMs = 8000): Promise<{ html: string; status: number }> {
+async function safeFetchPageHtml(targetUrl: string, referer?: string, timeoutMs = 8000, zhihuLimit = 5, zhihuSort = 'default'): Promise<{ html: string; status: number }> {
+  // Check if URL is zhihu.com to rewrite fetch request to mobile API
+  if (targetUrl.includes('zhihu.com/question/')) {
+    try {
+      const qidMatch = /question\/(\d+)/.exec(targetUrl);
+      const aidMatch = /answer\/(\d+)/.exec(targetUrl);
+      const headers = {
+        'user-agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        'accept': 'application/json',
+      };
+
+      if (aidMatch) {
+        // Fetch single answer
+        const answerId = aidMatch[1];
+        const apiRes = await fetch(`https://api.zhihu.com/answers/${answerId}`, { headers });
+        if (apiRes.ok) {
+          const data: any = await apiRes.json();
+          const mockHtml = `
+            <html>
+              <head>
+                <title>${data.question?.title || '知乎问答'}</title>
+                <meta name="author" content="${data.author?.name || '知乎用户'}" />
+              </head>
+              <body>
+                <div class="AuthorInfo-name">${data.author?.name || '知乎用户'}</div>
+                <div class="RichText">${data.content || ''}</div>
+              </body>
+            </html>
+          `;
+          return { html: mockHtml, status: 200 };
+        }
+      } else if (qidMatch) {
+        // Fetch question answers list with dynamic limit and sort (votes/date)
+        const questionId = qidMatch[1];
+        const sortParam = zhihuSort === 'date' ? 'created' : 'default';
+        const apiRes = await fetch(`https://api.zhihu.com/questions/${questionId}/answers?limit=${zhihuLimit}&sort_by=${sortParam}`, { headers });
+        if (apiRes.ok) {
+          const listData: any = await apiRes.json();
+          const qTitle = listData.data?.[0]?.question?.title || '知乎问答';
+          let bodyHtml = '';
+          if (listData.data && Array.isArray(listData.data)) {
+            listData.data.forEach((ans: any) => {
+              bodyHtml += `
+                <div class="answer-item">
+                  <div class="AuthorInfo-name">${ans.author?.name || '知乎用户'}</div>
+                  <div class="RichText">${ans.content || ''}</div>
+                </div>
+                <hr/>
+              `;
+            });
+          }
+          const mockHtml = `
+            <html>
+              <head>
+                <title>${qTitle}</title>
+              </head>
+              <body>
+                ${bodyHtml}
+              </body>
+            </html>
+          `;
+          return { html: mockHtml, status: 200 };
+        }
+      }
+    } catch (apiErr) {
+      console.error('[Herdown Worker] Zhihu API fallback failed:', apiErr);
+    }
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -192,7 +260,7 @@ export default {
         }, { status: 429 });
       }
 
-      const body = (await request.json().catch(() => ({}))) as { url?: string; html?: string };
+      const body = (await request.json().catch(() => ({}))) as { url?: string; html?: string; zhihuLimit?: number; zhihuSort?: string };
       const targetUrl = (body.url || '').trim();
       const rawHtml = (body.html || '').trim();
 
@@ -218,7 +286,7 @@ export default {
           const platform = detectPlatform(targetUrl);
           const referer = platform === 'xiaohongshu' ? 'https://www.xiaohongshu.com/' : 'https://mp.weixin.qq.com/';
 
-          const fetchResult = await safeFetchPageHtml(targetUrl, referer, 8000);
+          const fetchResult = await safeFetchPageHtml(targetUrl, referer, 8000, body.zhihuLimit, body.zhihuSort);
 
           if (fetchResult.status !== 200 && fetchResult.status !== 0) {
             return json({
