@@ -72,8 +72,8 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
   const dateStr = new Date().toISOString().slice(0, 10);
   const minuteStr = new Date().toISOString().slice(0, 16);
 
-  const maxPerMinute = isKey ? 3 : 1;
-  const maxPerDay = isKey ? 20 : 5;
+  const maxPerMinute = isKey ? 20 : 5;
+  const maxPerDay = isKey ? 100 : 20;
 
   if (!env.DB) return { allowed: true };
 
