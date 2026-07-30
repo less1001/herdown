@@ -189,12 +189,24 @@ async function safeFetchPageHtml(targetUrl: string, referer?: string, timeoutMs 
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    const isZhihu = targetUrl.includes('zhihu.com');
     const fetchRes = await fetch(targetUrl, {
       signal: controller.signal,
       headers: {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        ...(referer ? { 'referer': referer } : {}),
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        ...(isZhihu ? {
+          'referer': 'https://www.zhihu.com/',
+          'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'same-origin',
+          'sec-fetch-user': '?1',
+          'upgrade-insecure-requests': '1'
+        } : (referer ? { 'referer': referer } : {})),
       },
     });
 
