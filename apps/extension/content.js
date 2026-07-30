@@ -85,27 +85,70 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       // X.com / Twitter specific precise single tweet and thread extractor
       if (window.location.href.includes('x.com') || window.location.href.includes('twitter.com')) {
-        // Find the main active tweet (first main article in a status page, or the focused tweet container)
         const tweetArticle = document.querySelector('article[data-testid="tweet"]');
         if (tweetArticle) {
+          // 1. Gather Rich Metadata from DOM
+          const userNameEl = tweetArticle.querySelector('[data-testid="User-Name"]');
+          let authorHandle = '';
+          if (userNameEl) {
+            const spans = userNameEl.querySelectorAll('span');
+            for (let s of spans) {
+              if (s.innerText && s.innerText.startsWith('@')) {
+                authorHandle = s.innerText.trim();
+                break;
+              }
+            }
+          }
+
+          const timeEl = tweetArticle.querySelector('time');
+          const publishedTime = timeEl ? timeEl.getAttribute('datetime') : '';
+
+          const textEl = tweetArticle.querySelector('[data-testid="tweetText"]');
+          let cleanTitle = document.title;
+          let description = '';
+          if (textEl) {
+            const fullText = textEl.innerText.trim();
+            description = fullText.slice(0, 120);
+            // Grab the first line as a neat clean title (max 60 chars) to mirror Obsidian
+            const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length > 0) {
+              cleanTitle = lines[0];
+              if (cleanTitle.length > 60) {
+                cleanTitle = cleanTitle.slice(0, 57) + '...';
+              }
+            }
+          }
+
+          // Clean title fallback to avoid (1) unread prefixes
+          cleanTitle = cleanTitle.replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').replace(/\s+\|\s+Twitter$/, '');
+
+          // 2. Clone and Sanitize DOM while preserving media photos
           const clonedTweet = tweetArticle.cloneNode(true);
           
-          // Noise elements to strip: translation buttons, share, reactors list, engagement metrics
+          // Noise elements to strip, making sure NOT to touch tweetPhoto or images
           const xNoise = [
-            '[role="group"]', // The action bar containing Reply/Retweet/Like/Bookmark icons
-            '[data-testid="caret"]', // Caret drop-down
-            'time', // Hide duplicate datetime strings if wanted, or keep for frontmatter
-            '[class*="r-1tlfct8"]', // Vertical connecting lines in thread
-            'svg' // Strip redundant utility icons to avoid ugly link artifacts
+            '[role="group"]', // reply/retweet/like action bar
+            '[data-testid="caret"]', // dropdown caret
+            '[class*="r-1tlfct8"]' // vertical connecting lines in threads
           ];
           xNoise.forEach(sel => {
             clonedTweet.querySelectorAll(sel).forEach(el => el.remove());
           });
 
+          // Strip redundant utility SVGs but protect images inside photo grids
+          clonedTweet.querySelectorAll('svg').forEach(svg => svg.remove());
+
           targetHtml = `
             <html>
               <head>
-                <title>${document.title}</title>
+                <title>${cleanTitle}</title>
+                <script id="herdown-metadata" type="application/json">
+                  {
+                    "author": "${authorHandle}",
+                    "published": "${publishedTime}",
+                    "description": "${description.replace(/"/g, '\\"')}"
+                  }
+                </script>
               </head>
               <body>
                 <div class="x-purified-tweet">${clonedTweet.innerHTML}</div>

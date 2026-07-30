@@ -127,6 +127,17 @@ function renderMarkdown(rawHtml) {
       baseEl.href = pageData.url;
       doc.head.appendChild(baseEl);
 
+      // Try to parse Herdown metadata injected from content.js
+      let meta = null;
+      const metaEl = doc.getElementById('herdown-metadata');
+      if (metaEl) {
+        try {
+          meta = JSON.parse(metaEl.textContent);
+        } catch (e) {
+          console.error('[Herdown] Failed to parse injected metadata:', e);
+        }
+      }
+
       const reader = new Readability(doc);
       const article = reader.parse();
       if (article && article.content) {
@@ -141,10 +152,39 @@ function renderMarkdown(rawHtml) {
           turndownService.use(window.turndownPluginGfm.gfm);
         }
 
+        const cleanTitle = doc.title || article.title || pageData.title;
+
+        // Construct customized Frontmatter to mirror Obsidian Clipper
+        let frontmatter = '';
+        if (meta && (pageData.url.includes('x.com') || pageData.url.includes('twitter.com'))) {
+          const today = new Date();
+          const formatToday = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+          let formatPub = '';
+          if (meta.published) {
+            const pubDate = new Date(meta.published);
+            formatPub = `${String(pubDate.getMonth() + 1).padStart(2, '0')}/${String(pubDate.getDate()).padStart(2, '0')}/${pubDate.getFullYear()}`;
+          }
+
+          frontmatter = [
+            '---',
+            `title: "${cleanTitle.replace(/"/g, '\\"')}"`,
+            `source: "${pageData.url}"`,
+            meta.author ? `author: ${meta.author}` : null,
+            formatPub ? `published: ${formatPub}` : null,
+            `created: ${formatToday}`,
+            meta.description ? `description: "${meta.description.replace(/"/g, '\\"')}"` : null,
+            'tags:',
+            '  - clippings',
+            '---'
+          ].filter(Boolean).join('\n');
+        } else {
+          frontmatter = `---\ntitle: "${cleanTitle.replace(/"/g, '\\"')}"\nsource_url: "${pageData.url}"\ndomain: "${new URL(pageData.url).hostname}"\ntags: [herdown, clippings]\n---`;
+        }
+
         result = {
-          title: article.title || pageData.title,
+          title: cleanTitle,
           markdown: turndownService.turndown(article.content),
-          frontmatter: `---\ntitle: "${(article.title || pageData.title || '').replace(/"/g, '\\"')}"\nsource_url: "${pageData.url}"\ndomain: "${new URL(pageData.url).hostname}"\ntags: [herdown, clippings]\n---`
+          frontmatter: frontmatter
         };
       }
     } catch (e) {
