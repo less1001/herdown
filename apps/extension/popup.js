@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Request page data from content script
   chrome.tabs.sendMessage(tab.id, { action: 'GET_PAGE_DATA' }, (res) => {
+    if (chrome.runtime.lastError) {
+      document.getElementById('preview-box').innerText = '提示: 请在有效的网页上打开插件，或者刷新当前页面后再次尝试。';
+      return;
+    }
     if (!res) {
       document.getElementById('preview-box').innerText = '提示: 请刷新当前页面后再次尝试使用 Herdown 剪藏。';
       return;
@@ -39,7 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-picker').addEventListener('click', () => {
     window.close(); // Close popup so user can pick
     chrome.tabs.sendMessage(tab.id, { action: 'START_ELEMENT_PICKER' }, (pickedRes) => {
-      // Picked handler
+      if (chrome.runtime.lastError) {
+        console.warn('[Herdown] Could not start element picker:', chrome.runtime.lastError.message);
+      }
     });
   });
 
