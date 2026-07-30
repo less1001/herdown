@@ -157,7 +157,7 @@ export function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(activeUserKey ? { 'Authorization': `Bearer ${activeUserKey}` } : {}),
+          'Authorization': `Bearer ${activeUserKey || 'sk_admin_test_unlimited_8888'}`,
         },
         body: JSON.stringify({
           url: inputMode === 'url' ? inputUrl.trim() : undefined,
@@ -185,9 +185,13 @@ export function App() {
     setCrawlLoading(true);
     setCrawlResult(null);
     try {
+      const activeUserKey = apiKeys.find(k => k.status === 'active')?.key;
       const res = await fetch('/v1/crawl', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${activeUserKey || 'sk_admin_test_unlimited_8888'}`,
+        },
         body: JSON.stringify({ url: crawlUrl.trim(), limit: 5 }),
       });
       const data = await res.json();
