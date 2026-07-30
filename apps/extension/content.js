@@ -46,16 +46,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const jikePost = document.querySelector('article') || document.querySelector('[class*="PostItem"]') || document.querySelector('[class*="JikePostCard"]');
         if (jikePost) {
           const clonedPost = jikePost.cloneNode(true);
-          // Strip out action buttons, comments, reactions, and interaction count areas
+          // Strip out action buttons, comments, reactions, and interaction count areas completely
           const noiseSelectors = [
-            '[class*="actions"]', '[class*="comment"]', '[class*="Reaction"]',
-            'button', '[class*="Avatar"]', '[class*="UserRecommend"]',
-            '[class*="Recommend"]', '[class*="Footer"]', '[class*="toolbar"]'
+            '[class*="actions"]', 
+            '[class*="comment"]', 
+            '[class*="Comment"]', 
+            '[class*="Reaction"]',
+            '[class*="reactor"]', 
+            '[class*="Reactor"]', 
+            '[class*="interaction"]', 
+            '[class*="Interaction"]', 
+            'button', 
+            '[class*="Avatar"]', 
+            '[class*="UserRecommend"]',
+            '[class*="Recommend"]', 
+            '[class*="Footer"]', 
+            '[class*="toolbar"]',
+            '[class*="Toolbar"]',
+            'svg'
           ];
           noiseSelectors.forEach(sel => {
             clonedPost.querySelectorAll(sel).forEach(el => el.remove());
           });
 
+          // Extract only the post content area and media/image grid to ensure 100% clean markdown
           targetHtml = `
             <html>
               <head>
