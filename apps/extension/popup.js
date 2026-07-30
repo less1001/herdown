@@ -102,9 +102,8 @@ function initView() {
 function renderMarkdown(rawHtml) {
   let result = null;
   const isWeChat = pageData.url.includes('mp.weixin.qq.com');
-  const isZhihu = pageData.url.includes('zhihu.com');
 
-  if ((isWeChat || isZhihu) && window.HerdownCore && typeof window.HerdownCore.parseMarkdown === 'function') {
+  if (isWeChat && window.HerdownCore && typeof window.HerdownCore.parseMarkdown === 'function') {
     // 1. WeChat & Zhihu customized parsing logic via HerdownCore
     const limitEl = document.getElementById('zhihu-limit');
     const sortEl = document.getElementById('zhihu-sort');
