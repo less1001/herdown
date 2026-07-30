@@ -41,6 +41,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     setTimeout(() => {
       let targetHtml = document.documentElement.outerHTML;
 
+      // Jike specific precise extraction and noise purification
+      if (window.location.href.includes('okjike.com')) {
+        const jikePost = document.querySelector('article') || document.querySelector('[class*="PostItem"]') || document.querySelector('[class*="JikePostCard"]');
+        if (jikePost) {
+          const clonedPost = jikePost.cloneNode(true);
+          // Strip out action buttons, comments, reactions, and interaction count areas
+          const noiseSelectors = [
+            '[class*="actions"]', '[class*="comment"]', '[class*="Reaction"]',
+            'button', '[class*="Avatar"]', '[class*="UserRecommend"]',
+            '[class*="Recommend"]', '[class*="Footer"]', '[class*="toolbar"]'
+          ];
+          noiseSelectors.forEach(sel => {
+            clonedPost.querySelectorAll(sel).forEach(el => el.remove());
+          });
+
+          targetHtml = `
+            <html>
+              <head>
+                <title>${document.title}</title>
+              </head>
+              <body>
+                <div class="jike-purified-content">${clonedPost.innerHTML}</div>
+              </body>
+            </html>
+          `;
+        }
+      }
+
       // WeChat specific precise extraction
       if (window.location.href.includes('mp.weixin.qq.com')) {
         const wechatContent = document.getElementById('js_content') || document.querySelector('.rich_media_content');
