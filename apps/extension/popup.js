@@ -88,22 +88,76 @@ function setActiveMode(id) {
 function initView() {
   if (pageData.isZhihuQuestion) {
     document.getElementById('zhihu-panel').classList.add('show');
+    
+    // Listen to Zhihu limit and sort changes to trigger re-render in real time
+    const limitEl = document.getElementById('zhihu-limit');
+    const sortEl = document.getElementById('zhihu-sort');
+    if (limitEl) limitEl.addEventListener('input', () => renderMarkdown(pageData.html));
+    if (sortEl) sortEl.addEventListener('change', () => renderMarkdown(pageData.html));
   }
 
   renderMarkdown(pageData.html);
 }
 
 function renderMarkdown(rawHtml) {
-  let result;
-  if (window.HerdownCore && typeof window.HerdownCore.parseMarkdown === 'function') {
-    result = window.HerdownCore.parseMarkdown(rawHtml, pageData.url);
-  } else {
-    // Fallback if bundle not present
-    result = {
-      title: pageData.title,
-      markdown: rawHtml.replace(/<[^>]+>/g, ''),
-      frontmatter: '---\nsource_url: "' + pageData.url + '"\n---'
-    };
+  let result = null;
+  const isWeChat = pageData.url.includes('mp.weixin.qq.com');
+  const isZhihu = pageData.url.includes('zhihu.com');
+
+  if ((isWeChat || isZhihu) && window.HerdownCore && typeof window.HerdownCore.parseMarkdown === 'function') {
+    // 1. WeChat & Zhihu customized parsing logic via HerdownCore
+    const limitEl = document.getElementById('zhihu-limit');
+    const sortEl = document.getElementById('zhihu-sort');
+    const zhihuLimit = limitEl ? parseInt(limitEl.value, 10) || 5 : 5;
+    const zhihuSort = sortEl ? sortEl.value : 'votes';
+    result = window.HerdownCore.parseMarkdown(rawHtml, pageData.url, { zhihuLimit, zhihuSort });
+  } else if (window.Readability && window.TurndownService) {
+    // 2. Universal fallback: Mozilla Readability + Turndown GFM Pipeline
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(rawHtml, 'text/html');
+      
+      // Fix relative URLs in document before feeding it to readability
+      const baseEl = doc.createElement('base');
+      baseEl.href = pageData.url;
+      doc.head.appendChild(baseEl);
+
+      const reader = new Readability(doc);
+      const article = reader.parse();
+      if (article && article.content) {
+        const turndownService = new TurndownService({
+          headingStyle: 'atx',
+          codeBlockStyle: 'fenced',
+          hr: '---'
+        });
+
+        // Use GFM plugin for tables, strikethroughs, tasks
+        if (window.turndownPluginGfm && window.turndownPluginGfm.gfm) {
+          turndownService.use(window.turndownPluginGfm.gfm);
+        }
+
+        result = {
+          title: article.title || pageData.title,
+          markdown: turndownService.turndown(article.content),
+          frontmatter: `---\ntitle: "${(article.title || pageData.title || '').replace(/"/g, '\\"')}"\nsource_url: "${pageData.url}"\ndomain: "${new URL(pageData.url).hostname}"\ntags: [herdown, clippings]\n---`
+        };
+      }
+    } catch (e) {
+      console.error('[Herdown] Readability pipeline failed:', e);
+    }
+  }
+
+  // Fallback if pipelines fail or not loaded
+  if (!result) {
+    if (window.HerdownCore && typeof window.HerdownCore.parseMarkdown === 'function') {
+      result = window.HerdownCore.parseMarkdown(rawHtml, pageData.url);
+    } else {
+      result = {
+        title: pageData.title,
+        markdown: rawHtml.replace(/<[^>]+>/g, ''),
+        frontmatter: `---\nsource_url: "${pageData.url}"\n---`
+      };
+    }
   }
 
   currentTitle = result.title || pageData.title;
