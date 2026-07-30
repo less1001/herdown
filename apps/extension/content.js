@@ -11,16 +11,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Handle Zhihu auto expander
     if (window.location.href.includes('zhihu.com/question/')) {
-      // Find all "Show All / 显示全部" buttons and click them to force load complete HTML content
-      const showAllButtons = document.querySelectorAll('.ContentItem-more, button.QuestionMainAction');
-      showAllButtons.forEach(btn => {
-        if (btn && btn.innerText && btn.innerText.includes('显示全部')) {
+      // 1. Try to click and expand via MouseEvent
+      const buttons = document.querySelectorAll('button');
+      buttons.forEach(btn => {
+        if (btn && btn.textContent && btn.textContent.includes('显示全部')) {
+          btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
           btn.click();
+        }
+      });
+
+      // 2. Ironclad Noscript Fallback: if answers are still collapsed, extract from noscript tag which has 100% full content
+      const richTexts = document.querySelectorAll('.RichContent');
+      richTexts.forEach(rich => {
+        const noscript = rich.querySelector('noscript');
+        if (noscript) {
+          const innerContent = rich.querySelector('.RichContent-inner');
+          if (innerContent) {
+            // Replace the truncated text with the raw full HTML from noscript tag
+            innerContent.innerHTML = noscript.innerHTML;
+            // Remove the more/expand button
+            const moreBtn = rich.querySelector('.ContentItem-more');
+            if (moreBtn) moreBtn.remove();
+          }
         }
       });
     }
 
-    // Give a short 100ms delay to let expanded HTML render in DOM, then return parsed HTML
+    // Give a short 120ms delay to let expanded HTML render in DOM, then return parsed HTML
     setTimeout(() => {
       let targetHtml = document.documentElement.outerHTML;
 
