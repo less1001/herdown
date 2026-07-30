@@ -69,6 +69,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       }
 
+      // CSDN specific precise extraction to bypass paywall mask and filter headers/footers
+      if (window.location.href.includes('csdn.net')) {
+        const csdnContent = document.getElementById('article_content') || document.querySelector('.article_content');
+        if (csdnContent) {
+          const clonedContent = csdnContent.cloneNode(true);
+          // Strip out follow button, ads, code run/copy buttons overlays
+          const noise = [
+            '.hide-article-box', '.csdn-tracking-statistics', '[class*="opt-box"]',
+            '.save_to_devcloud', '.reward-user-box', '.follow-text-box'
+          ];
+          noise.forEach(sel => {
+            clonedContent.querySelectorAll(sel).forEach(el => el.remove());
+          });
+
+          targetHtml = `
+            <html>
+              <head>
+                <title>${document.title}</title>
+              </head>
+              <body>
+                <div id="article_content">${clonedContent.innerHTML}</div>
+              </body>
+            </html>
+          `;
+        }
+      }
+
       // WeChat specific precise extraction
       if (window.location.href.includes('mp.weixin.qq.com')) {
         const wechatContent = document.getElementById('js_content') || document.querySelector('.rich_media_content');
