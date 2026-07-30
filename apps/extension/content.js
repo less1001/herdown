@@ -83,6 +83,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       }
 
+      // X.com / Twitter specific precise single tweet and thread extractor
+      if (window.location.href.includes('x.com') || window.location.href.includes('twitter.com')) {
+        // Find the main active tweet (first main article in a status page, or the focused tweet container)
+        const tweetArticle = document.querySelector('article[data-testid="tweet"]');
+        if (tweetArticle) {
+          const clonedTweet = tweetArticle.cloneNode(true);
+          
+          // Noise elements to strip: translation buttons, share, reactors list, engagement metrics
+          const xNoise = [
+            '[role="group"]', // The action bar containing Reply/Retweet/Like/Bookmark icons
+            '[data-testid="caret"]', // Caret drop-down
+            'time', // Hide duplicate datetime strings if wanted, or keep for frontmatter
+            '[class*="r-1tlfct8"]', // Vertical connecting lines in thread
+            'svg' // Strip redundant utility icons to avoid ugly link artifacts
+          ];
+          xNoise.forEach(sel => {
+            clonedTweet.querySelectorAll(sel).forEach(el => el.remove());
+          });
+
+          targetHtml = `
+            <html>
+              <head>
+                <title>${document.title}</title>
+              </head>
+              <body>
+                <div class="x-purified-tweet">${clonedTweet.innerHTML}</div>
+              </body>
+            </html>
+          `;
+        }
+      }
+
       // CSDN specific precise extraction to bypass paywall mask and filter headers/footers
       if (window.location.href.includes('csdn.net')) {
         const csdnContent = document.getElementById('article_content') || document.querySelector('.article_content');
