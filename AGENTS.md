@@ -12,8 +12,10 @@
 
 1. **自我校验铁律 (Self-Verification)**：生成 Markdown 后，**必须先用 `view_file` 检查生成文件的完整性**（核对段落末尾是否截断、是否误带 JSON 代码、格式是否全量），自检 100% 无误后方可保存到 Obsidian 并通知用户。
 2. **Obsidian 预览验证**：**每个平台测试转换完成后，必须将生成的 Markdown 保存到用户的 Obsidian Vault 中，在 Obsidian 中打开给用户手动验证**，未经用户验证绝不出具完成报告。
-3. **如无必要，勿增实体 (Minimalist UI/UX Rule)**：UI/UX 设计必须极致简洁纯粹。严格禁止添加任何无意义的假标签（如 `v1.0 Plugin`）、多余的装饰性 Emoji（如 `💜`）、技术括号废话（如 `(obsidian://)`）或底部干扰性提示栏。保持界面克制、清爽、高效！
+3. **如无必要，勿增实体 (Minimalist UI/UX Rule)**：UI/UX 设计 must be extremely clean. Strictly prohibit meaningless dummy labels, redundant decorative emojis, or annoying user prompt boxes. Keep interfaces restrained, clean, and highly efficient.
 4. **知识沉淀**：把每个平台的 HTML 选择器、防盗链策略、LaTeX 处理与坑点实时记录到本 `AGENTS.md`。
+5. **接口上线强制自检铁律 (Self-Audit Contract)**：任何后端路由或接口（包括 Webhook、API Keys 生成、Sitemap 递归 Crawl）的逻辑代码在修改部署后，**AI 编码助手必须强行在后台使用终端执行真实测试请求（例如 curl -X POST / GET）对线上接口进行跑通验证**，只有在后台拿到 100% 正确无误的 JSON 响应，验证过每一项字段类型后，才能够交付给用户。坚决拒绝“只要部署成功就交付给用户肉眼测试”的懒汉思维。
+6. **D1 数据库与 Schema 强制审查铁律**：遇到任何 D1 数据库相关的报错或数据列表显示为空的问题，**严禁凭主观经验瞎猜去打补丁**。必须首先运行 wrangler 命令行拉取本地 schema/表结构，进行逐个字段名称（如 `id` 是否存在）的逐字物理比对，确保代码中的 SELECT/INSERT 查询与真实表结构完全一致。
 
 ## 部署流程
 
