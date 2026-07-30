@@ -257,9 +257,6 @@ export function App() {
               <span className="font-extrabold text-xl tracking-tight text-white font-['Outfit']">
                 Herdown
               </span>
-              <span className="hidden sm:inline-block ml-2.5 px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20">
-                v2.4.0 Pro
-              </span>
             </div>
           </div>
 
@@ -296,7 +293,7 @@ export function App() {
               }`}
             >
               <Key className="w-3.5 h-3.5" />
-              API Key
+              API
             </button>
             <button
               onClick={() => setActiveTab('mcp')}
@@ -328,7 +325,6 @@ export function App() {
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 text-emerald-400" />
               🧩 浏览器插件
             </button>
           </nav>
@@ -369,9 +365,9 @@ export function App() {
                 给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown 入口</span>
               </h1>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                微信公众号（包含贴图无水去重）、小红书笔记、知乎专栏/回答（Preserve LaTeX）、X/Twitter 及通用网页。
+                微信公众号、小红书笔记、知乎专栏/回答、X/Twitter 及通用网页。
                 <br className="hidden sm:block" />
-                2ms 极速解析，零存储隐私安全，支持 Stripe 自动订阅升级。
+                2ms 极速解析，零存储隐私安全。
               </p>
               
               {/* Presets */}
@@ -393,7 +389,7 @@ export function App() {
                   onClick={() => fillPreset('https://zhuanlan.zhihu.com/p/sample_zhihu')}
                   className="px-2.5 py-1 rounded-md bg-[#111823] border border-[#1e293b] text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400 transition"
                 >
-                  🔵 知乎 LaTeX 专栏
+                  🔵 知乎 问答
                 </button>
               </div>
             </div>
@@ -419,7 +415,6 @@ export function App() {
                     直接粘贴 HTML 源码
                   </button>
                 </div>
-                <span className="text-[11px] text-slate-500">POST /v1/parse</span>
               </div>
 
               {inputMode === 'url' ? (
@@ -430,7 +425,7 @@ export function App() {
                       type="url"
                       value={inputUrl}
                       onChange={(e) => setInputUrl(e.target.value)}
-                      placeholder="粘贴网页 URL（如 https://mp.weixin.qq.com/s/... 或 https://xiaohongshu.com/...）"
+                      placeholder="粘贴网页 URL..."
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
                     />
                   </div>
