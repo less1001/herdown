@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 import {
   Sparkles,
   Zap,
@@ -56,6 +57,7 @@ export function App() {
   const [crawlUrl, setCrawlUrl] = useState('');
   const [crawlLoading, setCrawlLoading] = useState(false);
   const [crawlResult, setCrawlResult] = useState<any>(null);
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   // Upgrade Modal
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -99,6 +101,44 @@ export function App() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const handleDownloadZip = async () => {
+    if (!crawlResult || !crawlResult.results || !crawlResult.results.length) {
+      alert('无可打包的页面内容！');
+      return;
+    }
+    setDownloadingZip(true);
+    try {
+      const zip = new JSZip();
+      crawlResult.results.forEach((item: any, idx: number) => {
+        // Create safe file name
+        const safeTitle = (item.title || `Page_${idx + 1}`)
+          .replace(/[/\\?%*:|"<>]/g, '_')
+          .trim();
+        
+        // Combine frontmatter + title + markdown body
+        const content = `---\ntitle: "${(item.title || '').replace(/"/g, '\\"')}"\nsource_url: "${item.url}"\n---\n\n# ${item.title}\n\n${item.markdown}`;
+        
+        zip.file(`${safeTitle}.md`, content);
+      });
+      
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      const cleanDomain = crawlResult.domain.replace(/[^a-zA-Z0-9]/g, '_');
+      a.download = `Herdown_Crawl_${cleanDomain}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Failed to create ZIP package:', err);
+      alert('打包压缩 ZIP 失败，请稍后重试！');
+    } finally {
+      setDownloadingZip(false);
     }
   };
 
@@ -648,7 +688,17 @@ export function App() {
                 <div className="mt-6 space-y-4">
                   <div className="flex items-center justify-between text-xs text-slate-400 border-b border-[#1e293b] pb-2">
                     <span>域名: <strong className="text-white">{crawlResult.domain}</strong></span>
-                    <span>批量抓取页面: <strong className="text-emerald-400">{crawlResult.total_pages} 页</strong> (耗时 {crawlResult.elapsed_ms}ms)</span>
+                    <div className="flex items-center gap-3">
+                      <span>批量抓取页面: <strong className="text-emerald-400">{crawlResult.total_pages} 页</strong> (耗时 {crawlResult.elapsed_ms}ms)</span>
+                      <button
+                        onClick={handleDownloadZip}
+                        disabled={downloadingZip}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/10 transition-all cursor-pointer"
+                      >
+                        {downloadingZip ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                        {downloadingZip ? '正在打包...' : '💾 一键打包下载全站 Markdown (.zip)'}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
