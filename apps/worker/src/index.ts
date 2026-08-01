@@ -41,6 +41,7 @@ const legalPage = (
   title: string,
   description: string,
   sections: Array<{ heading: string; body: string }>,
+  english = false,
 ) => {
   const sectionHtml = sections
     .map(
@@ -77,17 +78,24 @@ const legalPage = (
     <main>
       <a class="brand" href="/">Herdown</a>
       <h1>${title}</h1>
-      <p class="updated">生效日期：2026年8月1日</p>
+      <p class="updated">${english ? 'Effective date: August 1, 2026' : '生效日期：2026年8月1日'}</p>
       ${sectionHtml}
       <footer>
-        <a href="/terms">服务条款</a> · <a href="/privacy">隐私政策</a> · <a href="mailto:vkdefi@gmail.com">vkdefi@gmail.com</a> · <a href="https://x.com/vkdefi">@vkdefi</a>
+        <a href="/terms">${english ? 'Terms' : '服务条款'}</a> · <a href="/privacy">${english ? 'Privacy' : '隐私政策'}</a> · <a href="mailto:vkdefi@gmail.com">vkdefi@gmail.com</a> · <a href="https://x.com/vkdefi">@vkdefi</a>
       </footer>
     </main>
   </body>
 </html>`;
 };
 
-const termsPage = () => legalPage('服务条款', 'Herdown服务条款', [
+const termsPage = (english = false) => english ? legalPage('Terms of Service', 'Herdown Terms of Service', [
+  { heading: 'Service description', body: 'Herdown provides online tools, API, MCP, and related developer tools for turning webpages, documents, and images into Markdown. You may submit only content you are authorized to process and must follow applicable laws and third-party website rules.' },
+  { heading: 'One-time credit packs', body: 'Paid services are sold as one-time credit packs shown on the product page and do not include automatic renewal. After payment is completed and confirmed by the payment provider, the corresponding credits are delivered according to the product description.' },
+  { heading: 'Digital services and refunds', body: 'Credits are digital service capacity. Unless required by law or the service was not provided as agreed, issued or used digital credits generally cannot be refunded. Refund requests are handled according to the payment provider rules and the specific order.' },
+  { heading: 'Service availability', body: 'Herdown works to keep the service stable but does not guarantee that every third-party website, login-restricted page, or dynamic page can always be parsed. You may not use the service for illegal activity, infringement, bypassing access controls, or compromising the security of another system.' },
+  { heading: 'User obligations and enforcement', body: 'You must follow applicable laws, third-party platform rules, and these terms. You may not use the service for illegal, infringing, fraudulent, abusive scraping, access-control bypass, or harmful activity. Herdown may suspend or terminate access for violations or abnormal use and may cooperate when legally required.' },
+  { heading: 'Terms updates', body: 'We may update these terms for product, compliance, or security reasons. Continued use of the service means that you accept the updated terms.' },
+], true) : legalPage('服务条款', 'Herdown服务条款', [
   { heading: '服务说明', body: 'Herdown提供网页、文档和图片转为Markdown的在线工具、API、MCP与相关开发者工具。您应仅提交有权处理的内容，并遵守适用法律及第三方网站规则。' },
   { heading: '一次性点数包', body: '付费服务以商品页面展示的一次性点数包为准，不包含自动续费。支付完成并经支付平台确认后，系统会按商品说明发放相应服务额度。' },
   { heading: '数字服务与退款', body: '点数属于数字服务额度。除法律另有规定或服务未能按约提供外，已发放或已使用的数字额度通常不支持退款。退款申请会依据支付平台规则与具体订单情况处理。' },
@@ -96,7 +104,13 @@ const termsPage = () => legalPage('服务条款', 'Herdown服务条款', [
   { heading: '条款更新', body: '我们可能因功能、合规或安全需要更新本条款。继续使用服务即表示您接受更新后的条款。' },
 ]);
 
-const privacyPage = () => legalPage('隐私政策', 'Herdown隐私政策', [
+const privacyPage = (english = false) => english ? legalPage('Privacy Policy', 'Herdown Privacy Policy', [
+  { heading: 'Information processed', body: 'To complete a request, Herdown processes the webpage URLs, HTML, file content, API parameters, and necessary technical logs that you submit or generate through the service.' },
+  { heading: 'How information is used', body: 'Submitted content is used only to complete the current parsing or conversion request, troubleshoot errors, and protect the service. Herdown does not sell, rent, or use your content for targeted advertising.' },
+  { heading: 'Content and storage', body: 'Herdown uses real-time processing and does not provide user content hosting or a long-term knowledge base. Limited short-term logs may be used to prevent abuse, maintain stability, and diagnose failures.' },
+  { heading: 'Third-party services', body: 'Payments are handled by independent providers such as Waffo Pancake. Payment providers process payment information under their own privacy policies; Herdown does not directly store complete bank-card information.' },
+  { heading: 'Account, access, and deletion requests', body: 'You may sign in with Google to recover API keys, view quota, and manage your profile. You can delete API keys on the website. To request access to or deletion of service records related to you, email vkdefi@gmail.com and do not send identity documents or bank-card numbers through a public page. After verification, we will handle identifiable records within a reasonable period. Payment orders and payment information are handled by Waffo Pancake under its rules.' },
+], true) : legalPage('隐私政策', 'Herdown隐私政策', [
   { heading: '处理的信息', body: '为完成请求，Herdown会处理您主动提交的网页链接、HTML内容、文件内容、API请求参数以及必要的技术日志。' },
   { heading: '数据使用方式', body: '提交内容仅用于完成当前的解析、转换、错误排查与安全防护。Herdown不以出售、出租或广告定向为目的使用您的内容。' },
   { heading: '内容与存储', body: 'Herdown采用实时处理方式，不提供用户内容托管或长期知识库服务。必要的短期日志可能用于防滥用、保障服务稳定与定位故障。' },
@@ -1681,13 +1695,15 @@ export default {
     }
 
     if (url.pathname === '/terms' || url.pathname === '/terms/') {
-      return new Response(termsPage(), {
+      const english = (request.headers.get('accept-language') || '').toLowerCase().startsWith('en');
+      return new Response(termsPage(english), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
 
     if (url.pathname === '/privacy' || url.pathname === '/privacy/') {
-      return new Response(privacyPage(), {
+      const english = (request.headers.get('accept-language') || '').toLowerCase().startsWith('en');
+      return new Response(privacyPage(english), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
     }
