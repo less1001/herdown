@@ -32,6 +32,10 @@ interface ParseResponse {
   images: string[];
   platform: 'wechat' | 'xiaohongshu' | 'zhihu' | 'twitter' | 'wikipedia' | 'general';
   elapsed_ms: number;
+  source_tokens?: number;
+  markdown_tokens?: number;
+  token_savings?: number;
+  token_savings_percent?: number;
   message?: string;
 }
 
@@ -42,8 +46,129 @@ interface ApiKeyItem {
   created_at: string;
 }
 
+type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'help' | 'faq' | null;
+
+const getToolSlug = (): ToolSlug => {
+  const slug = window.location.pathname.replace(/^\//, '') as Exclude<ToolSlug, null>;
+  return ['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'help', 'faq'].includes(slug) ? slug : null;
+};
+
+const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; description: string; local?: boolean }> = {
+  'url-to-markdown': { title: 'URL转Markdown', description: '粘贴网页链接，提取正文、标题、图片和来源信息，生成干净Markdown。' },
+  'txt-to-markdown': { title: 'TXT转Markdown', description: '把纯文本整理成可直接保存和交给AI使用的Markdown文件。' },
+  'pdf-to-markdown': { title: 'PDF转Markdown', description: '使用本地MarkItDown处理可提取文字的PDF，不上传文件，不增加服务器费用。', local: true },
+  'ppt-to-markdown': { title: 'PPT转Markdown', description: '使用本地MarkItDown把PPT和PPTX整理为结构化Markdown。', local: true },
+  'excel-to-markdown': { title: 'Excel转Markdown', description: '使用本地MarkItDown把Excel表格整理成适合AI读取的Markdown。', local: true },
+  help: { title: '帮助文档', description: '从网页转换、API密钥、MCP和本地文档工具开始使用Herdown。' },
+  faq: { title: '常见问题', description: '查看解析范围、数据保存、额度和本地文档处理的常见问题。' },
+};
+
+function TextMarkdownTool() {
+  const [text, setText] = useState('');
+  const [copied, setCopied] = useState(false);
+  const markdown = text
+    .split(/\r?\n/)
+    .map(line => line.trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const copy = () => {
+    if (!markdown) return;
+    navigator.clipboard.writeText(markdown);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  const download = () => {
+    if (!markdown) return;
+    const blob = new Blob([`${markdown}\n`], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'herdown-text.md';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="max-w-3xl">
+        <span className="text-xs font-semibold text-emerald-400">本地即时转换</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">TXT转Markdown</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">文本只在当前浏览器处理，不上传服务器。整理后可以复制或直接下载为`.md`文件。</p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <label className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
+          <span className="block text-xs font-semibold text-slate-300 mb-3">输入TXT文本</span>
+          <textarea value={text} onChange={event => setText(event.target.value)} rows={16} placeholder="把纯文本粘贴到这里..." className="w-full h-80 resize-y rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500" />
+        </label>
+        <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-slate-300">Markdown结果</span>
+            <div className="flex gap-2">
+              <button onClick={copy} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-[#1e293b] text-xs text-slate-200 disabled:opacity-40">{copied ? '已复制' : '复制'}</button>
+              <button onClick={download} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white disabled:opacity-40">下载.md</button>
+            </div>
+          </div>
+          <pre className="h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || '转换结果会显示在这里...'}</pre>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LocalToolGuide({ slug }: { slug: 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' }) {
+  const info = toolPageInfo[slug];
+  const extension = slug === 'ppt-to-markdown' ? 'pptx' : slug === 'excel-to-markdown' ? 'xlsx' : 'pdf';
+  const command = ['python -m pip install markitdown', `markitdown "你的文件.${extension}" > output.md`].join('\n');
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="max-w-3xl">
+        <span className="text-xs font-semibold text-emerald-400">本地工具，不上传文件</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{info.title}</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{info.description}</p>
+      </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-5">
+        <div>
+          <h2 className="text-lg font-bold text-white">怎么用</h2>
+          <p className="text-sm text-slate-400 mt-2 leading-7">安装本地MarkItDown后，在终端执行下面的命令。文件留在你的电脑上，Herdown不接收文件内容。</p>
+        </div>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{command}</pre>
+        <p className="text-xs text-slate-500 leading-6">复杂扫描件或截图请使用本地Unlimited-OCRSkill。它在本地运行，不需要Herdown额外服务器。</p>
+      </div>
+    </div>
+  );
+}
+
+function HelpPage() {
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div>
+        <span className="text-xs font-semibold text-emerald-400">Herdown帮助</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">从一条网页链接开始</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">网页端适合临时转换，API、MCP和CLI适合接入自己的AI工作流。</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {[
+          ['网页转换', '打开首页，粘贴网页链接，点击转换为Markdown。'],
+          ['开发者接入', '在API页面创建密钥，再按MCP、CLI或REST文档接入。'],
+          ['本地文件', 'PDF、PPT和Excel使用本地MarkItDown，截图使用Unlimited-OCRSkill。'],
+        ].map(([title, body]) => (
+          <div key={title} className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
+            <h2 className="font-bold text-white">{title}</h2>
+            <p className="text-sm text-slate-400 leading-7 mt-2">{body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli' | 'extension' | 'skills'>('converter');
+  const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
@@ -446,7 +571,11 @@ export function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
         {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
-          <div className="space-y-8">
+          <>
+            {toolSlug === 'txt-to-markdown' && <TextMarkdownTool />}
+            {(toolSlug === 'pdf-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} />}
+            {toolSlug === 'help' && <HelpPage />}
+            {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-8">
             {/* Hero Banner */}
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
@@ -566,6 +695,14 @@ export function App() {
               )}
             </div>
 
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+                <a key={slug} href={`/${slug}`} className="rounded-xl border border-[#1e293b] bg-[#0d131c] px-3 py-3 text-center text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 transition">
+                  {toolPageInfo[slug].title}
+                </a>
+              ))}
+            </div>
+
             {/* Result Area */}
             {result && (
               <div className="bg-[#0f1722] border border-[#1e293b] rounded-2xl overflow-hidden shadow-2xl space-y-0">
@@ -599,6 +736,24 @@ export function App() {
                     </button>
                   </div>
                 </div>
+
+                {typeof result.source_tokens === 'number' && typeof result.markdown_tokens === 'number' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-[#1e293b] border-b border-[#1e293b]">
+                    <div className="bg-[#0d131c] px-5 py-4">
+                      <span className="block text-[11px] text-slate-500">原网页HTML估算</span>
+                      <strong className="block text-lg text-slate-200 mt-1">{result.source_tokens.toLocaleString()} Tokens</strong>
+                    </div>
+                    <div className="bg-[#0d131c] px-5 py-4">
+                      <span className="block text-[11px] text-slate-500">清洗后Markdown估算</span>
+                      <strong className="block text-lg text-emerald-300 mt-1">{result.markdown_tokens.toLocaleString()} Tokens</strong>
+                    </div>
+                    <div className="bg-[#0d131c] px-5 py-4">
+                      <span className="block text-[11px] text-slate-500">预计节省上下文</span>
+                      <strong className="block text-lg text-emerald-400 mt-1">{(result.token_savings_percent || 0).toFixed(1)}%</strong>
+                      <span className="text-[10px] text-slate-500">仅为估算值，实际数量取决于模型</span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="px-6 py-2 bg-[#0d131c] border-b border-[#1e293b] flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -691,7 +846,8 @@ export function App() {
                 </div>
               </div>
             )}
-          </div>
+            </div>}
+          </>
         )}
 
         {/* TAB 2: Full Site Crawl */}

@@ -13,6 +13,10 @@ Core capabilities:
 - CLI access
 - Browser extension
 - Skills and extraction rules
+- URL to Markdown: https://herdown.com/url-to-markdown
+- TXT to Markdown: https://herdown.com/txt-to-markdown
+- PDF, PPT, and Excel use the local MarkItDown tool: https://herdown.com/pdf-to-markdown
+- Help: https://herdown.com/help
+- FAQ: https://herdown.com/faq
 
 Do not treat Herdown as a full knowledge base or question answering product.
-
