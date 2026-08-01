@@ -17,6 +17,15 @@ Core capabilities:
 - TXT to Markdown: https://herdown.com/txt-to-markdown
 - PDF, PPT, and Excel use the local MarkItDown tool: https://herdown.com/pdf-to-markdown
 - Help: https://herdown.com/help
+- Docs: https://herdown.com/docs
 - FAQ: https://herdown.com/faq
+
+Documentation topics:
+- Quick start for webpage to Markdown
+- REST API authentication and parse requests
+- MCP, CLI, browser extension, and local Skill usage
+- Dify, Coze, FastGPT, and n8n workflow handoff
+- Local MarkItDown and Unlimited-OCRSkill
+- Quota, payment, privacy, and security rules
 
 Do not treat Herdown as a full knowledge base or question answering product.

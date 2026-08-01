@@ -28,6 +28,7 @@ import {
   LogIn,
   LogOut
 } from 'lucide-react';
+import { getInitialLanguage, Language, messages } from './i18n';
 
 interface ParseResponse {
   success: boolean;
@@ -70,7 +71,7 @@ interface AdminOverview {
   recent_users: Array<{ email: string; display_name?: string; plan: string; created_at: string }>;
 }
 
-type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'help' | 'faq' | null;
+type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | null;
 type ProductCode = 'starter' | 'standard' | 'bulk';
 
 declare global {
@@ -135,20 +136,25 @@ const pricingPackages: Array<{ code: ProductCode; price: string; credits: string
 
 const getToolSlug = (): ToolSlug => {
   const slug = window.location.pathname.replace(/^\//, '') as Exclude<ToolSlug, null>;
-  return ['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'help', 'faq'].includes(slug) ? slug : null;
+  return ['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq'].includes(slug) ? slug : null;
 };
 
-const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; description: string; local?: boolean }> = {
-  'url-to-markdown': { title: 'URL转Markdown', description: '粘贴网页链接，提取正文、标题、图片和来源信息，生成干净Markdown。' },
-  'txt-to-markdown': { title: 'TXT转Markdown', description: '把纯文本整理成可直接保存和交给AI使用的Markdown文件。' },
-  'pdf-to-markdown': { title: 'PDF转Markdown', description: '使用本地MarkItDown处理可提取文字的PDF，不上传文件，不增加服务器费用。', local: true },
-  'ppt-to-markdown': { title: 'PPT转Markdown', description: '使用本地MarkItDown把PPT和PPTX整理为结构化Markdown。', local: true },
-  'excel-to-markdown': { title: 'Excel转Markdown', description: '使用本地MarkItDown把Excel表格整理成适合AI读取的Markdown。', local: true },
-  help: { title: '帮助文档', description: '从网页转换、API密钥、MCP和本地文档工具开始使用Herdown。' },
-  faq: { title: '常见问题', description: '查看解析范围、数据保存、额度和本地文档处理的常见问题。' },
+const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: string; description: string; enDescription: string; local?: boolean }> = {
+  'url-to-markdown': { title: 'URL转Markdown', enTitle: 'URL to Markdown', description: '粘贴网页链接，提取正文、标题、图片和来源信息，生成干净Markdown。', enDescription: 'Paste a webpage URL to extract the body, title, images, and source metadata into clean Markdown.' },
+  'txt-to-markdown': { title: 'TXT转Markdown', enTitle: 'TXT to Markdown', description: '把纯文本整理成可直接保存和交给AI使用的Markdown文件。', enDescription: 'Turn plain text into a Markdown file ready to save or send to an AI tool.' },
+  'pdf-to-markdown': { title: 'PDF转Markdown', enTitle: 'PDF to Markdown', description: '使用本地MarkItDown处理可提取文字的PDF，不上传文件，不增加服务器费用。', enDescription: 'Use local MarkItDown to process text-based PDFs without uploading files or adding server cost.', local: true },
+  'ppt-to-markdown': { title: 'PPT转Markdown', enTitle: 'PPT to Markdown', description: '使用本地MarkItDown把PPT和PPTX整理为结构化Markdown。', enDescription: 'Use local MarkItDown to turn PPT and PPTX files into structured Markdown.', local: true },
+  'excel-to-markdown': { title: 'Excel转Markdown', enTitle: 'Excel to Markdown', description: '使用本地MarkItDown把Excel表格整理成适合AI读取的Markdown。', enDescription: 'Use local MarkItDown to turn Excel spreadsheets into Markdown for AI tools.', local: true },
+  docs: { title: 'Docs文档', enTitle: 'Docs', description: '查看网页转换、API、MCP、CLI、本地工具和工作流接入说明。', enDescription: 'Read guides for web conversion, API, MCP, CLI, local tools, and workflow integrations.' },
+  help: { title: '帮助文档', enTitle: 'Help', description: '从网页转换、API密钥、MCP和本地文档工具开始使用Herdown。', enDescription: 'Start using Herdown with web conversion, API keys, MCP, and local document tools.' },
+  faq: { title: '常见问题', enTitle: 'FAQ', description: '查看解析范围、数据保存、额度和本地文档处理的常见问题。', enDescription: 'Answers about parsing, data retention, quotas, and local document processing.' },
 };
 
-function TextMarkdownTool() {
+const toolLabel = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enTitle : toolPageInfo[slug].title;
+const toolDescription = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enDescription : toolPageInfo[slug].description;
+
+function TextMarkdownTool({ language }: { language: Language }) {
+  const ui = messages[language];
   const [text, setText] = useState('');
   const [copied, setCopied] = useState(false);
   const markdown = text
@@ -179,31 +185,32 @@ function TextMarkdownTool() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="max-w-3xl">
-        <span className="text-xs font-semibold text-emerald-400">本地即时转换</span>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">TXT转Markdown</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">文本只在当前浏览器处理，不上传服务器。整理后可以复制或直接下载为`.md`文件。</p>
+        <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'Local instant conversion' : '本地即时转换'}</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{toolLabel('txt-to-markdown', language)}</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Text is processed in this browser and is not uploaded. Copy or download the cleaned `.md` file.' : '文本只在当前浏览器处理，不上传服务器。整理后可以复制或直接下载为`.md`文件。'}</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <label className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
-          <span className="block text-xs font-semibold text-slate-300 mb-3">输入TXT文本</span>
-          <textarea value={text} onChange={event => setText(event.target.value)} rows={16} placeholder="把纯文本粘贴到这里..." className="w-full h-80 resize-y rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500" />
+          <span className="block text-xs font-semibold text-slate-300 mb-3">{language === 'en' ? 'Input TXT text' : '输入TXT文本'}</span>
+          <textarea value={text} onChange={event => setText(event.target.value)} rows={16} placeholder={language === 'en' ? 'Paste plain text here...' : '把纯文本粘贴到这里...'} className="w-full h-80 resize-y rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500" />
         </label>
         <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-slate-300">Markdown结果</span>
+            <span className="text-xs font-semibold text-slate-300">{language === 'en' ? 'Markdown result' : 'Markdown结果'}</span>
             <div className="flex gap-2">
-              <button onClick={copy} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-[#1e293b] text-xs text-slate-200 disabled:opacity-40">{copied ? '已复制' : '复制'}</button>
-              <button onClick={download} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white disabled:opacity-40">下载.md</button>
+              <button onClick={copy} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-[#1e293b] text-xs text-slate-200 disabled:opacity-40">{copied ? ui.copied : language === 'en' ? 'Copy' : '复制'}</button>
+              <button onClick={download} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white disabled:opacity-40">{ui.download}</button>
             </div>
           </div>
-          <pre className="h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || '转换结果会显示在这里...'}</pre>
+          <pre className="h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || (language === 'en' ? 'The result will appear here...' : '转换结果会显示在这里...')}</pre>
         </div>
       </div>
     </div>
   );
 }
 
-function LocalToolGuide({ slug }: { slug: 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' }) {
+function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown'; language: Language }) {
+  const ui = messages[language];
   const info = toolPageInfo[slug];
   const extension = slug === 'ppt-to-markdown' ? 'pptx' : slug === 'excel-to-markdown' ? 'xlsx' : 'pdf';
   const command = ['python -m pip install markitdown', `markitdown "你的文件.${extension}" > output.md`].join('\n');
@@ -211,35 +218,38 @@ function LocalToolGuide({ slug }: { slug: 'pdf-to-markdown' | 'ppt-to-markdown' 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       <div className="max-w-3xl">
-        <span className="text-xs font-semibold text-emerald-400">本地工具，不上传文件</span>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{info.title}</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">{info.description}</p>
+        <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'Local tool, no upload' : '本地工具，不上传文件'}</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{toolLabel(slug, language)}</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{toolDescription(slug, language)}</p>
       </div>
       <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-5">
         <div>
-          <h2 className="text-lg font-bold text-white">怎么用</h2>
-          <p className="text-sm text-slate-400 mt-2 leading-7">安装本地MarkItDown后，在终端执行下面的命令。文件留在你的电脑上，Herdown不接收文件内容。</p>
+          <h2 className="text-lg font-bold text-white">{language === 'en' ? 'How to use' : '怎么用'}</h2>
+          <p className="text-sm text-slate-400 mt-2 leading-7">{language === 'en' ? 'Install local MarkItDown and run the command below. Your file stays on your computer.' : '安装本地MarkItDown后，在终端执行下面的命令。文件留在你的电脑上，Herdown不接收文件内容。'}</p>
         </div>
         <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{command}</pre>
-        <p className="text-xs text-slate-500 leading-6">复杂扫描件或截图请使用本地Unlimited-OCRSkill。它在本地运行，不需要Herdown额外服务器。</p>
+        <p className="text-xs text-slate-500 leading-6">{language === 'en' ? 'For scans or screenshots, use the local Unlimited-OCRSkill. It runs locally and needs no extra Herdown server.' : '复杂扫描件或截图请使用本地Unlimited-OCRSkill。它在本地运行，不需要Herdown额外服务器。'}</p>
       </div>
     </div>
   );
 }
 
-function HelpPage() {
+function DocsPage({ language }: { language: Language }) {
+  const ui = messages[language];
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <span className="text-xs font-semibold text-emerald-400">Herdown帮助</span>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">从一条网页链接开始</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">网页端适合临时转换，API、MCP和CLI适合接入自己的AI工作流。</p>
+        <span className="text-xs font-semibold text-emerald-400">{ui.docsTitle}</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{ui.docsSubtitle}</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Choose a guide below. The examples only use features currently available on Herdown.' : '从下面选择对应说明。文档只介绍当前Herdown已经提供的功能。'}</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          ['网页转换', '打开首页，粘贴网页链接，点击转换为Markdown。'],
-          ['开发者接入', '在API页面创建密钥，再按MCP、CLI或REST文档接入。'],
-          ['本地文件', 'PDF、PPT和Excel使用本地MarkItDown，截图使用Unlimited-OCRSkill。'],
+          [ui.quickStart, ui.docsStart],
+          [ui.apiDocs, ui.docsApi],
+          [ui.integrations, ui.docsWorkflow],
+          [ui.localTools, ui.docsLocal],
+          [ui.security, language === 'en' ? 'Free quota is shared by user, IP, device, and API key. Paid credits do not expire and do not renew automatically.' : '免费额度按用户、IP、设备和API密钥共同计算。付费点数不过期，也不会自动续费。'],
         ].map(([title, body]) => (
           <div key={title} className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
             <h2 className="font-bold text-white">{title}</h2>
@@ -247,13 +257,34 @@ function HelpPage() {
           </div>
         ))}
       </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+        <h2 className="text-xl font-bold text-white">{language === 'en' ? 'REST API' : 'RESTAPI'}</h2>
+        <p className="text-sm text-slate-400 leading-7">{language === 'en' ? 'Create an API key from the API tab, then send it as a Bearer token.' : '在API页面创建密钥，然后把密钥作为BearerToken发送。'}</p>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{`curl -X POST https://herdown.com/v1/parse \\
+  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"url":"https://example.com/article"}'`}</pre>
+      </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
+        <h2 className="text-xl font-bold text-white">{language === 'en' ? 'Available tools' : '当前可用工具'}</h2>
+        <p className="text-sm text-slate-400 leading-7">{language === 'en' ? 'Web conversion, site crawl, REST API, MCP, CLI, browser extension, local MarkItDown, and local Unlimited-OCRSkill.' : '网页转换、全站抓取、RESTAPI、MCP、CLI、浏览器插件、本地MarkItDown和本地Unlimited-OCRSkill。'}</p>
+        <div className="flex flex-wrap gap-2 text-xs text-emerald-300">
+          {['/url-to-markdown', '/txt-to-markdown', '/pdf-to-markdown', '/ppt-to-markdown', '/excel-to-markdown'].map(path => <a key={path} href={path} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">{path.replace('/', '')}</a>)}
+        </div>
+      </div>
     </div>
   );
+}
+
+function HelpPage({ language }: { language: Language }) {
+  return <DocsPage language={language} />;
 }
 
 export function App() {
   const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>('converter');
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
+  const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
+  const ui = messages[language];
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
@@ -314,8 +345,15 @@ export function App() {
   }, [sessionLoading, sessionUser]);
 
   useEffect(() => {
-    document.title = toolSlug ? `${toolPageInfo[toolSlug].title} | Herdown` : 'Herdown - 给AIAgent用的干净Markdown入口';
-  }, [toolSlug]);
+    window.localStorage.setItem('herdown_language', language);
+    document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
+    const title = toolSlug ? toolLabel(toolSlug, language) : language === 'en' ? 'Herdown - Clean Markdown for AI agents' : 'Herdown - 给AIAgent用的干净Markdown入口';
+    const description = toolSlug ? toolDescription(toolSlug, language) : language === 'en' ? 'Turn webpages, documents, and images into clean materials for AI workflows.' : '把网页、文档和图片整理成适合AI知识库使用的干净资料。';
+    document.title = title;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', description);
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+    document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
+  }, [language, toolSlug]);
 
   const fetchKeys = async () => {
     if (sessionUser) {
@@ -622,7 +660,7 @@ export function App() {
       {/* Top Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#070a0e]/80 border-b border-[#1e293b]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <a href="/" className="flex items-center gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0f6b4f] to-[#10b981] p-[1px] shadow-lg shadow-[#0f6b4f]/20">
               <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-base">
                 HD
@@ -633,7 +671,7 @@ export function App() {
                 Herdown
               </span>
             </div>
-          </div>
+          </a>
 
           {/* Navigation Tabs */}
           <nav className="flex overflow-x-auto whitespace-nowrap scrollbar-none items-center gap-1 bg-[#111823] p-1 rounded-xl border border-[#1e293b] max-w-[60%] sm:max-w-none">
@@ -646,7 +684,7 @@ export function App() {
               }`}
             >
               <Zap className="w-3.5 h-3.5" />
-              单页转换
+              {ui.single}
             </button>
             <button
               onClick={() => setActiveTab('crawl')}
@@ -657,7 +695,7 @@ export function App() {
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              全站爬取
+              {ui.crawl}
             </button>
             <button
               onClick={() => setActiveTab('keys')}
@@ -668,7 +706,7 @@ export function App() {
               }`}
             >
               <Key className="w-3.5 h-3.5" />
-              API
+              {ui.api}
             </button>
             {sessionUser?.is_admin && (
               <button
@@ -680,7 +718,7 @@ export function App() {
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                管理
+                {ui.admin}
               </button>
             )}
             <button
@@ -692,7 +730,7 @@ export function App() {
               }`}
             >
               <Cpu className="w-3.5 h-3.5" />
-              MCP
+              {ui.mcp}
             </button>
             <button
               onClick={() => setActiveTab('cli')}
@@ -703,7 +741,7 @@ export function App() {
               }`}
             >
               <Terminal className="w-3.5 h-3.5" />
-              CLI
+              {ui.cli}
             </button>
             <button
               onClick={() => setActiveTab('extension')}
@@ -714,7 +752,7 @@ export function App() {
               }`}
             >
               <PlugZap className="w-3.5 h-3.5" />
-              浏览器插件
+              {ui.extension}
             </button>
             <button
               onClick={() => setActiveTab('skills')}
@@ -725,7 +763,7 @@ export function App() {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              Skill
+              {ui.skill}
             </button>
           </nav>
 
@@ -735,7 +773,14 @@ export function App() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              升级
+              {ui.upgrade}
+            </button>
+            <button
+              onClick={() => setLanguage(current => current === 'zh' ? 'en' : 'zh')}
+              className="px-2.5 py-1.5 rounded-xl bg-[#111823] border border-[#1e293b] text-slate-300 hover:text-white text-xs font-semibold transition"
+              title={language === 'zh' ? 'Switch to English' : '切换到中文'}
+            >
+              {ui.language}
             </button>
             {sessionUser ? (
               <div className="flex items-center gap-1">
@@ -750,7 +795,7 @@ export function App() {
                 <button
                   onClick={() => void handleLogout()}
                   className="p-2 rounded-lg text-slate-500 hover:text-white transition"
-                  title="退出登录"
+                  title={ui.logout}
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -761,7 +806,7 @@ export function App() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-slate-900 hover:bg-slate-200 text-xs font-bold transition"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                Google登录
+                {ui.login}
               </button>
             )}
             <a
@@ -769,7 +814,7 @@ export function App() {
               target="_blank"
               rel="noreferrer"
               className="p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title="GitHub 源码"
+              title={ui.github}
             >
               <Code2 className="w-4 h-4" />
             </a>
@@ -780,45 +825,45 @@ export function App() {
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
         <div className="mb-7 flex flex-wrap items-center gap-2 rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
-          <span className="px-3 py-2 font-semibold text-slate-500">工具入口</span>
+          <span className="px-3 py-2 font-semibold text-slate-500">{ui.tools}</span>
           {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
             <a key={slug} href={`/${slug}`} className="rounded-xl px-3 py-2 text-slate-300 hover:bg-[#1e293b] hover:text-emerald-300 transition">
-              {toolPageInfo[slug].title}
+              {toolLabel(slug, language)}
             </a>
           ))}
-          <a href="/help" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">帮助</a>
-          <a href="/faq" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">FAQ</a>
+          <a href="/docs" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.docs}</a>
+          <a href="/faq" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.faq}</a>
         </div>
         {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
           <>
-            {toolSlug === 'txt-to-markdown' && <TextMarkdownTool />}
-            {(toolSlug === 'pdf-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} />}
-            {toolSlug === 'help' && <HelpPage />}
+            {toolSlug === 'txt-to-markdown' && <TextMarkdownTool language={language} />}
+            {(toolSlug === 'pdf-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} language={language} />}
+            {(toolSlug === 'docs' || toolSlug === 'help') && <HelpPage language={language} />}
             {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-8">
             {/* Hero Banner */}
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                支持网页、文档和图片整理成适合AI知识库使用的干净资料
+                {ui.heroBadge}
               </div>
               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-normal">
-                给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown 入口</span>
+                {language === 'en' ? <>A clean <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">Markdown</span> entry point for AI agents</> : <>给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown入口</span></>}
               </h1>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                通用网页、公众号文章、PDF、Word、PPT、Excel、图片和截图。
+                {language === 'en' ? 'Webpages, articles, PDF, Word, PPT, Excel, images, and screenshots.' : '通用网页、公众号文章、PDF、Word、PPT、Excel、图片和截图。'}
                 <br className="hidden sm:block" />
-                先把资料清干净，再交给你的AI工作流或知识库。
+                {language === 'en' ? 'Clean the source first, then send it to your AI workflow or knowledge tool.' : '先把资料清干净，再交给你的AI工作流或知识库。'}
               </p>
               
               {/* Presets */}
               <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                <span className="text-xs text-slate-500 font-medium">快速体验示例：</span>
+                <span className="text-xs text-slate-500 font-medium">{ui.quickExample}</span>
                 <button
                   onClick={() => fillPreset('https://mp.weixin.qq.com/s/sample_article')}
                   className="px-2.5 py-1 rounded-md bg-[#111823] border border-[#1e293b] text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400 transition"
                 >
-                  网页文章
+                  {ui.article}
                 </button>
               </div>
             </div>
@@ -833,7 +878,7 @@ export function App() {
                       inputMode === 'url' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    网页 URL 链接转换
+                    {ui.urlMode}
                   </button>
                   <button
                     onClick={() => setInputMode('html')}
@@ -841,7 +886,7 @@ export function App() {
                       inputMode === 'html' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    直接粘贴 HTML 源码
+                    {ui.htmlMode}
                   </button>
                 </div>
               </div>
@@ -854,7 +899,7 @@ export function App() {
                       type="url"
                       value={inputUrl}
                       onChange={(e) => setInputUrl(e.target.value)}
-                      placeholder="粘贴网页 URL..."
+                      placeholder={ui.urlPlaceholder}
                       className="w-full pl-10 pr-4 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
                     />
                   </div>
@@ -864,7 +909,7 @@ export function App() {
                     className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm text-white shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
                   >
                     {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-white" />}
-                    {loading ? '正在解析中...' : '转换为 Markdown'}
+                    {loading ? ui.parsing : ui.parse}
                   </button>
                   {inputUrl.includes('zhihu.com/question/') && (
                     <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 animate-fadeIn">
@@ -891,7 +936,7 @@ export function App() {
                     rows={5}
                     value={inputHtml}
                     onChange={(e) => setInputHtml(e.target.value)}
-                    placeholder="在此粘贴包含 HTML 源码的文本..."
+                    placeholder={ui.htmlPlaceholder}
                     className="w-full p-4 rounded-xl bg-[#090d12] border border-[#1e293b] text-xs font-mono text-slate-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
                   />
                   <div className="flex justify-end">
@@ -901,7 +946,7 @@ export function App() {
                       className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 font-semibold text-sm text-white shadow-lg flex items-center gap-2 transition"
                     >
                       {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                      解析 HTML 源码
+                      {ui.parseHtml}
                     </button>
                   </div>
                 </div>
@@ -918,7 +963,7 @@ export function App() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
                 <a key={slug} href={`/${slug}`} className="rounded-xl border border-[#1e293b] bg-[#0d131c] px-3 py-3 text-center text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 transition">
-                  {toolPageInfo[slug].title}
+                  {toolLabel(slug, language)}
                 </a>
               ))}
             </div>
@@ -1139,30 +1184,30 @@ export function App() {
         {activeTab === 'account' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="rounded-2xl border border-[#1e293b] bg-[#0f1722] p-6">
-              <span className="text-xs font-semibold text-emerald-400">我的Herdown</span>
-              <h2 className="text-2xl font-bold text-white mt-2">账号管理</h2>
+              <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'My Herdown' : '我的Herdown'}</span>
+              <h2 className="text-2xl font-bold text-white mt-2">{language === 'en' ? 'Account' : '账号管理'}</h2>
               {sessionUser ? (
                 <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-4">
                   {sessionUser.avatar_url ? <img src={sessionUser.avatar_url} alt="" className="w-12 h-12 rounded-full border border-[#29423d]" /> : <div className="w-12 h-12 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-300"><UserRound /></div>}
                   <div>
-                    <p className="font-bold text-white">{sessionUser.display_name || 'Google用户'}</p>
+                    <p className="font-bold text-white">{sessionUser.display_name || (language === 'en' ? 'Google user' : 'Google用户')}</p>
                     <p className="text-sm text-slate-400">{sessionUser.email}</p>
                   </div>
                 </div>
               ) : (
                 <div className="mt-5">
-                  <p className="text-sm text-slate-400 leading-7">登录后可以在更换设备或清理浏览器缓存后找回API密钥，并查看自己的额度。</p>
-                  <button onClick={handleGoogleLogin} className="mt-4 px-4 py-2 rounded-xl bg-white text-slate-900 text-xs font-bold">使用Google登录</button>
+                  <p className="text-sm text-slate-400 leading-7">{language === 'en' ? 'Sign in to recover your API keys after changing devices or clearing browser data, and view your quota.' : '登录后可以在更换设备或清理浏览器缓存后找回API密钥，并查看自己的额度。'}</p>
+                  <button onClick={handleGoogleLogin} className="mt-4 px-4 py-2 rounded-xl bg-white text-slate-900 text-xs font-bold">{ui.login}</button>
                 </div>
               )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">当前API密钥</span><p className="text-2xl font-extrabold text-white mt-2">{apiKeys.filter(key => key.status === 'active').length}个</p></div>
-              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">本月免费额度</span><p className="text-2xl font-extrabold text-emerald-400 mt-2">{hasPaidCredits ? '不扣免费额度' : `${(freeRemaining ?? 1000).toLocaleString()}次`}</p></div>
-              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">付费点数</span><p className="text-2xl font-extrabold text-white mt-2">{(hasPaidCredits ? (creditBalance ?? 0) : 0).toLocaleString()}次</p></div>
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{language === 'en' ? 'Active API keys' : '当前API密钥'}</span><p className="text-2xl font-extrabold text-white mt-2">{apiKeys.filter(key => key.status === 'active').length}</p></div>
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{language === 'en' ? 'Monthly free quota' : '本月免费额度'}</span><p className="text-2xl font-extrabold text-emerald-400 mt-2">{hasPaidCredits ? (language === 'en' ? 'Not used' : '不扣免费额度') : `${(freeRemaining ?? 1000).toLocaleString()}${language === 'en' ? '' : '次'}`}</p></div>
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{language === 'en' ? 'Paid credits' : '付费点数'}</span><p className="text-2xl font-extrabold text-white mt-2">{(hasPaidCredits ? (creditBalance ?? 0) : 0).toLocaleString()}{language === 'en' ? '' : '次'}</p></div>
             </div>
             <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-5 text-sm text-slate-400 leading-7">
-              免费额度是每个用户每月1000次，IP、设备和API密钥共同计算，换密钥不会重置。API密钥每周最多创建1个。付费点数不过期，也不会自动续费。
+              {language === 'en' ? 'The free quota is 1,000 parses per user per month and is shared across IP, device, and API key. Changing keys does not reset it. Each IP can create one API key per week. Paid credits do not expire or auto-renew.' : '免费额度是每个用户每月1000次，IP、设备和API密钥共同计算，换密钥不会重置。API密钥每周最多创建1个。付费点数不过期，也不会自动续费。'}
             </div>
           </div>
         )}
@@ -1170,24 +1215,24 @@ export function App() {
         {activeTab === 'admin' && sessionUser?.is_admin && (
           <div className="space-y-8 max-w-5xl mx-auto">
             <div>
-              <span className="text-xs font-semibold text-emerald-400">Herdown后台</span>
-              <h2 className="text-2xl font-bold text-white mt-2">运营管理</h2>
-              <p className="text-sm text-slate-400 mt-2">只显示必要的运营数据，不保存用户提交的网页正文。</p>
+              <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'Herdown admin' : 'Herdown后台'}</span>
+              <h2 className="text-2xl font-bold text-white mt-2">{language === 'en' ? 'Operations' : '运营管理'}</h2>
+              <p className="text-sm text-slate-400 mt-2">{language === 'en' ? 'Only necessary operational data is shown. Submitted page bodies are not stored.' : '只显示必要的运营数据，不保存用户提交的网页正文。'}</p>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
               {[
-                ['用户', adminOverview?.stats.users ?? 0],
-                ['活跃密钥', adminOverview?.stats.active_keys ?? 0],
-                ['完成订单', adminOverview?.stats.completed_orders ?? 0],
-                ['已售额度', adminOverview?.stats.sold_credits ?? 0],
-                ['调用记录', adminOverview?.stats.usage_requests ?? 0],
+                [language === 'en' ? 'Users' : '用户', adminOverview?.stats.users ?? 0],
+                [language === 'en' ? 'Active keys' : '活跃密钥', adminOverview?.stats.active_keys ?? 0],
+                [language === 'en' ? 'Completed orders' : '完成订单', adminOverview?.stats.completed_orders ?? 0],
+                [language === 'en' ? 'Credits sold' : '已售额度', adminOverview?.stats.sold_credits ?? 0],
+                [language === 'en' ? 'Usage records' : '调用记录', adminOverview?.stats.usage_requests ?? 0],
               ].map(([label, value]) => <div key={label} className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{label}</span><p className="text-xl font-extrabold text-white mt-2">{Number(value).toLocaleString()}</p></div>)}
             </div>
             <div className="rounded-xl border border-[#1e293b] bg-[#0f1722] overflow-hidden">
-              <div className="p-5 border-b border-[#1e293b] font-bold text-white">最近注册用户</div>
+              <div className="p-5 border-b border-[#1e293b] font-bold text-white">{language === 'en' ? 'Recently registered users' : '最近注册用户'}</div>
               <div className="divide-y divide-[#1e293b]">
-                {(adminOverview?.recent_users || []).map((item, index) => <div key={`${item.email}-${index}`} className="p-4 flex items-center justify-between gap-4 text-sm"><div><p className="text-white">{item.display_name || 'Google用户'}</p><p className="text-slate-500">{item.email}</p></div><span className="text-xs text-slate-500">{item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</span></div>)}
-                {!adminOverview?.recent_users?.length && <p className="p-5 text-sm text-slate-500">暂无数据，点击管理入口后会自动加载。</p>}
+                {(adminOverview?.recent_users || []).map((item, index) => <div key={`${item.email}-${index}`} className="p-4 flex items-center justify-between gap-4 text-sm"><div><p className="text-white">{item.display_name || (language === 'en' ? 'Google user' : 'Google用户')}</p><p className="text-slate-500">{item.email}</p></div><span className="text-xs text-slate-500">{item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</span></div>)}
+                {!adminOverview?.recent_users?.length && <p className="p-5 text-sm text-slate-500">{language === 'en' ? 'No data yet.' : '暂无数据，点击管理入口后会自动加载。'}</p>}
               </div>
             </div>
           </div>
@@ -1198,8 +1243,8 @@ export function App() {
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-white">API 密钥控制台</h2>
-                <p className="text-slate-400 text-xs mt-1">{sessionUser ? 'API密钥已绑定到你的Google账号，可在其他设备登录后找回。' : '未登录时密钥只保存在当前浏览器，建议登录Google账号后再创建。'}付款后的点数会自动发放到你用于付款的密钥。</p>
+                <h2 className="text-2xl font-bold text-white">{language === 'en' ? 'API key console' : 'API密钥控制台'}</h2>
+                <p className="text-slate-400 text-xs mt-1">{sessionUser ? (language === 'en' ? 'Your API keys are linked to your Google account and can be recovered on other devices.' : 'API密钥已绑定到你的Google账号，可在其他设备登录后找回。') : (language === 'en' ? 'Without sign-in, keys are stored only in this browser. Sign in before creating one.' : '未登录时密钥只保存在当前浏览器，建议登录Google账号后再创建。')}{language === 'en' ? ' Credits are added to the key used for payment.' : '付款后的点数会自动发放到你用于付款的密钥。'}</p>
               </div>
               <button
                 onClick={() => setShowUpgradeModal(true)}
@@ -1213,16 +1258,16 @@ export function App() {
             {/* Usage Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">今日解析请求</span>
-                <p className="text-2xl font-extrabold text-white mt-1">{stats.today_requests} 次</p>
+                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Requests today' : '今日解析请求'}</span>
+                <p className="text-2xl font-extrabold text-white mt-1">{stats.today_requests}{language === 'en' ? '' : '次'}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">可用点数</span>
-                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{hasPaidCredits ? (creditBalance ?? 0).toLocaleString() : `${(freeRemaining ?? 1000).toLocaleString()}次免费`}</p>
+                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Available credits' : '可用点数'}</span>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{hasPaidCredits ? (creditBalance ?? 0).toLocaleString() : `${(freeRemaining ?? 1000).toLocaleString()}${language === 'en' ? ' free' : '次免费'}`}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">已生效 API Key</span>
-                <p className="text-2xl font-extrabold text-white mt-1">{apiKeys.filter(k => k.status === 'active').length} 个</p>
+                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Active API keys' : '已生效APIKey'}</span>
+                <p className="text-2xl font-extrabold text-white mt-1">{apiKeys.filter(k => k.status === 'active').length}</p>
               </div>
             </div>
 
@@ -1233,7 +1278,7 @@ export function App() {
                   type="text"
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
-                  placeholder="输入Key名称，如ClaudeAgent或CursorPro"
+                  placeholder={language === 'en' ? 'Key name, such as ClaudeAgent or CursorPro' : '输入Key名称，如ClaudeAgent或CursorPro'}
                   className="flex-1 px-4 py-2 rounded-lg bg-[#090d12] border border-[#1e293b] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                 />
                 <button
@@ -1242,7 +1287,7 @@ export function App() {
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center justify-center gap-1.5 transition"
                 >
                   <Plus className="w-4 h-4" />
-                  生成新Key
+                    {language === 'en' ? 'Create API key' : '生成新Key'}
                 </button>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
@@ -1262,7 +1307,7 @@ export function App() {
                 <thead>
                   <tr className="bg-[#111823] border-b border-[#1e293b] text-[11px] font-semibold text-slate-400 uppercase">
                     <th className="p-4">Key 名称</th>
-                    <th className="p-4">API 密钥 Token</th>
+                    <th className="p-4">{language === 'en' ? 'API token' : 'API密钥Token'}</th>
                     <th className="p-4">创建时间</th>
                     <th className="p-4">状态</th>
                     <th className="p-4 text-right">操作</th>
@@ -1272,7 +1317,7 @@ export function App() {
                   {apiKeys.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-slate-500">
-                        尚无活跃API Key。点击上方“生成新Key”创建专属密钥；登录后密钥会绑定到你的账号。
+                        {language === 'en' ? 'No active API key. Create one above; sign in to link it to your account.' : '尚无活跃APIKey。点击上方“生成新Key”创建专属密钥；登录后密钥会绑定到你的账号。'}
                       </td>
                     </tr>
                   ) : (
@@ -1299,14 +1344,14 @@ export function App() {
                             }}
                             className="px-2 py-1 rounded bg-[#1e293b] text-slate-300 hover:text-white"
                           >
-                            {copiedKeyIndex === idx ? '已复制' : '复制 Token'}
+                            {copiedKeyIndex === idx ? ui.copied : language === 'en' ? 'Copy token' : '复制Token'}
                           </button>
                           {item.status === 'active' && (
                             <button
                               onClick={() => handleRevokeKey(item.key)}
                               className="px-2 py-1 rounded bg-rose-500/10 text-rose-400 hover:bg-rose-500/20"
                             >
-                              撤销
+                              {language === 'en' ? 'Revoke' : '撤销'}
                             </button>
                           )}
                         </td>
@@ -1581,63 +1626,63 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
           </div>
         )}
 
-        {activeTab === 'converter' && (
+        {activeTab === 'converter' && (!toolSlug || toolSlug === 'url-to-markdown' || toolSlug === 'faq') && (
           <section id="faq" className="max-w-4xl mx-auto mt-14 scroll-mt-8">
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                常见问题
+                {ui.faq}
               </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-3">使用前你可能想知道</h2>
-              <p className="text-sm text-slate-400 mt-2">点击问题即可展开答案</p>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-3">{ui.faqTitle}</h2>
+              <p className="text-sm text-slate-400 mt-2">{ui.faqHint}</p>
             </div>
 
             <div className="rounded-2xl border border-[#1e293b] bg-[#0d131d] divide-y divide-[#1e293b] overflow-hidden">
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
-                  Herdown是做什么的？
+                  {language === 'en' ? 'What does Herdown do?' : 'Herdown是做什么的？'}
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">把网页链接或HTML整理成更干净的Markdown，方便保存、阅读、交给AI工作流或知识库继续使用。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">{language === 'en' ? 'Herdown turns webpages or HTML into clean Markdown for saving, reading, AI workflows, and knowledge tools.' : '把网页链接或HTML整理成更干净的Markdown，方便保存、阅读、交给AI工作流或知识库继续使用。'}</p>
               </details>
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
-                  我提交的内容会被长期保存吗？
+                  {language === 'en' ? 'Is my content stored long-term?' : '我提交的内容会被长期保存吗？'}
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">不会。Herdown以实时处理为主，不提供内容托管或知识库服务。必要的短期技术日志仅用于安全防护、稳定性和故障排查。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">{language === 'en' ? 'No. Herdown processes content in real time and does not host your content or run a knowledge base. Limited technical logs may be used for security and troubleshooting.' : '不会。Herdown以实时处理为主，不提供内容托管或知识库服务。必要的短期技术日志仅用于安全防护、稳定性和故障排查。'}</p>
               </details>
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
-                  不会写代码也能用吗？
+                  {language === 'en' ? 'Can I use it without coding?' : '不会写代码也能用吗？'}
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">可以。直接粘贴网页链接并点击转换即可。开发者也可以通过API、MCP、CLI或浏览器插件接入自己的工作流。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">{language === 'en' ? 'Yes. Paste a URL and click Convert. Developers can also use the API, MCP, CLI, or browser extension.' : '可以。直接粘贴网页链接并点击转换即可。开发者也可以通过API、MCP、CLI或浏览器插件接入自己的工作流。'}</p>
               </details>
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
-                  为什么有些网页无法解析？
+                  {language === 'en' ? 'Why can some pages not be parsed?' : '为什么有些网页无法解析？'}
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">登录限制、付费墙、反爬机制和动态加载都可能影响结果。你可以尝试粘贴已打开页面的HTML源码，或使用浏览器插件在本地提取。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">{language === 'en' ? 'Login walls, paywalls, anti-bot rules, and dynamic loading can affect results. Try pasting the page HTML or use the browser extension locally.' : '登录限制、付费墙、反爬机制和动态加载都可能影响结果。你可以尝试粘贴已打开页面的HTML源码，或使用浏览器插件在本地提取。'}</p>
               </details>
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
-                  点数包如何计费？会自动续费吗？
+                  {language === 'en' ? 'How are credits billed? Do they renew?' : '点数包如何计费？会自动续费吗？'}
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">收银台会明确展示金额、包含额度和支付方式。Herdown目前只提供一次性点数包，不会自动续费。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">{language === 'en' ? 'The checkout shows the price, included credits, and payment method. Herdown only offers one-time credit packs and does not auto-renew.' : '收银台会明确展示金额、包含额度和支付方式。Herdown目前只提供一次性点数包，不会自动续费。'}</p>
               </details>
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
-                  哪些内容不能提交？
+                  {language === 'en' ? 'What content must not be submitted?' : '哪些内容不能提交？'}
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">请只处理你有权访问和使用的内容。不要用于绕过访问限制、抓取私人数据、侵犯版权或违反第三方平台规则。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">{language === 'en' ? 'Only process content you are allowed to access and use. Do not bypass access controls, scrape private data, infringe copyright, or violate platform rules.' : '请只处理你有权访问和使用的内容。不要用于绕过访问限制、抓取私人数据、侵犯版权或违反第三方平台规则。'}</p>
               </details>
             </div>
 
             <div className="mt-5 text-xs">
-              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">免费体验</span><span className="text-white font-bold">每月1,000次免费解析</span>；也可以选择一次性点数包，点数不过期，不自动续费。</div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">{language === 'en' ? 'Free plan' : '免费体验'}</span><span className="text-white font-bold">{ui.free}</span>{language === 'en' ? '. One-time credit packs do not expire and do not auto-renew.' : '；也可以选择一次性点数包，点数不过期，不自动续费。'}</div>
             </div>
           </section>
         )}
@@ -1656,22 +1701,22 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
 
             <div className="text-center space-y-2">
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                支付收银台
+                {language === 'en' ? 'Checkout' : '支付收银台'}
               </span>
-              <h3 className="text-2xl font-extrabold text-white">升级Herdown额度</h3>
-              <p className="text-xs text-slate-400">先创建API密钥，付款成功后点数会自动发放到该密钥</p>
+              <h3 className="text-2xl font-extrabold text-white">{language === 'en' ? 'Upgrade Herdown credits' : '升级Herdown额度'}</h3>
+              <p className="text-xs text-slate-400">{language === 'en' ? 'Create an API key first. Credits are added to it after payment.' : '先创建API密钥，付款成功后点数会自动发放到该密钥'}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
               {pricingPackages.map((item) => (
                 <div key={item.code} className={`p-5 rounded-xl bg-gradient-to-b from-[#132320] to-[#111823] border ${item.featured ? 'border-2 border-emerald-500' : 'border-[#29423d]'} space-y-5 shadow-lg shadow-emerald-950/20`}>
                   <div className="space-y-2">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold ${item.featured ? 'bg-emerald-500 text-black' : 'bg-emerald-500/15 text-emerald-300'}`}>{item.label}</span>
-                    <h4 className="text-lg font-bold text-white">一次性付款</h4>
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold ${item.featured ? 'bg-emerald-500 text-black' : 'bg-emerald-500/15 text-emerald-300'}`}>{language === 'en' ? (item.code === 'starter' ? 'Starter' : item.code === 'standard' ? 'Standard' : 'Bulk') : item.label}</span>
+                    <h4 className="text-lg font-bold text-white">{language === 'en' ? 'One-time payment' : '一次性付款'}</h4>
                     <div className="text-2xl font-black text-emerald-400">US${item.price}</div>
-                    <p className="text-sm text-white font-semibold">{item.credits}次解析额度</p>
-                    <p className="text-xs text-slate-400 leading-6">点数不过期，不自动续费。</p>
-                    <p className="text-xs text-slate-300 flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />支持网页、API、MCP和CLI</p>
+                    <p className="text-sm text-white font-semibold">{item.credits}{language === 'en' ? ' parses' : '次解析额度'}</p>
+                    <p className="text-xs text-slate-400 leading-6">{language === 'en' ? 'Credits do not expire or auto-renew.' : '点数不过期，不自动续费。'}</p>
+                    <p className="text-xs text-slate-300 flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />{language === 'en' ? 'Web, API, MCP, and CLI' : '支持网页、API、MCP和CLI'}</p>
                   </div>
                   <button
                     onClick={() => { setSelectedProduct(item.code); void handleCheckout(item.code); }}
@@ -1679,17 +1724,17 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                     className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
                   >
                     {checkoutLoading && selectedProduct === item.code ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                    立即升级
+                    {language === 'en' ? 'Upgrade now' : '立即升级'}
                   </button>
                 </div>
               ))}
             </div>
 
-            <p className="text-center text-xs text-emerald-200">每个用户每月1,000次免费解析，IP、设备和API密钥共同计算，换密钥不会重置。</p>
+            <p className="text-center text-xs text-emerald-200">{language === 'en' ? '1,000 free parses per user per month. IP, device, and API key are counted together; changing keys does not reset the quota.' : '每个用户每月1,000次免费解析，IP、设备和API密钥共同计算，换密钥不会重置。'}</p>
 
             <div className="text-center text-[11px] text-slate-400 pt-3 border-t border-[#1e293b]/60 leading-relaxed">
-              🔒 声明：数字 API 额度属于虚拟商品，开通/充值成功即完成交付，不支持无理由退款。<br />
-              项目采用零数据存储架构，仅作实时格式解析，绝不转存、托管或泄露第三方图片与隐私内容。
+              🔒 {language === 'en' ? 'Digital API credits are virtual goods and are delivered after successful payment; refunds are subject to the terms.' : '声明：数字API额度属于虚拟商品，开通/充值成功即完成交付，不支持无理由退款。'}<br />
+              {language === 'en' ? 'Herdown processes content in real time and does not host or leak third-party images or private content.' : '项目采用零数据存储架构，仅作实时格式解析，绝不转存、托管或泄露第三方图片与隐私内容。'}
             </div>
           </div>
         </div>
@@ -1704,22 +1749,22 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 text-emerald-500">
               <ShieldCheck className="w-3.5 h-3.5" />
-              End-to-End Privacy Preserved
+              {language === 'en' ? 'End-to-End Privacy Preserved' : '端到端隐私保护'}
             </span>
             <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
               GitHub Repo
             </a>
             <a href="/terms" className="hover:text-slate-300 transition">
-              服务条款
+              {ui.terms}
             </a>
             <a href="/privacy" className="hover:text-slate-300 transition">
-              隐私政策
+              {ui.privacy}
             </a>
             <a href="/#faq" className="hover:text-slate-300 transition">
-              常见问题
+              {ui.faq}
             </a>
             <a href="mailto:vkdefi@gmail.com" className="hover:text-slate-300 transition">
-              联系邮箱
+              {ui.contact}
             </a>
             <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
               @vkdefi

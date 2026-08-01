@@ -18,6 +18,15 @@ Recommended downstream tools:
 - FastGPT
 - n8n
 
+Documentation:
+- https://herdown.com/docs
+- Quick start: paste a webpage URL on the homepage and convert it to Markdown.
+- REST API: create an API key and send it as a Bearer token to /v1/parse.
+- MCP and CLI: use the API, MCP, CLI, or browser extension for AI workflow automation.
+- Local files: use MarkItDown for text-based PDF, Word, PPT, and Excel files.
+- OCR: use the local Unlimited-OCRSkill for screenshots, scans, invoices, and image files.
+- Pricing: the free plan includes 1,000 parses per user per month. Paid credits are one-time purchases and do not auto-renew.
+- Privacy: Herdown is a clean-materials generator, not a hosted knowledge base. Do not submit private content or content you are not allowed to process.
+
 Core user promise:
 - Take messy source material and turn it into clean material that AI tools can use directly.
-

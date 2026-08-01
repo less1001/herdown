@@ -1596,11 +1596,17 @@ export default {
       '/pdf-to-markdown',
       '/ppt-to-markdown',
       '/excel-to-markdown',
+      '/docs',
       '/help',
       '/faq',
     ]);
     if (toolPages.has(url.pathname) && env.ASSETS) {
       return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
+    }
+
+    if ((url.pathname === '/' || url.pathname === '/index.html') && env.ASSETS) {
+      const assetIndex = await env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
+      if (assetIndex.ok) return assetIndex;
     }
 
     if (url.pathname === '/' || url.pathname === '/index.html') {
