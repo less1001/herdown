@@ -150,7 +150,7 @@ const getToolSlug = (): ToolSlug => {
 };
 
 const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: string; description: string; enDescription: string; local?: boolean }> = {
-  tools: { title: '统一资料入口', enTitle: 'Unified materials', description: '从一个入口处理网页、TXT和图片，并获得本地文档工具说明。', enDescription: 'Process webpages, TXT files, and images from one place, with local document tool guides.' },
+  tools: { title: '本地资料', enTitle: 'Local materials', description: '选择本地资料，整理成可以直接使用的Markdown。网页链接请使用首页转换。', enDescription: 'Choose a local file and prepare it as Markdown. Use the homepage for webpage links.' },
   'url-to-markdown': { title: 'URL转Markdown', enTitle: 'URL to Markdown', description: '粘贴网页链接，提取正文、标题、图片和来源信息，生成干净Markdown。', enDescription: 'Paste a webpage URL to extract the body, title, images, and source metadata into clean Markdown.' },
   'txt-to-markdown': { title: 'TXT转Markdown', enTitle: 'TXT to Markdown', description: '把纯文本整理成可直接保存和交给AI使用的Markdown文件。', enDescription: 'Turn plain text into a Markdown file ready to save or send to an AI tool.' },
   'pdf-to-markdown': { title: 'PDF转Markdown', enTitle: 'PDF to Markdown', description: '使用本地MarkItDown处理可提取文字的PDF，不上传文件，不增加服务器费用。', enDescription: 'Use local MarkItDown to process text-based PDFs without uploading files or adding server cost.', local: true },
@@ -250,7 +250,6 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
   const [file, setFile] = useState<File | null>(null);
   const [markdown, setMarkdown] = useState('');
   const [message, setMessage] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
 
   const handleFile = async (selectedFile?: File) => {
     if (!selectedFile) return;
@@ -291,40 +290,54 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
     URL.revokeObjectURL(url);
   };
 
+  const fileName = file?.name.toLowerCase() || '';
+  const guide = /\.docx$/.test(fileName)
+    ? { href: '/docs#local-tools', zh: '查看文档处理说明', en: 'View document processing guide' }
+    : /\.pdf$/.test(fileName)
+      ? { href: '/pdf-to-markdown', zh: '打开PDF转换', en: 'Open PDF converter' }
+      : /\.pptx$/.test(fileName)
+        ? { href: '/ppt-to-markdown', zh: '打开PPT转换', en: 'Open PPT converter' }
+        : /\.xlsx$/.test(fileName)
+          ? { href: '/excel-to-markdown', zh: '打开Excel转换', en: 'Open Excel converter' }
+          : null;
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="max-w-3xl">
         <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'Material organizer' : '资料整理入口'}</span>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{toolLabel('tools', language)}</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Choose your material and prepare it as clean Markdown. Use the webpage converter for links.' : '选择资料并整理成干净Markdown。网页链接请使用网页转换。'}</p>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Choose a local file and prepare it as clean Markdown. Use the homepage for webpage links.' : '选择本地资料并整理成干净Markdown。网页链接请使用首页转换。'}</p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-          <div className="flex items-center gap-2 text-white font-bold"><Upload className="w-5 h-5 text-emerald-400" />{language === 'en' ? 'Choose material' : '选择资料'}</div>
-          <div className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4 space-y-3">
-            <p className="text-xs text-slate-400">{language === 'en' ? 'Webpage URL' : '网页链接'}</p>
-            <div className="flex gap-2">
-              <input value={websiteUrl} onChange={event => setWebsiteUrl(event.target.value)} placeholder="https://example.com/article" className="min-w-0 flex-1 rounded-lg border border-[#1e293b] bg-[#0d131c] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400" />
-              <a href={websiteUrl.trim() ? `/url-to-markdown?url=${encodeURIComponent(websiteUrl.trim())}` : '/url-to-markdown'} className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">{language === 'en' ? 'Open' : '开始'}</a>
-            </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-5">
+        <div className="flex items-center gap-2 text-white font-bold"><Upload className="w-5 h-5 text-emerald-400" />{language === 'en' ? 'Choose a local file' : '选择本地资料'}</div>
+        <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void handleFile(event.dataTransfer.files?.[0]); }} className="flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-500/40 bg-[#090d12] px-5 text-center hover:border-emerald-400 transition">
+          <Upload className="w-9 h-9 text-emerald-400 mb-3" />
+          <span className="text-sm text-slate-200">{file?.name || (language === 'en' ? 'Drop or choose a local file' : '拖入或选择本地资料')}</span>
+          <span className="text-xs text-slate-500 mt-2">{language === 'en' ? 'TXT, Markdown, images, Word, PDF, PPT, and Excel' : 'TXT、Markdown、图片、Word、PDF、PPT和Excel'}</span>
+          <input type="file" accept=".txt,.md,.docx,.pdf,.pptx,.xlsx,image/*" className="hidden" onChange={event => void handleFile(event.target.files?.[0])} />
+        </label>
+        {!file && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[
+              [language === 'en' ? 'TXT and Markdown' : 'TXT和Markdown', language === 'en' ? 'Prepare directly in the browser.' : '可直接整理。'],
+              [language === 'en' ? 'Images' : '图片', language === 'en' ? 'Prepare as Markdown images.' : '整理为Markdown图片。'],
+              [language === 'en' ? 'Word, PDF, PPT, Excel' : 'Word、PDF、PPT、Excel', language === 'en' ? 'Continue with the matching tool.' : '进入对应工具继续处理。'],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4">
+                <p className="text-sm font-semibold text-slate-200">{title}</p>
+                <p className="mt-2 text-xs leading-6 text-slate-500">{description}</p>
+              </div>
+            ))}
           </div>
-          <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void handleFile(event.dataTransfer.files?.[0]); }} className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-500/40 bg-[#090d12] px-5 text-center hover:border-emerald-400 transition">
-            <Upload className="w-8 h-8 text-emerald-400 mb-3" />
-            <span className="text-sm text-slate-200">{file?.name || (language === 'en' ? 'Drop or choose TXT, Markdown, images, Word, PDF, PPT, Excel' : '拖入或选择TXT、Markdown、图片、Word、PDF、PPT、Excel')}</span>
-            <span className="text-xs text-slate-500 mt-2">{language === 'en' ? 'Common material formats supported' : '支持常见资料格式'}</span>
-            <input type="file" accept=".txt,.md,.docx,.pdf,.pptx,.xlsx,image/*" className="hidden" onChange={event => void handleFile(event.target.files?.[0])} />
-          </label>
-          {message && <p className="text-xs leading-6 text-emerald-200">{message}</p>}
-          <div className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4 text-xs text-slate-400 leading-6">
-            {language === 'en' ? 'Choose a file to see the best way to continue.' : '选择资料后，页面会提示你下一步怎么做。'}
-          </div>
-        </div>
-        <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-          <div className="flex items-center justify-between"><span className="font-bold text-white">{language === 'en' ? 'Local Markdown result' : '本地Markdown结果'}</span><button onClick={download} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white disabled:opacity-40">{language === 'en' ? 'Download .md' : '下载.md'}</button></div>
-          <pre className="min-h-80 max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || (language === 'en' ? 'Your prepared Markdown will appear here.' : '整理后的Markdown会显示在这里。')}</pre>
-          <a href="/url-to-markdown" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{language === 'en' ? 'Process a webpage URL' : '处理网页链接'}</a>
-        </div>
+        )}
+        {message && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm leading-6 text-emerald-200">{message}{guide && <a href={guide.href} className="ml-2 text-emerald-300 underline underline-offset-4 hover:text-emerald-200">{language === 'en' ? guide.en : guide.zh}</a>}</div>}
       </div>
+      {markdown && (
+        <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+          <div className="flex items-center justify-between gap-3"><span className="font-bold text-white">{language === 'en' ? 'Markdown result' : 'Markdown结果'}</span><button onClick={download} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white hover:bg-emerald-500">{language === 'en' ? 'Download Markdown' : '下载Markdown'}</button></div>
+          <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown}</pre>
+        </div>
+      )}
     </div>
   );
 }
