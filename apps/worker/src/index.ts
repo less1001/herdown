@@ -1693,6 +1693,7 @@ export default {
     }
 
     const toolPages = new Set([
+      '/tools',
       '/url-to-markdown',
       '/txt-to-markdown',
       '/pdf-to-markdown',
