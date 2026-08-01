@@ -26,7 +26,8 @@ import {
   X,
   UserRound,
   LogIn,
-  LogOut
+  LogOut,
+  Upload
 } from 'lucide-react';
 import { getInitialLanguage, Language, messages } from './i18n';
 
@@ -69,9 +70,18 @@ interface AdminOverview {
     usage_requests: number;
   };
   recent_users: Array<{ email: string; display_name?: string; plan: string; created_at: string }>;
+  processing?: {
+    total: number;
+    succeeded: number;
+    failed: number;
+    success_rate: number;
+    average_duration_ms: number;
+    failure_reasons: Array<{ reason: string; count: number }>;
+    file_types: Array<{ file_type: string; count: number }>;
+  };
 }
 
-type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | null;
+type ToolSlug = 'tools' | 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | null;
 type ProductCode = 'starter' | 'standard' | 'bulk';
 
 declare global {
@@ -136,10 +146,11 @@ const pricingPackages: Array<{ code: ProductCode; price: string; credits: string
 
 const getToolSlug = (): ToolSlug => {
   const slug = window.location.pathname.replace(/^\//, '') as Exclude<ToolSlug, null>;
-  return ['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq'].includes(slug) ? slug : null;
+  return ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq'].includes(slug) ? slug : null;
 };
 
 const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: string; description: string; enDescription: string; local?: boolean }> = {
+  tools: { title: '统一资料入口', enTitle: 'Unified materials', description: '从一个入口处理网页、TXT和图片，并获得本地文档工具说明。', enDescription: 'Process webpages, TXT files, and images from one place, with local document tool guides.' },
   'url-to-markdown': { title: 'URL转Markdown', enTitle: 'URL to Markdown', description: '粘贴网页链接，提取正文、标题、图片和来源信息，生成干净Markdown。', enDescription: 'Paste a webpage URL to extract the body, title, images, and source metadata into clean Markdown.' },
   'txt-to-markdown': { title: 'TXT转Markdown', enTitle: 'TXT to Markdown', description: '把纯文本整理成可直接保存和交给AI使用的Markdown文件。', enDescription: 'Turn plain text into a Markdown file ready to save or send to an AI tool.' },
   'pdf-to-markdown': { title: 'PDF转Markdown', enTitle: 'PDF to Markdown', description: '使用本地MarkItDown处理可提取文字的PDF，不上传文件，不增加服务器费用。', enDescription: 'Use local MarkItDown to process text-based PDFs without uploading files or adding server cost.', local: true },
@@ -234,6 +245,93 @@ function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'ppt-to-
   );
 }
 
+function UnifiedMaterialsTool({ language }: { language: Language }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [markdown, setMarkdown] = useState('');
+  const [message, setMessage] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+
+  const handleFile = async (selectedFile?: File) => {
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setMarkdown('');
+    const name = selectedFile.name.toLowerCase();
+    if (/\.(txt|md)$/.test(name)) {
+      const text = await selectedFile.text();
+      setMarkdown(text.split(/\r?\n/).map(line => line.trimEnd()).join('\n').replace(/\n{3,}/g, '\n\n').trim());
+      setMessage(language === 'en' ? 'Processed locally. The file was not uploaded.' : '已在本地处理，文件没有上传到服务器。');
+      return;
+    }
+    if (selectedFile.type.startsWith('image/')) {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(selectedFile);
+      });
+      setMarkdown(`![${selectedFile.name}](${dataUrl})`);
+      setMessage(language === 'en' ? 'Image packaged as local Markdown. Use Unlimited-OCRSkill for text recognition.' : '图片已整理为本地Markdown。需要识别图片文字时，请使用Unlimited-OCRSkill。');
+      return;
+    }
+    if (/\.(docx|pdf|pptx|xlsx)$/.test(name)) {
+      setMessage(language === 'en' ? 'This file stays on your computer. Use the local MarkItDown guide below to convert it.' : '文件保留在你的电脑上，请使用下面的本地MarkItDown命令转换。');
+      return;
+    }
+    setMessage(language === 'en' ? 'This file type is not supported yet.' : '暂不支持这个文件类型。');
+  };
+
+  const download = () => {
+    if (!markdown) return;
+    const url = URL.createObjectURL(new Blob([`${markdown}\n`], { type: 'text/markdown;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${file?.name.replace(/\.[^.]+$/, '') || 'herdown-material'}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="max-w-3xl">
+        <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'One local entry' : '一个入口，本地处理'}</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{toolLabel('tools', language)}</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Files are read in your browser and are not uploaded. Webpages continue through URL to Markdown.' : '文件只在当前浏览器读取，不上传服务器。网页请继续使用URL转Markdown。'}</p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+          <div className="flex items-center gap-2 text-white font-bold"><Upload className="w-5 h-5 text-emerald-400" />{language === 'en' ? 'Choose a local file' : '选择本地文件'}</div>
+          <div className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4 space-y-3">
+            <p className="text-xs text-slate-400">{language === 'en' ? 'Webpage URL' : '网页链接'}</p>
+            <div className="flex gap-2">
+              <input value={websiteUrl} onChange={event => setWebsiteUrl(event.target.value)} placeholder="https://example.com/article" className="min-w-0 flex-1 rounded-lg border border-[#1e293b] bg-[#0d131c] px-3 py-2 text-sm text-white outline-none focus:border-emerald-400" />
+              <a href={websiteUrl.trim() ? `/url-to-markdown?url=${encodeURIComponent(websiteUrl.trim())}` : '/url-to-markdown'} className="shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500">{language === 'en' ? 'Open' : '开始'}</a>
+            </div>
+          </div>
+          <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void handleFile(event.dataTransfer.files?.[0]); }} className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-500/40 bg-[#090d12] px-5 text-center hover:border-emerald-400 transition">
+            <Upload className="w-8 h-8 text-emerald-400 mb-3" />
+            <span className="text-sm text-slate-200">{file?.name || (language === 'en' ? 'Drop or choose TXT, Markdown, images, Word, PDF, PPT, Excel' : '拖入或选择TXT、Markdown、图片、Word、PDF、PPT、Excel')}</span>
+            <span className="text-xs text-slate-500 mt-2">{language === 'en' ? 'No upload, no extra server cost' : '不上传，不增加服务器成本'}</span>
+            <input type="file" accept=".txt,.md,.docx,.pdf,.pptx,.xlsx,image/*" className="hidden" onChange={event => void handleFile(event.target.files?.[0])} />
+          </label>
+          {message && <p className="text-xs leading-6 text-emerald-200">{message}</p>}
+          <div className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4 text-xs text-slate-400 leading-6">
+            <p>{language === 'en' ? 'Word, PDF, PPT, and Excel use local MarkItDown:' : 'Word、PDF、PPT和Excel使用本地MarkItDown：'}</p>
+            <code className="text-emerald-300">python -m pip install markitdown</code>
+            <br />
+            <code className="text-emerald-300">markitdown "your-file" &gt; output.md</code>
+            <p className="mt-2">{language === 'en' ? 'Scans and screenshots use local Unlimited-OCRSkill.' : '扫描件和截图使用本地Unlimited-OCRSkill。'}</p>
+          </div>
+        </div>
+        <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+          <div className="flex items-center justify-between"><span className="font-bold text-white">{language === 'en' ? 'Local Markdown result' : '本地Markdown结果'}</span><button onClick={download} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white disabled:opacity-40">{language === 'en' ? 'Download .md' : '下载.md'}</button></div>
+          <pre className="min-h-80 max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || (language === 'en' ? 'TXT and images can be processed here. Office files stay local and use the command above.' : 'TXT和图片可以在这里处理。Office文件保留在本地，使用上面的命令转换。')}</pre>
+          <a href="/url-to-markdown" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{language === 'en' ? 'Process a webpage URL' : '处理网页链接'}</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DocsPage({ language }: { language: Language }) {
   const ui = messages[language];
   return (
@@ -285,7 +383,7 @@ export function App() {
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const ui = messages[language];
-  const [inputUrl, setInputUrl] = useState('');
+  const [inputUrl, setInputUrl] = useState(() => new URLSearchParams(window.location.search).get('url') || '');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
   const [zhihuLimit, setZhihuLimit] = useState<number>(5);
@@ -831,6 +929,7 @@ export function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
         <div className="mb-7 flex flex-wrap items-center gap-2 rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
           <span className="px-3 py-2 font-semibold text-slate-500">{ui.tools}</span>
+          <a href="/tools" className="rounded-xl px-3 py-2 text-emerald-300 hover:bg-[#1e293b] transition">{language === 'en' ? 'Unified entry' : '统一入口'}</a>
           {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
             <a key={slug} href={`/${slug}`} className="rounded-xl px-3 py-2 text-slate-300 hover:bg-[#1e293b] hover:text-emerald-300 transition">
               {toolLabel(slug, language)}
@@ -842,6 +941,7 @@ export function App() {
         {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
           <>
+            {toolSlug === 'tools' && <UnifiedMaterialsTool language={language} />}
             {toolSlug === 'txt-to-markdown' && <TextMarkdownTool language={language} />}
             {(toolSlug === 'pdf-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} language={language} />}
             {(toolSlug === 'docs' || toolSlug === 'help') && <HelpPage language={language} />}
@@ -1244,6 +1344,40 @@ export function App() {
                 [language === 'en' ? 'Credits sold' : '已售额度', adminOverview?.stats.sold_credits ?? 0],
                 [language === 'en' ? 'Usage records' : '调用记录', adminOverview?.stats.usage_requests ?? 0],
               ].map(([label, value]) => <div key={label} className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{label}</span><p className="text-xl font-extrabold text-white mt-2">{Number(value).toLocaleString()}</p></div>)}
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white">{language === 'en' ? 'Processing monitoring' : '处理监控'}</h3>
+                  <p className="text-xs text-slate-500 mt-1">{language === 'en' ? 'Only processing metadata is recorded, never submitted content.' : '只记录处理统计，不保存用户提交的正文或文件。'}</p>
+                </div>
+                <span className="text-xs text-slate-500">{language === 'en' ? 'All time' : '累计数据'}</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {[
+                  [language === 'en' ? 'Total' : '处理总量', adminOverview?.processing?.total ?? 0],
+                  [language === 'en' ? 'Succeeded' : '成功', adminOverview?.processing?.succeeded ?? 0],
+                  [language === 'en' ? 'Failed' : '失败', adminOverview?.processing?.failed ?? 0],
+                  [language === 'en' ? 'Success rate' : '成功率', `${adminOverview?.processing?.success_rate ?? 0}%`],
+                  [language === 'en' ? 'Avg duration' : '平均耗时', `${adminOverview?.processing?.average_duration_ms ?? 0}ms`],
+                ].map(([label, value]) => <div key={label} className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{label}</span><p className="text-xl font-extrabold text-white mt-2">{typeof value === 'number' ? value.toLocaleString() : value}</p></div>)}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="rounded-xl border border-[#1e293b] bg-[#0f1722] overflow-hidden">
+                  <div className="p-4 border-b border-[#1e293b] font-bold text-white">{language === 'en' ? 'Failure reasons' : '失败原因'}</div>
+                  <div className="divide-y divide-[#1e293b]">
+                    {(adminOverview?.processing?.failure_reasons || []).map(item => <div key={item.reason} className="p-3 flex items-center justify-between gap-4 text-sm"><span className="text-slate-300 truncate">{item.reason}</span><span className="text-amber-300">{item.count}</span></div>)}
+                    {!adminOverview?.processing?.failure_reasons?.length && <p className="p-4 text-sm text-slate-500">{language === 'en' ? 'No failure records.' : '暂无失败记录。'}</p>}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-[#1e293b] bg-[#0f1722] overflow-hidden">
+                  <div className="p-4 border-b border-[#1e293b] font-bold text-white">{language === 'en' ? 'File and source types' : '文件和来源类型'}</div>
+                  <div className="divide-y divide-[#1e293b]">
+                    {(adminOverview?.processing?.file_types || []).map(item => <div key={item.file_type} className="p-3 flex items-center justify-between gap-4 text-sm"><span className="text-slate-300">{item.file_type}</span><span className="text-emerald-300">{item.count}</span></div>)}
+                    {!adminOverview?.processing?.file_types?.length && <p className="p-4 text-sm text-slate-500">{language === 'en' ? 'No processing records yet.' : '暂无处理记录。'}</p>}
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="rounded-xl border border-[#1e293b] bg-[#0f1722] overflow-hidden">
               <div className="p-5 border-b border-[#1e293b] font-bold text-white">{language === 'en' ? 'Recently registered users' : '最近注册用户'}</div>
