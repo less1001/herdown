@@ -23,7 +23,10 @@ import {
   Layers,
   PlugZap,
   CheckCircle2,
-  X
+  X,
+  UserRound,
+  LogIn,
+  LogOut
 } from 'lucide-react';
 
 interface ParseResponse {
@@ -45,6 +48,26 @@ interface ApiKeyItem {
   name: string;
   status: string;
   created_at: string;
+}
+
+interface SessionUser {
+  id: string;
+  email: string;
+  plan: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  is_admin?: boolean;
+}
+
+interface AdminOverview {
+  stats: {
+    users: number;
+    active_keys: number;
+    completed_orders: number;
+    sold_credits: number;
+    usage_requests: number;
+  };
+  recent_users: Array<{ email: string; display_name?: string; plan: string; created_at: string }>;
 }
 
 type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'help' | 'faq' | null;
@@ -229,7 +252,7 @@ function HelpPage() {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli' | 'extension' | 'skills'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>('converter');
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
@@ -265,24 +288,48 @@ export function App() {
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [freeRemaining, setFreeRemaining] = useState<number | null>(null);
   const [hasPaidCredits, setHasPaidCredits] = useState(false);
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
 
   // Usage stats state
   const [stats, setStats] = useState({ today_requests: 0, daily_quota: 100000, active_keys: 0 });
 
   useEffect(() => {
-    fetchKeys();
-    fetchStats();
     fetch('/v1/security-config')
       .then(response => response.ok ? response.json() : null)
       .then(data => setTurnstileSiteKey(typeof data?.turnstile_site_key === 'string' ? data.turnstile_site_key : ''))
       .catch(() => setTurnstileSiteKey(''));
+    fetch('/v1/me', { credentials: 'include' })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => setSessionUser(data?.authenticated ? data.user : null))
+      .catch(() => setSessionUser(null))
+      .finally(() => setSessionLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    fetchKeys();
+    fetchStats();
+  }, [sessionLoading, sessionUser]);
 
   useEffect(() => {
     document.title = toolSlug ? `${toolPageInfo[toolSlug].title} | Herdown` : 'Herdown - 给AIAgent用的干净Markdown入口';
   }, [toolSlug]);
 
   const fetchKeys = async () => {
+    if (sessionUser) {
+      try {
+        const response = await fetch('/v1/keys', { credentials: 'include' });
+        const data = await response.json();
+        if (response.ok && Array.isArray(data.keys)) {
+          setApiKeys(data.keys);
+          return;
+        }
+      } catch {
+        // Fall back to the browser copy if the account request fails.
+      }
+    }
     try {
       const savedKeys = JSON.parse(window.localStorage.getItem('herdown_api_keys') || '[]');
       setApiKeys(Array.isArray(savedKeys) ? savedKeys : []);
@@ -320,6 +367,10 @@ export function App() {
     fetchCredits(apiKeys.find(k => k.status === 'active')?.key);
   }, [apiKeys]);
 
+  useEffect(() => {
+    if (activeTab === 'admin' && sessionUser?.is_admin) void fetchAdminOverview();
+  }, [activeTab, sessionUser]);
+
   const fetchStats = async () => {
     try {
       const res = await fetch('/v1/usage');
@@ -329,6 +380,27 @@ export function App() {
       }
     } catch {
       // ignore
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = '/auth/google';
+  };
+
+  const handleLogout = async () => {
+    await fetch('/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => undefined);
+    setSessionUser(null);
+    setActiveTab('converter');
+    await fetchKeys();
+  };
+
+  const fetchAdminOverview = async () => {
+    try {
+      const response = await fetch('/v1/admin/overview', { credentials: 'include' });
+      const data = await response.json();
+      if (response.ok && data.success) setAdminOverview(data);
+    } catch {
+      setAdminOverview(null);
     }
   };
 
@@ -589,6 +661,19 @@ export function App() {
               <Key className="w-3.5 h-3.5" />
               API
             </button>
+            {sessionUser?.is_admin && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  activeTab === 'admin'
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                管理
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('mcp')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -643,6 +728,33 @@ export function App() {
               <CreditCard className="w-3.5 h-3.5" />
               升级
             </button>
+            {sessionUser ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setActiveTab('account')}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#111823] border border-[#1e293b] text-slate-300 hover:text-white text-xs transition"
+                  title={sessionUser.email}
+                >
+                  <UserRound className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="max-w-24 truncate">{sessionUser.display_name || sessionUser.email}</span>
+                </button>
+                <button
+                  onClick={() => void handleLogout()}
+                  className="p-2 rounded-lg text-slate-500 hover:text-white transition"
+                  title="退出登录"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleGoogleLogin}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-slate-900 hover:bg-slate-200 text-xs font-bold transition"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Google登录
+              </button>
+            )}
             <a
               href="https://github.com/less1001/herdown"
               target="_blank"
@@ -1015,13 +1127,70 @@ export function App() {
           </div>
         )}
 
+        {activeTab === 'account' && (
+          <div className="space-y-8 max-w-4xl mx-auto">
+            <div className="rounded-2xl border border-[#1e293b] bg-[#0f1722] p-6">
+              <span className="text-xs font-semibold text-emerald-400">我的Herdown</span>
+              <h2 className="text-2xl font-bold text-white mt-2">账号管理</h2>
+              {sessionUser ? (
+                <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-4">
+                  {sessionUser.avatar_url ? <img src={sessionUser.avatar_url} alt="" className="w-12 h-12 rounded-full border border-[#29423d]" /> : <div className="w-12 h-12 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-300"><UserRound /></div>}
+                  <div>
+                    <p className="font-bold text-white">{sessionUser.display_name || 'Google用户'}</p>
+                    <p className="text-sm text-slate-400">{sessionUser.email}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5">
+                  <p className="text-sm text-slate-400 leading-7">登录后可以在更换设备或清理浏览器缓存后找回API密钥，并查看自己的额度。</p>
+                  <button onClick={handleGoogleLogin} className="mt-4 px-4 py-2 rounded-xl bg-white text-slate-900 text-xs font-bold">使用Google登录</button>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">当前API密钥</span><p className="text-2xl font-extrabold text-white mt-2">{apiKeys.filter(key => key.status === 'active').length}个</p></div>
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">本月免费额度</span><p className="text-2xl font-extrabold text-emerald-400 mt-2">{hasPaidCredits ? '不扣免费额度' : `${(freeRemaining ?? 1000).toLocaleString()}次`}</p></div>
+              <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">付费点数</span><p className="text-2xl font-extrabold text-white mt-2">{(hasPaidCredits ? (creditBalance ?? 0) : 0).toLocaleString()}次</p></div>
+            </div>
+            <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-5 text-sm text-slate-400 leading-7">
+              免费额度是每个用户每月1000次，IP、设备和API密钥共同计算，换密钥不会重置。API密钥每周最多创建1个。付费点数不过期，也不会自动续费。
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'admin' && sessionUser?.is_admin && (
+          <div className="space-y-8 max-w-5xl mx-auto">
+            <div>
+              <span className="text-xs font-semibold text-emerald-400">Herdown后台</span>
+              <h2 className="text-2xl font-bold text-white mt-2">运营管理</h2>
+              <p className="text-sm text-slate-400 mt-2">只显示必要的运营数据，不保存用户提交的网页正文。</p>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              {[
+                ['用户', adminOverview?.stats.users ?? 0],
+                ['活跃密钥', adminOverview?.stats.active_keys ?? 0],
+                ['完成订单', adminOverview?.stats.completed_orders ?? 0],
+                ['已售额度', adminOverview?.stats.sold_credits ?? 0],
+                ['调用记录', adminOverview?.stats.usage_requests ?? 0],
+              ].map(([label, value]) => <div key={label} className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]"><span className="text-xs text-slate-400">{label}</span><p className="text-xl font-extrabold text-white mt-2">{Number(value).toLocaleString()}</p></div>)}
+            </div>
+            <div className="rounded-xl border border-[#1e293b] bg-[#0f1722] overflow-hidden">
+              <div className="p-5 border-b border-[#1e293b] font-bold text-white">最近注册用户</div>
+              <div className="divide-y divide-[#1e293b]">
+                {(adminOverview?.recent_users || []).map((item, index) => <div key={`${item.email}-${index}`} className="p-4 flex items-center justify-between gap-4 text-sm"><div><p className="text-white">{item.display_name || 'Google用户'}</p><p className="text-slate-500">{item.email}</p></div><span className="text-xs text-slate-500">{item.created_at ? new Date(item.created_at).toLocaleDateString() : '-'}</span></div>)}
+                {!adminOverview?.recent_users?.length && <p className="p-5 text-sm text-slate-500">暂无数据，点击管理入口后会自动加载。</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB 3: API Keys & Pricing Modal trigger */}
         {activeTab === 'keys' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-white">API 密钥控制台</h2>
-                <p className="text-slate-400 text-xs mt-1">密钥只保存在当前浏览器。付款后的点数会自动发放到你用于付款的密钥。</p>
+                <p className="text-slate-400 text-xs mt-1">{sessionUser ? 'API密钥已绑定到你的Google账号，可在其他设备登录后找回。' : '未登录时密钥只保存在当前浏览器，建议登录Google账号后再创建。'}付款后的点数会自动发放到你用于付款的密钥。</p>
               </div>
               <button
                 onClick={() => setShowUpgradeModal(true)}
@@ -1094,7 +1263,7 @@ export function App() {
                   {apiKeys.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-slate-500">
-                        尚无活跃API Key。点击上方“生成新Key”创建专属密钥后，密钥会保存在当前浏览器。
+                        尚无活跃API Key。点击上方“生成新Key”创建专属密钥；登录后密钥会绑定到你的账号。
                       </td>
                     </tr>
                   ) : (
@@ -1507,7 +1676,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               ))}
             </div>
 
-            <p className="text-center text-xs text-emerald-200">每个API密钥每月1,000次免费体验，用完后再选择付费点数包。</p>
+            <p className="text-center text-xs text-emerald-200">每个用户每月1,000次免费解析，IP、设备和API密钥共同计算，换密钥不会重置。</p>
 
             <div className="text-center text-[11px] text-slate-400 pt-3 border-t border-[#1e293b]/60 leading-relaxed">
               🔒 声明：数字 API 额度属于虚拟商品，开通/充值成功即完成交付，不支持无理由退款。<br />

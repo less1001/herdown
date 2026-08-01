@@ -18,6 +18,10 @@ export interface Env {
   WAFFO_PROD_WEBHOOK_PUBLIC_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   TURNSTILE_SITE_KEY?: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_REDIRECT_URI?: string;
+  ADMIN_EMAIL?: string;
   ASSETS?: { fetch: (request: Request) => Promise<Response> };
 }
 
@@ -97,7 +101,7 @@ const privacyPage = () => legalPage('隐私政策', 'Herdown隐私政策', [
   { heading: '数据使用方式', body: '提交内容仅用于完成当前的解析、转换、错误排查与安全防护。Herdown不以出售、出租或广告定向为目的使用您的内容。' },
   { heading: '内容与存储', body: 'Herdown采用实时处理方式，不提供用户内容托管或长期知识库服务。必要的短期日志可能用于防滥用、保障服务稳定与定位故障。' },
   { heading: '第三方服务', body: '支付由Waffo Pancake等独立支付服务商处理。支付服务商会依其自身隐私政策处理付款信息；Herdown不会直接保存完整银行卡信息。' },
-  { heading: '查询、删除与取消', body: 'Herdown目前不提供用户注册账户或长期内容托管。您可在网站内删除已创建的API密钥；如需查询或删除与您相关的服务记录，请发送邮件至vkdefi@gmail.com，且不要在公开页面提交身份证件、银行卡号等敏感信息。经核实后，我们会在合理期限内处理可识别的相关记录。付款订单与付款资料由Waffo Pancake按其规则处理。' },
+  { heading: '账号与查询、删除', body: '您可以使用Google账号登录，用于找回API密钥、查看额度和管理个人资料。Herdown不提供用户内容托管或长期知识库服务。您可在网站内删除API密钥；如需查询或删除与您相关的服务记录，请发送邮件至vkdefi@gmail.com，且不要在公开页面提交身份证件、银行卡号等敏感信息。经核实后，我们会在合理期限内处理可识别的相关记录。付款订单与付款资料由Waffo Pancake按其规则处理。' },
 ]);
 
 const getClientIp = (request: Request): string => {
@@ -120,6 +124,75 @@ const attachDeviceCookie = (response: Response, deviceId: string): Response => {
   headers.append('set-cookie', `herdown_device_id=${encodeURIComponent(deviceId)}; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax`);
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 };
+
+type AuthUser = {
+  id: string;
+  email: string;
+  plan: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+};
+
+const SESSION_COOKIE = 'herdown_session';
+const OAUTH_STATE_COOKIE = 'herdown_oauth_state';
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
+
+const randomToken = (prefix: string): string => `${prefix}_${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`;
+
+const setCookie = (headers: Headers, name: string, value: string, maxAge: number, options = 'HttpOnly; Secure; SameSite=Lax'): void => {
+  headers.append('set-cookie', `${name}=${encodeURIComponent(value)}; Max-Age=${maxAge}; Path=/; ${options}`);
+};
+
+const clearCookie = (headers: Headers, name: string): void => {
+  headers.append('set-cookie', `${name}=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax`);
+};
+
+const responseRedirect = (location: string, cookies: Array<{ name: string; value: string; maxAge: number }> = []): Response => {
+  const headers = new Headers({ Location: location, 'cache-control': 'no-store' });
+  cookies.forEach(cookie => setCookie(headers, cookie.name, cookie.value, cookie.maxAge));
+  return new Response(null, { status: 302, headers });
+};
+
+const createSession = async (userId: string, env: Env): Promise<string | null> => {
+  if (!env.DB) return null;
+  const token = randomToken('sess');
+  const tokenHash = await sha256Base64(token);
+  const expiresAt = Date.now() + SESSION_MAX_AGE * 1000;
+  try {
+    await env.DB.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
+      .bind(tokenHash, userId, expiresAt)
+      .run();
+    return token;
+  } catch {
+    return null;
+  }
+};
+
+const getSessionUser = async (request: Request, env: Env): Promise<AuthUser | null> => {
+  const token = getCookie(request, SESSION_COOKIE);
+  if (!token || !env.DB) return null;
+  try {
+    const tokenHash = await sha256Base64(token);
+    const row = await env.DB.prepare(`
+      SELECT u.id, u.email, u.plan, u.display_name, u.avatar_url
+      FROM sessions s
+      JOIN users u ON u.id = s.user_id
+      WHERE s.token_hash = ? AND s.expires_at > ?
+    `).bind(tokenHash, Date.now()).first<AuthUser>();
+    return row || null;
+  } catch {
+    return null;
+  }
+};
+
+const isAdminUser = (user: AuthUser | null, env: Env): boolean => Boolean(user && env.ADMIN_EMAIL && user.email.toLowerCase() === env.ADMIN_EMAIL.toLowerCase());
+
+const googleRedirectUri = (request: Request, env: Env): string => env.GOOGLE_REDIRECT_URI || `${new URL(request.url).origin}/auth/google/callback`;
+
+const googleErrorPage = (message: string): Response => new Response(`<!doctype html><meta charset="utf-8"><title>Herdown登录失败</title><style>body{font-family:system-ui;background:#070a0e;color:#e2e8f0;padding:48px;line-height:1.7}a{color:#52d9ad}</style><h1>Google登录失败</h1><p>${message}</p><p><a href="/">返回Herdown</a></p>`, {
+  status: 400,
+  headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+});
 
 type WaffoWebhookEvent = {
   eventType?: string;
@@ -431,6 +504,55 @@ const verifyTurnstile = async (token: string, request: Request, env: Env): Promi
   }
 };
 
+type GoogleProfile = { sub?: string; email?: string; name?: string; picture?: string };
+
+const upsertGoogleUser = async (profile: GoogleProfile, env: Env): Promise<string | null> => {
+  if (!env.DB || !profile.sub || !profile.email) return null;
+  const email = profile.email.trim().toLowerCase();
+  try {
+    const existing = await env.DB.prepare('SELECT id FROM users WHERE google_sub = ? OR email = ? LIMIT 1')
+      .bind(profile.sub, email)
+      .first<{ id: string }>();
+    const userId = existing?.id || `usr_${crypto.randomUUID().replace(/-/g, '')}`;
+    await env.DB.prepare(`
+      INSERT INTO users (id, email, plan, google_sub, display_name, avatar_url, updated_at)
+      VALUES (?, ?, 'free', ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        email = excluded.email,
+        google_sub = excluded.google_sub,
+        display_name = excluded.display_name,
+        avatar_url = excluded.avatar_url,
+        updated_at = CURRENT_TIMESTAMP
+    `).bind(userId, email, profile.sub, profile.name || email.split('@')[0], profile.picture || null).run();
+    return userId;
+  } catch {
+    return null;
+  }
+};
+
+const exchangeGoogleCode = async (code: string, request: Request, env: Env): Promise<GoogleProfile | null> => {
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return null;
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: googleRedirectUri(request, env),
+      grant_type: 'authorization_code',
+    }),
+  });
+  if (!tokenResponse.ok) return null;
+  const tokens = await tokenResponse.json() as { access_token?: string };
+  if (!tokens.access_token) return null;
+  const profileResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+    headers: { Authorization: `Bearer ${tokens.access_token}` },
+  });
+  if (!profileResponse.ok) return null;
+  return profileResponse.json() as Promise<GoogleProfile>;
+};
+
 const getBlockKey = (keyOrIp: string, isKey: boolean): string => `block:${isKey ? 'key' : 'ip'}:${keyOrIp}`;
 const getAbuseKey = (keyOrIp: string, isKey: boolean): string => `abuse:${isKey ? 'key' : 'ip'}:${keyOrIp}`;
 
@@ -721,6 +843,89 @@ export default {
           'access-control-max-age': '86400',
         },
       });
+    }
+
+    if (url.pathname === '/auth/google' && request.method === 'GET') {
+      if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.DB) {
+        return googleErrorPage('Google登录尚未完成配置，请稍后再试。');
+      }
+      const state = randomToken('state');
+      const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+      authUrl.search = new URLSearchParams({
+        client_id: env.GOOGLE_CLIENT_ID,
+        redirect_uri: googleRedirectUri(request, env),
+        response_type: 'code',
+        scope: 'openid email profile',
+        state,
+        access_type: 'online',
+        prompt: 'select_account',
+      }).toString();
+      return responseRedirect(authUrl.toString(), [{ name: OAUTH_STATE_COOKIE, value: state, maxAge: 600 }]);
+    }
+
+    if (url.pathname === '/auth/google/callback' && request.method === 'GET') {
+      const state = url.searchParams.get('state') || '';
+      const savedState = getCookie(request, OAUTH_STATE_COOKIE);
+      const code = url.searchParams.get('code') || '';
+      if (!state || !savedState || state !== savedState || !code) return googleErrorPage('登录验证已过期，请重新点击Google登录。');
+      const profile = await exchangeGoogleCode(code, request, env);
+      const userId = profile ? await upsertGoogleUser(profile, env) : null;
+      const sessionToken = userId ? await createSession(userId, env) : null;
+      if (!sessionToken) return googleErrorPage('无法创建登录会话，请检查数据库和Google配置。');
+      const redirect = responseRedirect('/?login=success');
+      const headers = new Headers(redirect.headers);
+      setCookie(headers, SESSION_COOKIE, sessionToken, SESSION_MAX_AGE);
+      clearCookie(headers, OAUTH_STATE_COOKIE);
+      return new Response(null, { status: 302, headers });
+    }
+
+    if (url.pathname === '/auth/logout' && (request.method === 'GET' || request.method === 'POST')) {
+      const token = getCookie(request, SESSION_COOKIE);
+      if (token && env.DB) {
+        try {
+          await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256Base64(token)).run();
+        } catch {
+          // Ignore logout cleanup errors and still clear the browser session.
+        }
+      }
+      const redirect = responseRedirect('/');
+      const headers = new Headers(redirect.headers);
+      clearCookie(headers, SESSION_COOKIE);
+      return new Response(null, { status: 302, headers });
+    }
+
+    if (url.pathname === '/v1/me' && request.method === 'GET') {
+      const user = await getSessionUser(request, env);
+      return json({ authenticated: Boolean(user), user: user ? { ...user, is_admin: isAdminUser(user, env) } : null });
+    }
+
+    if (url.pathname === '/v1/admin/overview' && request.method === 'GET') {
+      const user = await getSessionUser(request, env);
+      if (!isAdminUser(user, env) || !env.DB) return json({ success: false, message: '无管理员权限' }, { status: 403 });
+      try {
+        const [usersRow, keysRow, ordersRow, creditsRow, usageRow] = await env.DB.batch([
+          env.DB.prepare('SELECT COUNT(*) AS count FROM users'),
+          env.DB.prepare('SELECT COUNT(*) AS count FROM api_keys WHERE status = "active"'),
+          env.DB.prepare('SELECT COUNT(*) AS count FROM payment_orders WHERE payment_status = "completed"'),
+          env.DB.prepare('SELECT COALESCE(SUM(credits), 0) AS count FROM credit_ledger WHERE reason = "purchase"'),
+          env.DB.prepare('SELECT COALESCE(SUM(count), 0) AS count FROM usage_logs WHERE key_or_ip LIKE "day:%"'),
+        ]);
+        const rowValue = (index: number, key: string): number => Number((([usersRow, keysRow, ordersRow, creditsRow, usageRow][index] as any)?.results?.[0] as any)?.[key] || 0);
+        const { results: recentUsers } = await env.DB.prepare('SELECT email, display_name, plan, created_at FROM users ORDER BY created_at DESC LIMIT 20').all();
+        return json({
+          success: true,
+          stats: {
+            users: rowValue(0, 'count'),
+            active_keys: rowValue(1, 'count'),
+            completed_orders: rowValue(2, 'count'),
+            sold_credits: rowValue(3, 'count'),
+            usage_requests: rowValue(4, 'count'),
+          },
+          recent_users: recentUsers || [],
+        });
+      } catch {
+        return json({ success: false, message: '管理员数据暂时无法读取' }, { status: 500 });
+      }
     }
 
     if (url.pathname === '/health') {
@@ -1082,12 +1287,18 @@ export default {
     if (url.pathname === '/v1/keys') {
       if (request.method === 'GET') {
         const authInfo = await verifyApiKeyOrIp(request, env);
-        if (!authInfo.isKey || !env.DB) return json({ keys: [] });
+        const sessionUser = await getSessionUser(request, env);
+        if (!env.DB) return json({ keys: [] });
         try {
-          const { results } = await env.DB.prepare('SELECT name, key, status, created_at FROM api_keys WHERE key = ? AND status != "revoked"')
-            .bind(authInfo.keyOrIp)
+          const query = sessionUser
+            ? env.DB.prepare('SELECT name, key, status, created_at FROM api_keys WHERE user_id = ? AND status != "revoked" ORDER BY created_at DESC').bind(sessionUser.id)
+            : authInfo.isKey
+              ? env.DB.prepare('SELECT name, key, status, created_at FROM api_keys WHERE key = ? AND status != "revoked"').bind(authInfo.keyOrIp)
+              : null;
+          if (!query) return json({ authenticated: false, keys: [] });
+          const { results } = await query
             .all();
-          return json({ keys: results || [] });
+          return json({ authenticated: Boolean(sessionUser), keys: results || [] });
         } catch {
           return json({ keys: [] });
         }
@@ -1107,12 +1318,13 @@ export default {
         }
         const keyName = (body.name || 'API Key').trim();
         const newKey = `sk_live_free_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
-        const userId = `usr_${crypto.randomUUID().replace(/-/g, '')}`;
+        const sessionUser = await getSessionUser(request, env);
+        const userId = sessionUser?.id || `usr_${crypto.randomUUID().replace(/-/g, '')}`;
 
         if (env.DB) {
           try {
-            await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, plan) VALUES (?, ?, 'pro')")
-              .bind(userId, `${userId}@key.local`)
+            await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, plan) VALUES (?, ?, 'free')")
+              .bind(userId, sessionUser?.email || `${userId}@key.local`)
               .run();
 
             await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
@@ -1129,12 +1341,17 @@ export default {
     if (url.pathname.startsWith('/v1/keys/') && request.method === 'DELETE') {
       const keyToDelete = url.pathname.replace('/v1/keys/', '');
       const authInfo = await verifyApiKeyOrIp(request, env);
-      if (!authInfo.isKey || authInfo.keyOrIp !== keyToDelete) {
+      const sessionUser = await getSessionUser(request, env);
+      if (!sessionUser && (!authInfo.isKey || authInfo.keyOrIp !== keyToDelete)) {
         return json({ success: false, message: '只能删除当前使用的API密钥' }, { status: 401 });
       }
       if (env.DB && keyToDelete) {
         try {
-          await env.DB.prepare('UPDATE api_keys SET status = "revoked" WHERE key = ?').bind(keyToDelete).run();
+          if (sessionUser) {
+            await env.DB.prepare('UPDATE api_keys SET status = "revoked" WHERE key = ? AND user_id = ?').bind(keyToDelete, sessionUser.id).run();
+          } else {
+            await env.DB.prepare('UPDATE api_keys SET status = "revoked" WHERE key = ?').bind(keyToDelete).run();
+          }
         } catch {
           // ignore
         }
