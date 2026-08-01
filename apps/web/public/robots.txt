@@ -1,4 +1,10 @@
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=no, use=reference
 Allow: /
+
+Disallow: /v1/
+Disallow: /auth/
+Disallow: /account
+Disallow: /admin
 
 Sitemap: https://herdown.com/sitemap.xml
