@@ -725,6 +725,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
     document.querySelector('meta[name="description"]')?.setAttribute('content', description);
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
+    if (toolSlug) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [language, toolSlug]);
 
   const fetchKeys = async () => {
