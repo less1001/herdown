@@ -608,6 +608,37 @@ const consumeKeyCreationSlot = async (ip: string, env: Env): Promise<boolean> =>
   }
 };
 
+const recordProcessingLog = async (
+  env: Env,
+  details: {
+    endpoint: string;
+    fileType: string;
+    success: boolean;
+    errorReason?: string;
+    durationMs: number;
+    keyOrIp?: string;
+    userId?: string;
+  },
+): Promise<void> => {
+  if (!env.DB) return;
+  try {
+    await env.DB.prepare(`
+      INSERT INTO processing_logs (endpoint, file_type, success, error_reason, duration_ms, key_or_ip, user_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      details.endpoint,
+      details.fileType,
+      details.success ? 1 : 0,
+      details.errorReason?.slice(0, 300) || null,
+      Math.max(0, Math.floor(details.durationMs)),
+      details.keyOrIp || null,
+      details.userId || null,
+    ).run();
+  } catch {
+    // Monitoring must never break a user request.
+  }
+};
+
 const verifyApiKeyOrIp = async (request: Request, env: Env): Promise<{ keyOrIp: string; isKey: boolean; userId: string; ip: string; deviceId?: string }> => {
   const ip = getClientIp(request);
   const deviceId = getDeviceId(request);
@@ -927,6 +958,36 @@ export default {
           env.DB.prepare('SELECT COALESCE(SUM(count), 0) AS count FROM usage_logs WHERE key_or_ip LIKE "day:%"'),
         ]);
         const rowValue = (index: number, key: string): number => Number((([usersRow, keysRow, ordersRow, creditsRow, usageRow][index] as any)?.results?.[0] as any)?.[key] || 0);
+        let processing = {
+          total: 0,
+          succeeded: 0,
+          failed: 0,
+          success_rate: 0,
+          average_duration_ms: 0,
+          failure_reasons: [] as Array<{ reason: string; count: number }>,
+          file_types: [] as Array<{ file_type: string; count: number }>,
+        };
+        try {
+          const [summary, reasons, fileTypes] = await env.DB.batch([
+            env.DB.prepare(`SELECT COUNT(*) AS total, COALESCE(SUM(success), 0) AS succeeded, COALESCE(SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END), 0) AS failed, COALESCE(AVG(duration_ms), 0) AS average_duration_ms FROM processing_logs`),
+            env.DB.prepare(`SELECT COALESCE(NULLIF(error_reason, ''), 'UNKNOWN') AS reason, COUNT(*) AS count FROM processing_logs WHERE success = 0 GROUP BY COALESCE(NULLIF(error_reason, ''), 'UNKNOWN') ORDER BY count DESC LIMIT 10`),
+            env.DB.prepare(`SELECT file_type, COUNT(*) AS count FROM processing_logs GROUP BY file_type ORDER BY count DESC LIMIT 10`),
+          ]);
+          const summaryRow = (summary.results?.[0] || {}) as Record<string, unknown>;
+          const total = Number(summaryRow.total || 0);
+          const succeeded = Number(summaryRow.succeeded || 0);
+          processing = {
+            total,
+            succeeded,
+            failed: Number(summaryRow.failed || 0),
+            success_rate: total ? Number(((succeeded / total) * 100).toFixed(1)) : 0,
+            average_duration_ms: Math.round(Number(summaryRow.average_duration_ms || 0)),
+            failure_reasons: (reasons.results || []) as Array<{ reason: string; count: number }>,
+            file_types: (fileTypes.results || []) as Array<{ file_type: string; count: number }>,
+          };
+        } catch {
+          // Older databases may not have the monitoring migration yet.
+        }
         const { results: recentUsers } = await env.DB.prepare('SELECT email, display_name, plan, created_at FROM users ORDER BY created_at DESC LIMIT 20').all();
         return json({
           success: true,
@@ -937,6 +998,7 @@ export default {
             sold_credits: rowValue(3, 'count'),
             usage_requests: rowValue(4, 'count'),
           },
+          processing,
           recent_users: recentUsers || [],
         });
       } catch {
@@ -1003,15 +1065,21 @@ export default {
         }, { status: 402 });
       }
 
+      const processingStartedAt = Date.now();
+      let processingSuccess = false;
+      let processingErrorReason = '';
+      let processingFileType = rawHtml ? 'html' : 'webpage';
       try {
         let sourceHtml = rawHtml;
         if (!sourceHtml && targetUrl) {
           const platform = detectPlatform(targetUrl);
+          processingFileType = platform;
           const referer = getPlatformReferer(platform);
 
           const fetchResult = await safeFetchPageHtml(targetUrl, referer, 8000, body.zhihuLimit, body.zhihuSort);
 
           if (fetchResult.status !== 200 && fetchResult.status !== 0) {
+            processingErrorReason = `HTTP_${fetchResult.status}`;
             return json({
               success: false,
               code: 'PARSE_FAILED',
@@ -1022,6 +1090,7 @@ export default {
           sourceHtml = fetchResult.html;
 
           if (platform === 'wechat' && isInvalidWeChatPage(sourceHtml)) {
+            processingErrorReason = 'INVALID_SOURCE';
             return json({
               success: false,
               code: 'INVALID_SOURCE',
@@ -1037,6 +1106,7 @@ export default {
         const tokenSavingsPercent = sourceTokens > 0 ? Number(((tokenSavings / sourceTokens) * 100).toFixed(1)) : 0;
 
         if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, 1, 'parse', env))) {
+          processingErrorReason = 'CREDITS_EXHAUSTED';
           return json({
             success: false,
             code: 'CREDITS_EXHAUSTED',
@@ -1044,6 +1114,7 @@ export default {
           }, { status: 402 });
         }
         if (!creditStatus.hasPurchasedCredits && !(await consumeFreeQuota(getFreeQuotaIdentity(authInfo), 1, env))) {
+          processingErrorReason = 'FREE_QUOTA_EXHAUSTED';
           return json({
             success: false,
             code: 'FREE_QUOTA_EXHAUSTED',
@@ -1051,6 +1122,7 @@ export default {
           }, { status: 402 });
         }
 
+        processingSuccess = true;
         return json({
           success: true,
           title: result.title,
@@ -1068,11 +1140,22 @@ export default {
           token_savings_percent: tokenSavingsPercent,
         });
       } catch (err: any) {
+        processingErrorReason = err?.message || 'PARSE_FAILED';
         return json({
           success: false,
           code: 'PARSE_FAILED',
           message: err?.message || '抓取或解析目标网页失败',
         }, { status: 500 });
+      } finally {
+        await recordProcessingLog(env, {
+          endpoint: '/v1/parse',
+          fileType: processingFileType,
+          success: processingSuccess,
+          errorReason: processingErrorReason,
+          durationMs: Date.now() - processingStartedAt,
+          keyOrIp: authInfo.keyOrIp,
+          userId: authInfo.userId,
+        });
       }
     }
 
@@ -1105,6 +1188,9 @@ export default {
       }
 
       const startTime = Date.now();
+      let processingSuccess = false;
+      let processingErrorReason = '';
+      const processingFileType = targetUrl.includes('sitemap') ? 'sitemap' : 'website-crawl';
       try {
         let sitemapUrl = targetUrl;
         if (!targetUrl.includes('sitemap')) {
@@ -1136,12 +1222,15 @@ export default {
         );
 
         if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, crawlResults.length, 'crawl', env))) {
+          processingErrorReason = 'CREDITS_EXHAUSTED';
           return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数不足，请购买新的点数包后继续使用' }, { status: 402 });
         }
         if (!creditStatus.hasPurchasedCredits && crawlResults.length > 0 && !(await consumeFreeQuota(getFreeQuotaIdentity(authInfo), crawlResults.length, env))) {
+          processingErrorReason = 'FREE_QUOTA_EXHAUSTED';
           return json({ success: false, code: 'FREE_QUOTA_EXHAUSTED', message: '本月免费额度已用完，请升级后继续使用' }, { status: 402 });
         }
 
+        processingSuccess = true;
         return json({
           success: true,
           domain: targetUrl,
@@ -1150,7 +1239,18 @@ export default {
           elapsed_ms: Date.now() - startTime,
         });
       } catch (err: any) {
+        processingErrorReason = err?.message || 'CRAWL_FAILED';
         return json({ success: false, message: err?.message || 'Crawl 失败' }, { status: 500 });
+      } finally {
+        await recordProcessingLog(env, {
+          endpoint: '/v1/crawl',
+          fileType: processingFileType,
+          success: processingSuccess,
+          errorReason: processingErrorReason,
+          durationMs: Date.now() - startTime,
+          keyOrIp: authInfo.keyOrIp,
+          userId: authInfo.userId,
+        });
       }
     }
 
