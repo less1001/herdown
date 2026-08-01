@@ -16,6 +16,8 @@ export interface Env {
   HERDOWN_TEST_TOKEN?: string;
   WAFFO_TEST_WEBHOOK_PUBLIC_KEY?: string;
   WAFFO_PROD_WEBHOOK_PUBLIC_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
+  TURNSTILE_SITE_KEY?: string;
   ASSETS?: { fetch: (request: Request) => Promise<Response> };
 }
 
@@ -102,6 +104,23 @@ const getClientIp = (request: Request): string => {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || '127.0.0.1';
 };
 
+const getCookie = (request: Request, name: string): string | undefined => {
+  const cookieHeader = request.headers.get('cookie') || '';
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return match?.[1] ? decodeURIComponent(match[1]) : undefined;
+};
+
+const getDeviceId = (request: Request): string | undefined => {
+  const deviceId = getCookie(request, 'herdown_device_id');
+  return deviceId && /^dev_[a-zA-Z0-9_-]{16,80}$/.test(deviceId) ? deviceId : undefined;
+};
+
+const attachDeviceCookie = (response: Response, deviceId: string): Response => {
+  const headers = new Headers(response.headers);
+  headers.append('set-cookie', `herdown_device_id=${encodeURIComponent(deviceId)}; Max-Age=31536000; Path=/; Secure; HttpOnly; SameSite=Lax`);
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+};
+
 type WaffoWebhookEvent = {
   eventType?: string;
   eventId?: string;
@@ -114,6 +133,9 @@ type WaffoWebhookEvent = {
 
 const WAFFO_CHECKOUT_PATH = '/v1/actions/checkout/create-session';
 const FREE_MONTHLY_QUOTA = 1_000;
+const KEY_CREATION_INTERVAL = 'week';
+const ABUSE_BLOCK_MS = 15 * 60 * 1000;
+const ABUSE_BLOCK_THRESHOLD = 5;
 
 type ProductCode = 'starter' | 'standard' | 'bulk';
 type ProductConfig = {
@@ -246,33 +268,50 @@ const getCreditStatus = async (apiKey: string, env: Env): Promise<{ balance: num
   }
 };
 
-const getFreeQuotaStatus = async (keyOrIp: string, env: Env): Promise<{ used: number; remaining: number }> => {
+type FreeQuotaIdentity = { ip: string; deviceId?: string; key?: string };
+
+const getFreeQuotaIdentity = (authInfo: { ip: string; deviceId?: string; keyOrIp: string; isKey: boolean }): FreeQuotaIdentity => ({
+  ip: authInfo.ip,
+  deviceId: authInfo.deviceId,
+  key: authInfo.isKey ? authInfo.keyOrIp : undefined,
+});
+
+const getFreeQuotaKeys = (identity: FreeQuotaIdentity): string[] => {
+  return Array.from(new Set([
+    `free:ip:${identity.ip}`,
+    identity.deviceId ? `free:device:${identity.deviceId}` : '',
+    identity.key ? `free:${identity.key}` : '',
+  ].filter(Boolean)));
+};
+
+const getFreeQuotaStatus = async (identity: FreeQuotaIdentity, env: Env): Promise<{ used: number; remaining: number }> => {
   if (!env.DB) return { used: 0, remaining: FREE_MONTHLY_QUOTA };
   const month = new Date().toISOString().slice(0, 7);
   try {
-    const row = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
-      .bind(`free:${keyOrIp}`, month)
-      .first<{ count: number }>();
-    const used = Math.max(0, Number(row?.count || 0));
+    const rows = await Promise.all(getFreeQuotaKeys(identity).map((key) => env.DB!.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
+      .bind(key, month)
+      .first<{ count: number }>()));
+    const used = Math.max(0, ...rows.map((row) => Number(row?.count || 0)));
     return { used, remaining: Math.max(0, FREE_MONTHLY_QUOTA - used) };
   } catch {
     return { used: 0, remaining: FREE_MONTHLY_QUOTA };
   }
 };
 
-const consumeFreeQuota = async (keyOrIp: string, amount: number, env: Env): Promise<boolean> => {
+const consumeFreeQuota = async (identity: FreeQuotaIdentity, amount: number, env: Env): Promise<boolean> => {
   if (!env.DB) return true;
   const requested = Math.max(1, Math.floor(amount));
   if (requested > FREE_MONTHLY_QUOTA) return false;
   const month = new Date().toISOString().slice(0, 7);
   try {
-    const result = await env.DB.prepare(`
+    const statements = getFreeQuotaKeys(identity).map((key) => env.DB!.prepare(`
       INSERT INTO usage_logs (key_or_ip, parse_date, count)
       VALUES (?, ?, ?)
       ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = count + excluded.count
       WHERE usage_logs.count + excluded.count <= ?
-    `).bind(`free:${keyOrIp}`, month, requested, FREE_MONTHLY_QUOTA).run();
-    return (result.meta.changes || 0) === 1;
+    `).bind(key, month, requested, FREE_MONTHLY_QUOTA));
+    const results = await env.DB.batch(statements);
+    return results.every((result) => (result.meta.changes || 0) === 1);
   } catch {
     return false;
   }
@@ -365,26 +404,110 @@ const isForbiddenUrl = (urlString: string): boolean => {
   return false;
 };
 
-const verifyApiKeyOrIp = async (request: Request, env: Env): Promise<{ keyOrIp: string; isKey: boolean; userId: string }> => {
+const getWeekKey = (): string => {
+  const date = new Date();
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  return date.toISOString().slice(0, 10);
+};
+
+const verifyTurnstile = async (token: string, request: Request, env: Env): Promise<boolean> => {
+  if (!env.TURNSTILE_SECRET_KEY || !token) return false;
+  try {
+    const body = new URLSearchParams({
+      secret: env.TURNSTILE_SECRET_KEY,
+      response: token,
+    });
+    const ip = getClientIp(request);
+    if (ip) body.set('remoteip', ip);
+    const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      body,
+    });
+    const result = await response.json() as { success?: boolean };
+    return result.success === true;
+  } catch {
+    return false;
+  }
+};
+
+const getBlockKey = (keyOrIp: string, isKey: boolean): string => `block:${isKey ? 'key' : 'ip'}:${keyOrIp}`;
+const getAbuseKey = (keyOrIp: string, isKey: boolean): string => `abuse:${isKey ? 'key' : 'ip'}:${keyOrIp}`;
+
+const getActiveBlockUntil = async (keyOrIp: string, isKey: boolean, env: Env): Promise<number> => {
+  if (!env.DB) return 0;
+  try {
+    const row = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
+      .bind(getBlockKey(keyOrIp, isKey), 'block')
+      .first<{ count: number }>();
+    return Number(row?.count || 0);
+  } catch {
+    return 0;
+  }
+};
+
+const recordAbuseAndMaybeBlock = async (keyOrIp: string, isKey: boolean, env: Env): Promise<void> => {
+  if (!env.DB) return;
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    await env.DB.prepare(`
+      INSERT INTO usage_logs (key_or_ip, parse_date, count)
+      VALUES (?, ?, 1)
+      ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = count + 1
+    `).bind(getAbuseKey(keyOrIp, isKey), today).run();
+    const row = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
+      .bind(getAbuseKey(keyOrIp, isKey), today)
+      .first<{ count: number }>();
+    if (Number(row?.count || 0) >= ABUSE_BLOCK_THRESHOLD) {
+      await env.DB.prepare(`
+        INSERT INTO usage_logs (key_or_ip, parse_date, count)
+        VALUES (?, 'block', ?)
+        ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = excluded.count
+      `).bind(getBlockKey(keyOrIp, isKey), Date.now() + ABUSE_BLOCK_MS).run();
+    }
+  } catch {
+    // Abuse protection must not break normal requests when logging fails.
+  }
+};
+
+const consumeKeyCreationSlot = async (ip: string, env: Env): Promise<boolean> => {
+  if (!env.DB) return true;
+  const week = `${KEY_CREATION_INTERVAL}:${getWeekKey()}`;
+  try {
+    const result = await env.DB.prepare(`
+      INSERT INTO usage_logs (key_or_ip, parse_date, count)
+      VALUES (?, ?, 1)
+      ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = count + 1
+      WHERE usage_logs.count < 1
+    `).bind(`key-create:${ip}`, week).run();
+    return (result.meta.changes || 0) === 1;
+  } catch {
+    return false;
+  }
+};
+
+const verifyApiKeyOrIp = async (request: Request, env: Env): Promise<{ keyOrIp: string; isKey: boolean; userId: string; ip: string; deviceId?: string }> => {
+  const ip = getClientIp(request);
+  const deviceId = getDeviceId(request);
   const authHeader = request.headers.get('authorization') || '';
   const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
   if (token === 'sk_admin_test_unlimited_8888') {
-    return { keyOrIp: token, isKey: true, userId: 'usr_admin' };
+    return { keyOrIp: token, isKey: true, userId: 'usr_admin', ip, deviceId };
   }
 
   if (token && token !== 'sk_live_demo88888888' && env.DB) {
     try {
       const res = await env.DB.prepare('SELECT user_id, status FROM api_keys WHERE key = ?').bind(token).first<{ user_id: string; status: string }>();
       if (res && res.status === 'active') {
-        return { keyOrIp: token, isKey: true, userId: res.user_id };
+        return { keyOrIp: token, isKey: true, userId: res.user_id, ip, deviceId };
       }
     } catch {
       // ignore
     }
   }
 
-  return { keyOrIp: getClientIp(request), isKey: false, userId: 'usr_anonymous' };
+  return { keyOrIp: ip, isKey: false, userId: 'usr_anonymous', ip, deviceId };
 };
 
 const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): Promise<{ allowed: boolean; reason?: string }> => {
@@ -401,6 +524,11 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
   if (!env.DB) return { allowed: true };
 
   try {
+    const activeBlockUntil = await getActiveBlockUntil(keyOrIp, isKey, env);
+    if (activeBlockUntil > Date.now()) {
+      return { allowed: false, reason: '检测到异常请求，访问已暂时暂停15分钟' };
+    }
+
     const minuteKey = `min:${keyOrIp}:${minuteStr}`;
     await env.DB.prepare(`
       INSERT INTO usage_logs (key_or_ip, parse_date, count)
@@ -413,6 +541,7 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
       .first<{ count: number }>();
 
     if (minRow && typeof minRow.count === 'number' && minRow.count > maxPerMinute) {
+      await recordAbuseAndMaybeBlock(keyOrIp, isKey, env);
       return { allowed: false, reason: `请求太频繁！已达到限制 (${maxPerMinute} 次/分钟)` };
     }
 
@@ -428,6 +557,7 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
       .first<{ count: number }>();
 
     if (dayRow && typeof dayRow.count === 'number' && dayRow.count > maxPerDay) {
+      await recordAbuseAndMaybeBlock(keyOrIp, isKey, env);
       return { allowed: false, reason: `已达到今日解析配额上限 (${maxPerDay} 次/天)` };
     }
   } catch (err) {
@@ -643,7 +773,7 @@ export default {
           message: '点数已用完，请购买新的点数包后继续使用',
         }, { status: 402 });
       }
-      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(authInfo.keyOrIp, env);
+      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(getFreeQuotaIdentity(authInfo), env);
       if (freeQuota && freeQuota.remaining < 1) {
         return json({
           success: false,
@@ -692,7 +822,7 @@ export default {
             message: '点数已用完，请购买新的点数包后继续使用',
           }, { status: 402 });
         }
-        if (!creditStatus.hasPurchasedCredits && !(await consumeFreeQuota(authInfo.keyOrIp, 1, env))) {
+        if (!creditStatus.hasPurchasedCredits && !(await consumeFreeQuota(getFreeQuotaIdentity(authInfo), 1, env))) {
           return json({
             success: false,
             code: 'FREE_QUOTA_EXHAUSTED',
@@ -737,7 +867,7 @@ export default {
       const targetUrl = (body.url || '').trim();
       const limit = Math.min(20, Math.max(1, body.limit || 5));
       const creditStatus = authInfo.isKey ? await getCreditStatus(authInfo.keyOrIp, env) : { balance: 0, hasPurchasedCredits: false };
-      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(authInfo.keyOrIp, env);
+      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(getFreeQuotaIdentity(authInfo), env);
       const crawlLimit = creditStatus.hasPurchasedCredits ? Math.min(limit, creditStatus.balance) : Math.min(limit, freeQuota?.remaining || 0);
 
       if (creditStatus.hasPurchasedCredits && crawlLimit < 1) {
@@ -785,7 +915,7 @@ export default {
         if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, crawlResults.length, 'crawl', env))) {
           return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数不足，请购买新的点数包后继续使用' }, { status: 402 });
         }
-        if (!creditStatus.hasPurchasedCredits && crawlResults.length > 0 && !(await consumeFreeQuota(authInfo.keyOrIp, crawlResults.length, env))) {
+        if (!creditStatus.hasPurchasedCredits && crawlResults.length > 0 && !(await consumeFreeQuota(getFreeQuotaIdentity(authInfo), crawlResults.length, env))) {
           return json({ success: false, code: 'FREE_QUOTA_EXHAUSTED', message: '本月免费额度已用完，请升级后继续使用' }, { status: 402 });
         }
 
@@ -944,6 +1074,10 @@ export default {
       return json({ received: true, processed: true });
     }
 
+    if (url.pathname === '/v1/security-config' && request.method === 'GET') {
+      return json({ turnstile_site_key: env.TURNSTILE_SITE_KEY || '' });
+    }
+
     // Dashboard API: API Key Management
     if (url.pathname === '/v1/keys') {
       if (request.method === 'GET') {
@@ -960,7 +1094,17 @@ export default {
       }
 
       if (request.method === 'POST') {
-        const body = (await request.json().catch(() => ({}))) as { name?: string };
+        const body = (await request.json().catch(() => ({}))) as { name?: string; turnstile_token?: string };
+        if (!env.TURNSTILE_SECRET_KEY) {
+          return json({ success: false, code: 'TURNSTILE_NOT_CONFIGURED', message: '安全验证暂未配置，请稍后重试' }, { status: 503 });
+        }
+        if (!(await verifyTurnstile(body.turnstile_token || '', request, env))) {
+          return json({ success: false, code: 'TURNSTILE_FAILED', message: '请先完成安全验证后再创建API密钥' }, { status: 403 });
+        }
+        const ip = getClientIp(request);
+        if (!(await consumeKeyCreationSlot(ip, env))) {
+          return json({ success: false, code: 'KEY_CREATION_LIMIT', message: '同一IP每周最多创建1个API密钥' }, { status: 429 });
+        }
         const keyName = (body.name || 'API Key').trim();
         const newKey = `sk_live_free_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
         const userId = `usr_${crypto.randomUUID().replace(/-/g, '')}`;
@@ -977,7 +1121,8 @@ export default {
           }
         }
 
-        return json({ success: true, key: newKey, name: keyName, created_at: new Date().toISOString() });
+        const deviceId = getDeviceId(request) || `dev_${crypto.randomUUID().replace(/-/g, '')}`;
+        return attachDeviceCookie(json({ success: true, key: newKey, name: keyName, created_at: new Date().toISOString() }), deviceId);
       }
     }
 
@@ -1001,7 +1146,7 @@ export default {
       const authInfo = await verifyApiKeyOrIp(request, env);
       if (!authInfo.isKey) return json({ success: false, message: '请提供有效的API密钥' }, { status: 401 });
       const creditStatus = await getCreditStatus(authInfo.keyOrIp, env);
-      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(authInfo.keyOrIp, env);
+      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(getFreeQuotaIdentity(authInfo), env);
       return json({
         success: true,
         credits: creditStatus.balance,
