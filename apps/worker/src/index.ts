@@ -899,6 +899,22 @@ export default {
       return json({ authenticated: Boolean(user), user: user ? { ...user, is_admin: isAdminUser(user, env) } : null });
     }
 
+    if (url.pathname === '/v1/account/link-key' && request.method === 'POST') {
+      const sessionUser = await getSessionUser(request, env);
+      if (!sessionUser || !env.DB) return json({ success: false, message: '请先登录Google账号' }, { status: 401 });
+      const body = await request.json().catch(() => ({})) as { key?: string };
+      const key = (body.key || '').trim();
+      if (!key || key.length > 160) return json({ success: false, message: 'API密钥无效' }, { status: 400 });
+      try {
+        const existing = await env.DB.prepare('SELECT key FROM api_keys WHERE key = ? AND status != "revoked"').bind(key).first<{ key: string }>();
+        if (!existing) return json({ success: false, message: 'API密钥不存在或已撤销' }, { status: 404 });
+        await env.DB.prepare('UPDATE api_keys SET user_id = ? WHERE key = ?').bind(sessionUser.id, key).run();
+        return json({ success: true });
+      } catch {
+        return json({ success: false, message: 'API密钥绑定失败' }, { status: 500 });
+      }
+    }
+
     if (url.pathname === '/v1/admin/overview' && request.method === 'GET') {
       const user = await getSessionUser(request, env);
       if (!isAdminUser(user, env) || !env.DB) return json({ success: false, message: '无管理员权限' }, { status: 403 });
