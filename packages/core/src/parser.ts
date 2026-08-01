@@ -115,7 +115,7 @@ const extractEmbeddedJsonContent = (html: string): EmbeddedJsonContent | null =>
     if (typeof value === 'string') {
       const text = value.replace(/\\u002F/gi, '/').replace(/\\\//g, '/').trim();
       if (titleKeys.test(key) && text.length > 2 && text.length < 300) titleCandidates.push(text);
-      if (contentKeys.test(key) && text.length >= 80) {
+      if (contentKeys.test(key) && text.length >= 20) {
         const htmlScore = /<\/?(?:p|article|section|div|h[1-6]|img|br)[\s>]/i.test(text) ? 3 : 1;
         contentCandidates.push({ value: text, score: text.length * htmlScore });
       }
