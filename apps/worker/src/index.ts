@@ -20,7 +20,7 @@ const json = (data: unknown, init: ResponseInit = {}) => {
   headers.set('content-type', 'application/json; charset=utf-8');
   headers.set('access-control-allow-origin', '*');
   headers.set('access-control-allow-methods', 'GET, POST, OPTIONS, DELETE');
-  headers.set('access-control-allow-headers', 'Content-Type, Authorization, Stripe-Signature');
+  headers.set('access-control-allow-headers', 'Content-Type, Authorization, X-Waffo-Signature');
   return new Response(JSON.stringify(data, null, 2), {
     ...init,
     headers,
@@ -229,15 +229,16 @@ const getCreditStatus = async (apiKey: string, env: Env): Promise<{ balance: num
   }
 };
 
-const consumeOneCredit = async (apiKey: string, env: Env): Promise<boolean> => {
+const consumeCredits = async (apiKey: string, credits: number, reason: 'parse' | 'crawl', env: Env): Promise<boolean> => {
   if (!env.DB) return false;
+  const amount = Math.max(1, Math.floor(credits));
   try {
-    const id = `parse_${crypto.randomUUID()}`;
+    const id = `${reason}_${crypto.randomUUID()}`;
     const result = await env.DB.prepare(`
       INSERT INTO credit_ledger (api_key, credits, reason, external_order_id)
-      SELECT ?, -1, 'parse', ?
-      WHERE (SELECT COALESCE(SUM(credits), 0) FROM credit_ledger WHERE api_key = ?) > 0
-    `).bind(apiKey, id, apiKey).run();
+      SELECT ?, ?, ?, ?
+      WHERE (SELECT COALESCE(SUM(credits), 0) FROM credit_ledger WHERE api_key = ?) >= ?
+    `).bind(apiKey, -amount, reason, id, apiKey, amount).run();
     return (result.meta.changes || 0) === 1;
   } catch {
     return false;
@@ -614,7 +615,7 @@ export default {
 
         const result: ParseResult = parseMarkdown(sourceHtml, targetUrl);
 
-        if (creditStatus.hasPurchasedCredits && !(await consumeOneCredit(authInfo.keyOrIp, env))) {
+        if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, 1, 'parse', env))) {
           return json({
             success: false,
             code: 'CREDITS_EXHAUSTED',
@@ -654,6 +655,12 @@ export default {
       const body = (await request.json().catch(() => ({}))) as { url?: string; limit?: number };
       const targetUrl = (body.url || '').trim();
       const limit = Math.min(20, Math.max(1, body.limit || 5));
+      const creditStatus = authInfo.isKey ? await getCreditStatus(authInfo.keyOrIp, env) : { balance: 0, hasPurchasedCredits: false };
+      const crawlLimit = creditStatus.hasPurchasedCredits ? Math.min(limit, creditStatus.balance) : limit;
+
+      if (creditStatus.hasPurchasedCredits && crawlLimit < 1) {
+        return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数已用完，请购买新的点数包后继续使用' }, { status: 402 });
+      }
 
       if (!targetUrl || isForbiddenUrl(targetUrl)) {
         return json({ success: false, message: '请传入有效的公网目标域名 URL' }, { status: 400 });
@@ -675,7 +682,7 @@ export default {
           content = mainRes?.html || '';
         }
 
-        const subUrls = extractSitemapUrls(content, targetUrl, limit);
+        const subUrls = extractSitemapUrls(content, targetUrl, crawlLimit);
         const crawlResults = await Promise.all(
           subUrls.map(async (u: string) => {
             const pageRes = await safeFetchPageHtml(u, undefined, 5000).catch(() => null);
@@ -690,13 +697,8 @@ export default {
           })
         );
 
-        // Deduct Quota for Crawled Subpages
-        if (env.DB && crawlResults.length > 1) {
-          const dateStr = new Date().toISOString().slice(0, 10);
-          const dailyKey = `day:${authInfo.keyOrIp}:${dateStr}`;
-          await env.DB.prepare(`
-            UPDATE usage_logs SET count = count + ? WHERE key_or_ip = ? AND parse_date = ?
-          `).bind(crawlResults.length - 1, dailyKey, dateStr).run().catch(() => null);
+        if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, crawlResults.length, 'crawl', env))) {
+          return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数不足，请购买新的点数包后继续使用' }, { status: 402 });
         }
 
         return json({
@@ -713,6 +715,9 @@ export default {
 
     // Feature 2: Screenshot API - POST /v1/screenshot
     if (url.pathname === '/v1/screenshot' && request.method === 'POST') {
+      const authInfo = await verifyApiKeyOrIp(request, env);
+      const rateLimitResult = await checkAndLogRateLimit(authInfo.keyOrIp, authInfo.isKey, env);
+      if (!rateLimitResult.allowed) return json({ success: false, message: rateLimitResult.reason }, { status: 429 });
       const body = (await request.json().catch(() => ({}))) as { url?: string };
       const targetUrl = (body.url || '').trim();
 
@@ -731,9 +736,16 @@ export default {
 
     // Feature 3: Vectorize RAG Chunks API - POST /v1/vectorize
     if (url.pathname === '/v1/vectorize' && request.method === 'POST') {
+      const authInfo = await verifyApiKeyOrIp(request, env);
+      const rateLimitResult = await checkAndLogRateLimit(authInfo.keyOrIp, authInfo.isKey, env);
+      if (!rateLimitResult.allowed) return json({ success: false, message: rateLimitResult.reason }, { status: 429 });
       const body = (await request.json().catch(() => ({}))) as { url?: string; html?: string; chunk_size?: number };
       const targetUrl = (body.url || '').trim();
       const rawHtml = body.html || '';
+
+      if (targetUrl && isForbiddenUrl(targetUrl)) {
+        return json({ success: false, message: '请传入有效的公网 URL' }, { status: 400 });
+      }
 
       let sourceHtml = rawHtml;
       if (!sourceHtml && targetUrl) {

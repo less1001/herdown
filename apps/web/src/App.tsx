@@ -427,7 +427,7 @@ export function App() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              升级配额
+              购买点数
             </button>
             <a
               href="https://github.com/less1001/herdown"
@@ -773,7 +773,7 @@ export function App() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
               >
                 <CreditCard className="w-4 h-4" />
-                升级配额
+                购买点数
               </button>
             </div>
 
