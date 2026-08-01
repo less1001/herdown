@@ -1193,7 +1193,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             </div>
 
             <div className="mt-5 text-xs">
-              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">一次性点数包</span><span className="text-white font-bold">10,000次解析额度</span>，不自动续费，点数不过期。</div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">一次性点数包</span><span className="text-white font-bold">US$9.99/10,000次解析额度</span>，不自动续费，点数不过期。</div>
             </div>
           </section>
         )}
@@ -1223,7 +1223,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                 <div className="space-y-2">
                   <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-black">一次性付款</span>
                   <h4 className="text-xl font-bold text-white">Herdown点数包</h4>
-                  <div className="text-2xl font-black text-emerald-400">10,000次 <span className="text-xs text-slate-400 font-normal">网页与文档解析额度</span></div>
+                  <div className="text-2xl font-black text-emerald-400">US$9.99 <span className="text-xs text-slate-400 font-normal">/10,000次网页与文档解析额度</span></div>
                   <p className="text-xs text-emerald-200 leading-6">不自动续费。点数不过期。付款成功后自动发放到你用于付款的API密钥。</p>
                   <ul className="space-y-2 text-xs text-slate-300 pt-1">
                     <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持API、MCP、CLI和网页端使用</li>
