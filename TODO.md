@@ -12,16 +12,15 @@
 - 待补：正式支付后做一次真实小额验收，确认付款、回调、点数到账完整闭环。
 
 3. 文件能力补齐
-- 补齐TXT转Markdown。
-- 补齐URL转Markdown。
-- 补齐PPT转Markdown。
-- 补齐Excel转Markdown。
+- 已完成：URL转Markdown独立入口。
+- 已完成：TXT转Markdown浏览器本地转换和下载。
+- 已完成：PDF、PPT、Excel独立入口，转为本地MarkItDown使用说明。
 - 保留网页转Markdown和图片整理能力。
 
 4. 本地文档和图片处理
-- 把MarkItDown接到本地文档处理流程里，用来处理docx、pdf、pptx、xlsx。
-- 把Unlimited-OCR先做成本地Skill，不额外买VPS，不增加固定服务器成本。
-- 图片和截图识别优先走本地技能或本地工具链。
+- 已完成：增加本地MarkItDown使用说明和转换包装脚本，用来处理docx、pdf、pptx、xlsx。
+- 已完成：接入现有本地Unlimited-OCRSkill，不额外买VPS，不增加固定服务器成本。
+- 图片和截图识别继续走本地技能或本地工具链。
 
 5. 接口整理
 - 保留单页解析接口。
@@ -30,16 +29,19 @@
 - 保留自定义筛选和站点地图接口。
 
 6. SEO和对外说明
-- 增加帮助文档。
-- 增加常见问题。
-- 增加robots.txt、sitemap.xml、llms.txt、llms-full.txt。
-- 增加更清楚的产品说明页，让用户一进来就知道怎么用。
+- 已完成：增加帮助文档入口和常见问题入口。
+- 已完成：robots.txt、sitemap.xml、llms.txt、llms-full.txt。
+- 已完成：增加URL、TXT、PDF、PPT、Excel功能入口，让用户一进来就知道怎么用。
 
-7. 集成说明
+7. Token节省展示
+- 已完成：解析API返回原始HTML、清洗后Markdown和节省比例的估算值。
+- 已完成：网页结果页显示Token节省估算，并明确提示实际数量取决于模型。
+
+8. 集成说明
 - 补充给Dify、Coze、FastGPT、n8n这类工作流平台的接入说明。
 - 重点说明Herdown是干净资料生成器，不做完整知识库问答。
 
-8. 质量保障
+9. 质量保障
 - 已完成：正式上线前完成构建、健康检查、正式付款页创建验证。
 - 已完成：付费全站抓取按实际页面数扣点，截图和向量接口加入限流及内网地址拦截。
 - 持续执行：每次改动后先构建，再做真实URL验证，确保新功能不影响旧功能。

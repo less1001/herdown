@@ -388,6 +388,13 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
 
 const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB 防爆内存限制
 
+const estimateTokenCount = (value: string): number => {
+  const asciiCount = (value.match(/[\x20-\x7e]/g) || []).length;
+  const characterCount = Array.from(value).length;
+  const nonAsciiCount = Math.max(0, characterCount - asciiCount);
+  return Math.max(1, Math.ceil(asciiCount / 4 + nonAsciiCount / 1.5));
+};
+
 const getPlatformReferer = (platform: ReturnType<typeof detectPlatform>): string | undefined => ({
   wechat: 'https://mp.weixin.qq.com/',
   xiaohongshu: 'https://www.xiaohongshu.com/',
@@ -614,6 +621,10 @@ export default {
         }
 
         const result: ParseResult = parseMarkdown(sourceHtml, targetUrl);
+        const sourceTokens = estimateTokenCount(sourceHtml);
+        const markdownTokens = estimateTokenCount(result.markdown);
+        const tokenSavings = Math.max(0, sourceTokens - markdownTokens);
+        const tokenSavingsPercent = sourceTokens > 0 ? Number(((tokenSavings / sourceTokens) * 100).toFixed(1)) : 0;
 
         if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, 1, 'parse', env))) {
           return json({
@@ -634,6 +645,10 @@ export default {
           author: result.author,
           published_at: result.publish_date,
           elapsed_ms: result.elapsed_ms,
+          source_tokens: sourceTokens,
+          markdown_tokens: markdownTokens,
+          token_savings: tokenSavings,
+          token_savings_percent: tokenSavingsPercent,
         });
       } catch (err: any) {
         return json({
@@ -1110,6 +1125,19 @@ export default {
       return new Response(privacyPage(), {
         headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
       });
+    }
+
+    const toolPages = new Set([
+      '/url-to-markdown',
+      '/txt-to-markdown',
+      '/pdf-to-markdown',
+      '/ppt-to-markdown',
+      '/excel-to-markdown',
+      '/help',
+      '/faq',
+    ]);
+    if (toolPages.has(url.pathname) && env.ASSETS) {
+      return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
     }
 
     if (url.pathname === '/' || url.pathname === '/index.html') {
