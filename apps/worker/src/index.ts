@@ -63,7 +63,7 @@ const legalPage = (
       <p class="updated">生效日期：2026年8月1日</p>
       ${sectionHtml}
       <footer>
-        <a href="/terms">服务条款</a> · <a href="/privacy">隐私政策</a> · <a href="https://github.com/less1001/herdown/issues">联系支持</a>
+        <a href="/terms">服务条款</a> · <a href="/privacy">隐私政策</a> · <a href="mailto:vkdefi@gmail.com">vkdefi@gmail.com</a> · <a href="https://x.com/vkdefi">@vkdefi</a>
       </footer>
     </main>
   </body>
@@ -84,7 +84,7 @@ const privacyPage = () => legalPage('隐私政策', 'Herdown隐私政策', [
   { heading: '数据使用方式', body: '提交内容仅用于完成当前的解析、转换、错误排查与安全防护。Herdown不以出售、出租或广告定向为目的使用您的内容。' },
   { heading: '内容与存储', body: 'Herdown采用实时处理方式，不提供用户内容托管或长期知识库服务。必要的短期日志可能用于防滥用、保障服务稳定与定位故障。' },
   { heading: '第三方服务', body: '支付由Waffo Pancake等独立支付服务商处理。支付服务商会依其自身隐私政策处理付款信息；Herdown不会直接保存完整银行卡信息。' },
-  { heading: '查询、删除与取消', body: 'Herdown目前不提供用户注册账户或长期内容托管。您可在网站内删除已创建的API密钥；如需查询或删除与您相关的服务记录，请通过项目支持渠道提交请求，且不要在公开页面提交身份证件、银行卡号等敏感信息。经核实后，我们会在合理期限内处理可识别的相关记录。付款订单与付款资料由Waffo Pancake按其规则处理。' },
+  { heading: '查询、删除与取消', body: 'Herdown目前不提供用户注册账户或长期内容托管。您可在网站内删除已创建的API密钥；如需查询或删除与您相关的服务记录，请发送邮件至vkdefi@gmail.com，且不要在公开页面提交身份证件、银行卡号等敏感信息。经核实后，我们会在合理期限内处理可识别的相关记录。付款订单与付款资料由Waffo Pancake按其规则处理。' },
 ]);
 
 const getClientIp = (request: Request): string => {
