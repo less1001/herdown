@@ -1289,6 +1289,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             <a href="/#faq" className="hover:text-slate-300 transition">
               常见问题
             </a>
+            <a href="mailto:vkdefi@gmail.com" className="hover:text-slate-300 transition">
+              联系邮箱
+            </a>
+            <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
+              @vkdefi
+            </a>
           </div>
         </div>
       </footer>
