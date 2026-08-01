@@ -332,114 +332,285 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
   );
 }
 
-function DocsPage({ language }: { language: Language }) {
-  const ui = messages[language];
+
+function ProfessionalDocsPage({ language }: { language: Language }) {
   const isEnglish = language === 'en';
-  const copy = {
-    quickTitle: isEnglish ? '1. Quick start' : '1、快速开始',
-    quickBody: isEnglish ? 'For one page, paste a public URL on the homepage and click Convert to Markdown. Copy the result or download it as a Markdown file.' : '处理单个网页时，在首页粘贴公开网页链接，点击转换为Markdown。结果可以复制，也可以下载为Markdown文件。',
-    apiTitle: isEnglish ? '2. REST API' : '2、RESTAPI',
-    apiBody: isEnglish ? 'Create a key from the API page and send it in the Authorization header. The website and API use the same domain.' : '在API页面创建密钥，然后放进Authorization请求头。网站和API使用同一个域名。',
-    parseTitle: isEnglish ? 'Parse one page' : '单页解析',
-    crawlTitle: isEnglish ? 'Crawl a website' : '全站抓取',
-    responseTitle: isEnglish ? 'Response fields' : '返回字段',
-    responseBody: isEnglish ? 'The parse response includes title, markdown, images, platform, elapsed_ms, source_tokens, markdown_tokens, token_savings, and token_savings_percent.' : '单页解析会返回标题、Markdown、图片、平台、耗时，以及原网页Token、清洗后Token、节省Token和节省比例。',
-    mcpTitle: isEnglish ? '3. Remote MCP' : '3、远程MCP',
-    mcpBody: isEnglish ? 'Use this endpoint in an MCP client. The server exposes parse_webpage, crawl_website, and health_check.' : '在支持远程MCP的客户端中使用这个地址。服务提供parse_webpage、crawl_website和health_check。',
-    cliTitle: isEnglish ? '4. CLI' : '4、CLI命令行',
-    cliBody: isEnglish ? 'Run the CLI without a global install. Use -o to save Markdown locally and -k to use your API key.' : '不需要全局安装，直接运行CLI。使用-o保存Markdown，使用-k传入API密钥。',
-    workflowTitle: isEnglish ? '5. Workflow integrations' : '5、工作流平台接入',
-    workflowBody: isEnglish ? 'Herdown cleans the source material. The workflow platform receives the markdown field and continues with summarization, tagging, storage, or automation.' : 'Herdown负责清洗资料，工作流平台接收返回结果里的markdown字段，再继续摘要、打标签、入库或自动化处理。',
-    localTitle: isEnglish ? '6. Local document and image tools' : '6、本地文档和图片工具',
-    localBody: isEnglish ? 'TXT and Markdown files can be handled in the browser. Word, PDF, PPT, and Excel use local MarkItDown. Scans and screenshots use the local Unlimited-OCRSkill. Files do not need to be uploaded to Herdown.' : 'TXT和Markdown文件可以在浏览器本地处理。Word、PDF、PPT和Excel使用本地MarkItDown，扫描件和截图使用本地Unlimited-OCRSkill。文件不需要上传到Herdown。',
-    securityTitle: isEnglish ? '7. Quota and security' : '7、额度和安全',
-    securityBody: isEnglish ? 'Free users receive 1,000 parses per month. Free site crawl is limited to 5 pages per request. Paid credits are one-time credits, do not expire, and paid crawl supports up to 100 pages per request within the available balance. Private network targets are blocked.' : '免费用户每月1000次解析，免费全站抓取每次最多5页。付费点数一次性购买，不过期；付费全站抓取每次最多100页，但不能超过账户剩余点数。内网和私有地址会被拦截。',
-  };
-  const parseExample = ['curl -X POST https://herdown.com/v1/parse \\', '  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\', '  -H "Content-Type: application/json" \\', "  -d '{\"url\":\"https://example.com/article\"}'"].join('\n');
-  const crawlExample = ['curl -X POST https://herdown.com/v1/crawl \\', '  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\', '  -H "Content-Type: application/json" \\', "  -d '{\"url\":\"https://example.com\",\"limit\":5}'"].join('\n');
-  const mcpExample = ['{', '  "mcpServers": {', '    "herdown": {', '      "url": "https://herdown.com/mcp"', '    }', '  }', '}'].join('\n');
+  const [copiedBlock, setCopiedBlock] = useState<string | null>(null);
+  const apiBase = 'https://api.herdown.com';
+  const sections = [
+    {
+      title: isEnglish ? 'Get started' : '开始使用',
+      items: [
+        ['overview', isEnglish ? 'What is Herdown' : 'Herdown是什么'],
+        ['getting-started', isEnglish ? 'First parse' : '第一次解析'],
+      ],
+    },
+    {
+      title: isEnglish ? 'Account and usage' : '账户和使用',
+      items: [
+        ['authentication', isEnglish ? 'API key' : 'API密钥'],
+        ['quota', isEnglish ? 'Quota and billing' : '额度和计费'],
+      ],
+    },
+    {
+      title: 'RESTAPI',
+      items: [
+        ['rest-api', isEnglish ? 'Overview' : '接口概览'],
+        ['parse', 'POST /v1/parse'],
+        ['crawl', 'POST /v1/crawl'],
+        ['errors', isEnglish ? 'Errors and limits' : '错误和限制'],
+      ],
+    },
+    {
+      title: 'MCP',
+      items: [
+        ['mcp', isEnglish ? 'Remote MCP' : '远程MCP'],
+      ],
+    },
+    {
+      title: isEnglish ? 'Agent tools' : 'Agent工具',
+      items: [
+        ['skill', 'Skill'],
+        ['cli', 'CLI'],
+      ],
+    },
+    {
+      title: isEnglish ? 'More' : '更多',
+      items: [
+        ['local-tools', isEnglish ? 'Local tools' : '本地工具'],
+        ['integrations', isEnglish ? 'Integrations' : '工作流接入'],
+        ['faq', 'FAQ'],
+      ],
+    },
+  ];
+  const quickstartExample = ['curl -X POST ' + apiBase + '/v1/parse \\', '  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\', '  -H "Content-Type: application/json" \\', "  -d '{\"url\":\"https://example.com/article\"}'"].join('\n');
+  const crawlExample = ['curl -X POST ' + apiBase + '/v1/crawl \\', '  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\', '  -H "Content-Type: application/json" \\', "  -d '{\"url\":\"https://example.com\",\"limit\":5}'"].join('\n');
+  const mcpExample = ['{', '  "mcpServers": {', '    "herdown": {', '      "url": "https://api.herdown.com/mcp"', '    }', '  }', '}'].join('\n');
   const cliExample = ['npx @herdown/cli "https://example.com/article"', 'npx @herdown/cli "https://example.com/article" -o article.md', 'npx @herdown/cli "https://example.com/article" -k "sk_live_YOUR_API_KEY"'].join('\n');
+  const skillExample = ['Use Herdown when the user asks to:', '- turn a public webpage into clean Markdown', '- prepare material for an AI workflow or knowledge tool', '- preserve article metadata and image links', '', 'Choose the browser, RESTAPI, MCP, or CLI path based on the user environment.', 'Do not claim to access private pages or bypass a login.'].join('\n');
+
+  const copyCode = async (id: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedBlock(id);
+      window.setTimeout(() => setCopiedBlock(current => current === id ? null : current), 1400);
+    } catch {
+      setCopiedBlock(null);
+    }
+  };
+
+  const codeBlock = (id: string, label: string, value: string) => (
+    <div className="overflow-hidden rounded-xl border border-[#243244] bg-[#080c11]">
+      <div className="flex items-center justify-between border-b border-[#1e293b] px-4 py-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</span>
+        <button onClick={() => void copyCode(id, value)} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-[#162231] hover:text-emerald-300">
+          {copiedBlock === id ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+          {copiedBlock === id ? (isEnglish ? 'Copied' : '已复制') : (isEnglish ? 'Copy' : '复制')}
+        </button>
+      </div>
+      <pre className="overflow-x-auto p-4 text-xs leading-7 text-emerald-200">{value}</pre>
+    </div>
+  );
+
+  const sectionTitle = (id: string, title: string, description: string) => (
+    <div id={id} className="scroll-mt-8 border-b border-[#1e293b] pb-4">
+      <h2 className="text-2xl font-bold tracking-tight text-white">{title}</h2>
+      <p className="mt-2 text-sm leading-7 text-slate-400">{description}</p>
+    </div>
+  );
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <span className="text-xs font-semibold text-emerald-400">{ui.docsTitle}</span>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{ui.docsSubtitle}</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">{isEnglish ? 'Copy the examples below and connect Herdown to your AI workflow. The guides describe features currently available on Herdown.' : '下面的示例可以直接复制使用。文档只介绍当前Herdown已经提供的功能。'}</p>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[
-          [copy.quickTitle, copy.quickBody],
-          [copy.apiTitle, copy.apiBody],
-          [copy.workflowTitle, copy.workflowBody],
-          [copy.localTitle, copy.localBody],
-          [copy.securityTitle, copy.securityBody],
-        ].map(([title, body]) => (
-          <div key={title} className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
-            <h2 className="font-bold text-white">{title}</h2>
-            <p className="text-sm text-slate-400 leading-7 mt-2">{body}</p>
-          </div>
-        ))}
-      </div>
-      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-        <h2 className="text-xl font-bold text-white">{copy.apiTitle}</h2>
-        <p className="text-sm text-slate-400 leading-7">{copy.apiBody}</p>
-        <h3 className="font-bold text-white">{copy.parseTitle}</h3>
-        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{parseExample}</pre>
-        <h3 className="font-bold text-white">{copy.crawlTitle}</h3>
-        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{crawlExample}</pre>
-        <p className="text-sm text-slate-400 leading-7">{copy.responseTitle}：{copy.responseBody}</p>
-        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n')}</pre>
-      </div>
-      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
-        <h2 className="text-xl font-bold text-white">{copy.mcpTitle}</h2>
-        <p className="text-sm text-slate-400 leading-7">{copy.mcpBody}</p>
-        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{mcpExample}</pre>
-        <p className="text-xs text-slate-500 leading-6">{isEnglish ? 'If your MCP client asks for a token, use the API key created on the API page as a Bearer token.' : '如果MCP客户端要求填写Token，使用API页面创建的密钥作为BearerToken。'}</p>
-      </div>
-      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-        <h2 className="text-xl font-bold text-white">{copy.cliTitle}</h2>
-        <p className="text-sm text-slate-400 leading-7">{copy.cliBody}</p>
-        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{cliExample}</pre>
-        <a href="https://github.com/less1001/herdown/tree/main/packages/cli" target="_blank" rel="noreferrer" className="inline-flex text-sm text-emerald-300 hover:text-emerald-200">{isEnglish ? 'View CLI source on GitHub' : '在GitHub查看CLI源码'}</a>
-      </div>
-      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-        <h2 className="text-xl font-bold text-white">{copy.workflowTitle}</h2>
-        <p className="text-sm text-slate-400 leading-7">{copy.workflowBody}</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {[
-            ['Dify', isEnglish ? 'Add an HTTP request tool. Use POST https://herdown.com/v1/parse, add Authorization: Bearer YOUR_API_KEY, send {"url":"{{url}}"}, and pass the markdown field to the next node.' : '添加HTTP请求工具。方法选POST，地址填https://herdown.com/v1/parse，请求头填Authorization: Bearer YOUR_API_KEY，请求体填{"url":"{{url}}"}，后续节点使用markdown字段。'],
-            ['Coze', isEnglish ? 'Create an HTTP plugin or workflow HTTP node with the same URL and header. Map the incoming URL to url and return markdown as the text output.' : '创建HTTP插件或工作流HTTP节点。地址和请求头同上，把用户输入的网址传给url，返回markdown作为文本结果。'],
-            ['FastGPT', isEnglish ? 'Create an HTTP request tool, set POST /v1/parse, add the Bearer header, and map response markdown into the knowledge or dialogue step.' : '创建HTTP请求工具，设置POST /v1/parse，添加Bearer请求头，把返回的markdown交给知识库或对话节点。'],
-            ['n8n', isEnglish ? 'Use an HTTP Request node with POST, JSON body, and Authorization header. Pass {{$json.url}} as input and use {{$json.markdown}} downstream.' : '使用HTTP Request节点，方法选POST，发送JSON并添加Authorization请求头。把{{$json.url}}传给接口，后续使用{{$json.markdown}}。'],
-          ].map(([title, body]) => (
-            <div key={title} className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4">
-              <h3 className="font-bold text-white">{title}</h3>
-              <p className="mt-2 text-xs leading-6 text-slate-400">{body}</p>
+    <div className="mx-auto max-w-[1440px]">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[220px_minmax(0,1fr)_180px]">
+        <aside className="self-start xl:sticky xl:top-6">
+          <div className="rounded-2xl border border-[#1e293b] bg-[#0d131c] p-4">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-300"><FileText className="h-4 w-4" /></div>
+              <div>
+                <p className="text-sm font-bold text-white">HerdownDocs</p>
+                <p className="text-[11px] text-slate-500">v1</p>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
-      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-        <h2 className="text-xl font-bold text-white">{copy.localTitle}</h2>
-        <p className="text-sm text-slate-400 leading-7">{copy.localBody}</p>
-        <div className="flex flex-wrap gap-2 text-xs text-emerald-300">
-          {['/tools', '/url-to-markdown', '/txt-to-markdown', '/pdf-to-markdown', '/ppt-to-markdown', '/excel-to-markdown'].map(path => <a key={path} href={path} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">{path.replace('/', '')}</a>)}
-        </div>
-      </div>
-      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
-        <h2 className="text-xl font-bold text-white">{copy.securityTitle}</h2>
-        <p className="text-sm text-slate-400 leading-7">{copy.securityBody}</p>
-        <div className="flex flex-wrap gap-2 text-xs text-emerald-300">
-          <a href="/faq" className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">FAQ</a>
-          <a href="/privacy" className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">{isEnglish ? 'Privacy' : '隐私政策'}</a>
-        </div>
+            <nav className="space-y-4">
+              {sections.map(section => (
+                <div key={section.title}>
+                  <p className="mb-1.5 px-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{section.title}</p>
+                  <div className="space-y-0.5">
+                    {section.items.map(([id, label]) => (
+                      <a key={id} href={'#' + id} className="block rounded-lg px-2 py-1.5 text-xs text-slate-400 transition hover:bg-[#172333] hover:text-emerald-300">{label}</a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        <article className="min-w-0 space-y-12">
+          <section id="overview" className="scroll-mt-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">{isEnglish ? 'Developer documentation' : '开发者文档'}</p>
+            <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{isEnglish ? 'Clean materials for AI workflows' : '为AI工作流准备干净资料'}</h1>
+            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-400">{isEnglish ? 'Herdown turns public webpages, documents, and images into clean Markdown. Use the web interface for a quick result, or connect the API, MCP, Skill, CLI, and local tools to your own workflow.' : 'Herdown把公开网页、文档和图片整理成干净Markdown。想快速使用就打开网页入口，需要接入自己的流程就使用API、MCP、Skill、CLI和本地工具。'}</p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <a href="#getting-started" className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-[#07110d] hover:bg-emerald-400">{isEnglish ? 'Start here' : '从这里开始'}</a>
+              <a href="#rest-api" className="rounded-lg border border-[#2a3a4d] px-3 py-2 text-xs text-slate-300 hover:border-emerald-400 hover:text-emerald-300">RESTAPI</a>
+              <a href="#skill" className="rounded-lg border border-[#2a3a4d] px-3 py-2 text-xs text-slate-300 hover:border-emerald-400 hover:text-emerald-300">Skill</a>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-5">
+            <p className="text-sm font-semibold text-emerald-300">{isEnglish ? 'One clear boundary' : '一个清晰边界'}</p>
+            <p className="mt-2 text-sm leading-7 text-slate-300">{isEnglish ? 'Herdown prepares clean source material. It does not provide a complete knowledge-base Q&A system. Send the Markdown to the platform you already use.' : 'Herdown负责准备干净资料，不负责搭建完整知识库问答系统。解析后的Markdown可以交给你已经在使用的知识库或工作流平台。'}</p>
+          </section>
+
+          <section id="getting-started" className="scroll-mt-8 space-y-5">
+            {sectionTitle('getting-started', isEnglish ? 'Get started' : '开始使用', isEnglish ? 'The fastest path is one public URL and one click.' : '最快的方式是粘贴一个公开网页链接，然后点击一次。')}
+            <div className="grid gap-3 md:grid-cols-3">
+              {[
+                [isEnglish ? 'Open' : '打开', isEnglish ? 'Open the homepage or the unified tools page.' : '打开首页或统一工具入口。'],
+                [isEnglish ? 'Convert' : '转换', isEnglish ? 'Paste a public URL and click Convert to Markdown.' : '粘贴公开网页链接，点击转换为Markdown。'],
+                [isEnglish ? 'Use' : '使用', isEnglish ? 'Copy or download the result, then send it to your AI workflow.' : '复制或下载结果，再交给你的AI工作流。'],
+              ].map(([title, body]) => (
+                <div key={title} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4">
+                  <p className="text-sm font-bold text-white">{title}</p>
+                  <p className="mt-2 text-xs leading-6 text-slate-400">{body}</p>
+                </div>
+              ))}
+            </div>
+            <a href="/tools" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open unified tools' : '打开统一工具入口'}</a>
+          </section>
+
+          <section id="authentication" className="scroll-mt-8 space-y-5">
+            {sectionTitle('authentication', isEnglish ? 'API key and authentication' : 'API密钥和身份验证', isEnglish ? 'Create a key from the API page. Keep it on your server or in a local environment variable.' : '在API页面创建密钥。密钥应保存在自己的服务器或本地环境变量中。')}
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm leading-7 text-amber-100">
+              {isEnglish ? 'Do not put a live API key in frontend code, a public repository, or a screenshot.' : '不要把正式API密钥放进前端代码、公开仓库或截图。'}
+            </div>
+            {codeBlock('env', 'Environment variable', 'export HERDOWN_API_KEY="sk_live_YOUR_API_KEY"')}
+          </section>
+
+          <section id="quota" className="scroll-mt-8 space-y-5">
+            {sectionTitle('quota', isEnglish ? 'Quota and billing' : '额度和计费', isEnglish ? 'Free usage is monthly. Paid packages are one-time credits and do not renew automatically.' : '免费额度按月计算。付费套餐是一次性点数，不会自动续费。')}
+            <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111a26] text-slate-300"><tr><th className="px-4 py-3">{isEnglish ? 'Access' : '类型'}</th><th className="px-4 py-3">{isEnglish ? 'Allowance' : '额度'}</th><th className="px-4 py-3">{isEnglish ? 'Crawl limit' : '全站抓取限制'}</th></tr></thead>
+                <tbody className="divide-y divide-[#1e293b] text-slate-400">
+                  <tr><td className="px-4 py-3">{isEnglish ? 'Free' : '免费用户'}</td><td className="px-4 py-3">{isEnglish ? '1,000 parses per month' : '每月1000次解析'}</td><td className="px-4 py-3">{isEnglish ? 'Up to 5 pages per request' : '每次最多5页'}</td></tr>
+                  <tr><td className="px-4 py-3">{isEnglish ? 'Paid credits' : '付费点数'}</td><td className="px-4 py-3">{isEnglish ? 'One-time credits, no auto-renewal' : '一次性点数，不自动续费'}</td><td className="px-4 py-3">{isEnglish ? 'Up to 100 pages per request within balance' : '每次最多100页，不能超过剩余点数'}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="rest-api" className="scroll-mt-8 space-y-5">
+            {sectionTitle('rest-api', 'RESTAPI', isEnglish ? 'HTTP endpoints for your backend, scripts, and workflow tools.' : '适合后端、脚本和工作流平台调用的HTTP接口。')}
+            <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-5 text-sm leading-7 text-slate-400">
+              <p>{isEnglish ? 'Base URL' : '基础地址'}：<code className="text-emerald-300">{apiBase}</code></p>
+              <p>{isEnglish ? 'Method' : '请求方式'}：<code className="text-emerald-300">POST</code></p>
+              <p>{isEnglish ? 'Authentication' : '身份验证'}：<code className="text-emerald-300">Authorization: Bearer YOUR_API_KEY</code></p>
+              <p>{isEnglish ? 'Content type' : '内容类型'}：<code className="text-emerald-300">application/json</code></p>
+            </div>
+          </section>
+
+          <section id="parse" className="scroll-mt-8 space-y-5">
+            {sectionTitle('parse', 'POST /v1/parse', isEnglish ? 'Parse one public webpage or raw HTML into clean Markdown.' : '把一个公开网页或HTML源码解析成干净Markdown。')}
+            {codeBlock('parse', 'Request', quickstartExample)}
+            <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111a26] text-slate-300"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">{isEnglish ? 'Description' : '说明'}</th></tr></thead>
+                <tbody className="divide-y divide-[#1e293b] text-slate-400">
+                  <tr><td className="px-4 py-3 text-emerald-300">url</td><td className="px-4 py-3">string</td><td className="px-4 py-3">{isEnglish ? 'Public HTTP or HTTPS URL.' : '公开的HTTP或HTTPS网页链接。'}</td></tr>
+                  <tr><td className="px-4 py-3 text-emerald-300">html</td><td className="px-4 py-3">string</td><td className="px-4 py-3">{isEnglish ? 'Optional raw HTML. Use url or html.' : '可选的HTML源码。url和html至少填写一个。'}</td></tr>
+                  <tr><td className="px-4 py-3 text-emerald-300">zhihuLimit</td><td className="px-4 py-3">number</td><td className="px-4 py-3">{isEnglish ? 'Optional answer limit for Zhihu pages.' : '知乎页面可选的回答数量限制。'}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            {codeBlock('response', 'Response', ['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n'))}
+          </section>
+
+          <section id="crawl" className="scroll-mt-8 space-y-5">
+            {sectionTitle('crawl', 'POST /v1/crawl', isEnglish ? 'Discover and parse pages from a public website or sitemap.' : '从公开网站或Sitemap发现并解析网页。')}
+            {codeBlock('crawl', 'Request', crawlExample)}
+            <p className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4 text-sm leading-7 text-slate-400">{isEnglish ? 'The response contains total_pages, results, title, markdown, and elapsed_ms. Free users are limited to 5 pages per request. Paid crawl can use up to 100 pages within the available balance.' : '返回内容包括total_pages、results、title、markdown和elapsed_ms。免费用户每次最多5页，付费用户每次最多100页，但不能超过剩余点数。'}</p>
+          </section>
+
+          <section id="errors" className="scroll-mt-8 space-y-5">
+            {sectionTitle('errors', isEnglish ? 'Errors and limits' : '错误和限制', isEnglish ? 'Use the HTTP status and code field to decide whether to retry or ask the user to act.' : '结合HTTP状态码和code字段判断是重试，还是提示用户处理。')}
+            <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111a26] text-slate-300"><tr><th className="px-4 py-3">Code</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">{isEnglish ? 'What to do' : '处理方式'}</th></tr></thead>
+                <tbody className="divide-y divide-[#1e293b] text-slate-400">
+                  <tr><td className="px-4 py-3 text-amber-300">INVALID_INPUT</td><td className="px-4 py-3">400</td><td className="px-4 py-3">{isEnglish ? 'Check url or html.' : '检查url或html参数。'}</td></tr>
+                  <tr><td className="px-4 py-3 text-amber-300">FORBIDDEN_TARGET</td><td className="px-4 py-3">400</td><td className="px-4 py-3">{isEnglish ? 'Private and internal addresses are not allowed.' : '不能访问内网和私有地址。'}</td></tr>
+                  <tr><td className="px-4 py-3 text-amber-300">FREE_QUOTA_EXHAUSTED</td><td className="px-4 py-3">402</td><td className="px-4 py-3">{isEnglish ? 'Wait for the monthly reset or upgrade.' : '等待下月额度恢复，或购买付费点数。'}</td></tr>
+                  <tr><td className="px-4 py-3 text-amber-300">CREDITS_EXHAUSTED</td><td className="px-4 py-3">402</td><td className="px-4 py-3">{isEnglish ? 'Buy another credit package.' : '购买新的点数包。'}</td></tr>
+                  <tr><td className="px-4 py-3 text-amber-300">RATE_LIMIT_EXCEEDED</td><td className="px-4 py-3">429</td><td className="px-4 py-3">{isEnglish ? 'Slow down and retry later.' : '降低请求频率后再重试。'}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="mcp" className="scroll-mt-8 space-y-5">
+            {sectionTitle('mcp', isEnglish ? 'Remote MCP' : '远程MCP', isEnglish ? 'Connect an MCP client to discover and call Herdown tools.' : '让支持MCP的客户端发现并调用Herdown工具。')}
+            {codeBlock('mcp', 'mcp.json', mcpExample)}
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'Available tools: parse_webpage, crawl_website, and health_check. If a client asks for authentication, provide your API key as a Bearer token.' : '可用工具：parse_webpage、crawl_website和health_check。如果客户端要求身份验证，把API密钥作为BearerToken提供。'}</p>
+          </section>
+
+          <section id="skill" className="scroll-mt-8 space-y-5">
+            {sectionTitle('skill', 'Skill', isEnglish ? 'Instructions that help an AI agent choose and use Herdown correctly.' : '帮助AIAgent正确选择和使用Herdown的操作说明。')}
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'A Skill is not another server. It tells an agent when to use the browser, RESTAPI, MCP, or CLI, how to preserve useful metadata, and how to handle failures. Install the Herdown Skill in the agent environment, then give the agent a public URL or a document task.' : 'Skill不是另一个服务器，而是给AIAgent看的操作说明。它告诉Agent什么时候使用网页、RESTAPI、MCP或CLI，如何保留有用的元数据，以及失败时怎么处理。把HerdownSkill安装到Agent环境后，就可以让Agent处理公开网页或文档任务。'}</p>
+            {codeBlock('skill', 'Skill behavior', skillExample)}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Herdown Skill' : 'HerdownSkill'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'Web extraction, clean Markdown, API, MCP, and CLI routing.' : '网页提取、干净Markdown、API、MCP和CLI调用。'}</p></div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Local Unlimited-OCRSkill' : '本地Unlimited-OCRSkill'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'Local processing for scans and screenshots without an extra online OCR server.' : '本地处理扫描件和截图，不增加额外在线OCR服务器。'}</p></div>
+            </div>
+          </section>
+
+          <section id="cli" className="scroll-mt-8 space-y-5">
+            {sectionTitle('cli', 'CLI', isEnglish ? 'Run Herdown from a terminal and save the result locally.' : '在终端运行Herdown，并把结果保存到本地。')}
+            {codeBlock('cli', 'Terminal', cliExample)}
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'The -o option writes a Markdown file. The -k option selects an API key. Without -o, the Markdown is printed to the terminal.' : '-o参数把结果写入Markdown文件，-k参数指定API密钥。不使用-o时，Markdown会直接输出到终端。'}</p>
+          </section>
+
+          <section id="local-tools" className="scroll-mt-8 space-y-5">
+            {sectionTitle('local-tools', isEnglish ? 'Local document and image tools' : '本地文档和图片工具', isEnglish ? 'Keep local files on your computer whenever possible.' : '本地文件尽量留在自己的电脑上处理。')}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                ['/txt-to-markdown', 'TXT / Markdown', isEnglish ? 'Runs in the browser and does not upload the file.' : '浏览器本地处理，不上传文件。'],
+                ['/pdf-to-markdown', 'PDF', isEnglish ? 'Use local MarkItDown for electronic PDFs.' : '电子PDF使用本地MarkItDown。'],
+                ['/ppt-to-markdown', 'PPT', isEnglish ? 'Use local MarkItDown for presentations.' : '演示文稿使用本地MarkItDown。'],
+                ['/excel-to-markdown', 'Excel', isEnglish ? 'Use local MarkItDown for spreadsheets.' : '表格使用本地MarkItDown。'],
+              ].map(([href, title, body]) => <a key={href} href={href} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4 hover:border-emerald-500/40"><p className="font-semibold text-white">{title}</p><p className="mt-2 text-xs leading-6 text-slate-400">{body}</p></a>)}
+            </div>
+          </section>
+
+          <section id="integrations" className="scroll-mt-8 space-y-5">
+            {sectionTitle('integrations', isEnglish ? 'Workflow integrations' : '工作流接入', isEnglish ? 'Use an HTTP request node, send the URL to /v1/parse, and pass the markdown field forward.' : '使用HTTP请求节点，把网址传给/v1/parse，再把返回的markdown字段交给后续节点。')}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {['Dify', 'Coze', 'FastGPT', 'n8n'].map(name => <div key={name} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{name}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'HTTP POST tool → Authorization Bearer header → JSON body {url} → use response.markdown.' : 'HTTPPOST工具→AuthorizationBearer请求头→JSON请求体{url}→使用返回的markdown。'}</p></div>)}
+            </div>
+          </section>
+
+          <section id="faq" className="scroll-mt-8 space-y-5">
+            {sectionTitle('faq', 'FAQ', isEnglish ? 'Answers about access, data handling, and usage limits.' : '关于访问、数据处理和使用限制的常见问题。')}
+            <a href="/faq" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open full FAQ' : '打开完整FAQ'}</a>
+          </section>
+        </article>
+
+        <aside className="hidden self-start xl:sticky xl:top-6 xl:block">
+          <div className="border-l border-[#1e293b] pl-4">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{isEnglish ? 'On this page' : '本页目录'}</p>
+            <nav className="space-y-2">
+              {[['overview', isEnglish ? 'Overview' : '概览'], ['getting-started', isEnglish ? 'Get started' : '开始使用'], ['authentication', isEnglish ? 'API key' : 'API密钥'], ['rest-api', 'RESTAPI'], ['mcp', 'MCP'], ['skill', 'Skill'], ['cli', 'CLI'], ['local-tools', isEnglish ? 'Local tools' : '本地工具'], ['integrations', isEnglish ? 'Integrations' : '工作流接入']].map(([id, label]) => <a key={id} href={'#' + id} className="block text-xs text-slate-500 hover:text-emerald-300">{label}</a>)}
+            </nav>
+          </div>
+        </aside>
       </div>
     </div>
   );
 }
 
 function HelpPage({ language }: { language: Language }) {
-  return <DocsPage language={language} />;
+  return <ProfessionalDocsPage language={language} />;
 }
 
 export function App() {
