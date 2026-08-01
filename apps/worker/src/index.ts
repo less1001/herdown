@@ -6,9 +6,13 @@ export interface Env {
   WAFFO_MERCHANT_ID?: string;
   WAFFO_PRIVATE_KEY?: string;
   WAFFO_STARTER_PRODUCT_ID?: string;
+  WAFFO_STANDARD_PRODUCT_ID?: string;
+  WAFFO_BULK_PRODUCT_ID?: string;
   WAFFO_TEST_MERCHANT_ID?: string;
   WAFFO_TEST_PRIVATE_KEY?: string;
   WAFFO_TEST_STARTER_PRODUCT_ID?: string;
+  WAFFO_TEST_STANDARD_PRODUCT_ID?: string;
+  WAFFO_TEST_BULK_PRODUCT_ID?: string;
   HERDOWN_TEST_TOKEN?: string;
   WAFFO_TEST_WEBHOOK_PUBLIC_KEY?: string;
   WAFFO_PROD_WEBHOOK_PUBLIC_KEY?: string;
@@ -109,7 +113,20 @@ type WaffoWebhookEvent = {
 };
 
 const WAFFO_CHECKOUT_PATH = '/v1/actions/checkout/create-session';
-const STARTER_CREDITS = 10_000;
+const FREE_MONTHLY_QUOTA = 1_000;
+
+type ProductCode = 'starter' | 'standard' | 'bulk';
+type ProductConfig = {
+  credits: number;
+  productionEnv: keyof Env;
+  testEnv: keyof Env;
+};
+
+const PRODUCT_CATALOG: Record<ProductCode, ProductConfig> = {
+  starter: { credits: 10_000, productionEnv: 'WAFFO_STARTER_PRODUCT_ID', testEnv: 'WAFFO_TEST_STARTER_PRODUCT_ID' },
+  standard: { credits: 50_000, productionEnv: 'WAFFO_STANDARD_PRODUCT_ID', testEnv: 'WAFFO_TEST_STANDARD_PRODUCT_ID' },
+  bulk: { credits: 100_000, productionEnv: 'WAFFO_BULK_PRODUCT_ID', testEnv: 'WAFFO_TEST_BULK_PRODUCT_ID' },
+};
 
 const toArrayBuffer = (bytes: Uint8Array): ArrayBuffer =>
   bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
@@ -229,6 +246,38 @@ const getCreditStatus = async (apiKey: string, env: Env): Promise<{ balance: num
   }
 };
 
+const getFreeQuotaStatus = async (keyOrIp: string, env: Env): Promise<{ used: number; remaining: number }> => {
+  if (!env.DB) return { used: 0, remaining: FREE_MONTHLY_QUOTA };
+  const month = new Date().toISOString().slice(0, 7);
+  try {
+    const row = await env.DB.prepare('SELECT count FROM usage_logs WHERE key_or_ip = ? AND parse_date = ?')
+      .bind(`free:${keyOrIp}`, month)
+      .first<{ count: number }>();
+    const used = Math.max(0, Number(row?.count || 0));
+    return { used, remaining: Math.max(0, FREE_MONTHLY_QUOTA - used) };
+  } catch {
+    return { used: 0, remaining: FREE_MONTHLY_QUOTA };
+  }
+};
+
+const consumeFreeQuota = async (keyOrIp: string, amount: number, env: Env): Promise<boolean> => {
+  if (!env.DB) return true;
+  const requested = Math.max(1, Math.floor(amount));
+  if (requested > FREE_MONTHLY_QUOTA) return false;
+  const month = new Date().toISOString().slice(0, 7);
+  try {
+    const result = await env.DB.prepare(`
+      INSERT INTO usage_logs (key_or_ip, parse_date, count)
+      VALUES (?, ?, ?)
+      ON CONFLICT(key_or_ip, parse_date) DO UPDATE SET count = count + excluded.count
+      WHERE usage_logs.count + excluded.count <= ?
+    `).bind(`free:${keyOrIp}`, month, requested, FREE_MONTHLY_QUOTA).run();
+    return (result.meta.changes || 0) === 1;
+  } catch {
+    return false;
+  }
+};
+
 const consumeCredits = async (apiKey: string, credits: number, reason: 'parse' | 'crawl', env: Env): Promise<boolean> => {
   if (!env.DB) return false;
   const amount = Math.max(1, Math.floor(credits));
@@ -249,11 +298,13 @@ const createWaffoCheckout = async (
   env: Env,
   merchantOrderId: string,
   origin: string,
+  productCode: ProductCode,
   testMode: boolean,
 ): Promise<{ checkoutUrl?: string; error?: string }> => {
   const merchantId = testMode ? env.WAFFO_TEST_MERCHANT_ID : env.WAFFO_MERCHANT_ID;
   const privateKey = testMode ? env.WAFFO_TEST_PRIVATE_KEY : env.WAFFO_PRIVATE_KEY;
-  const productId = testMode ? env.WAFFO_TEST_STARTER_PRODUCT_ID : env.WAFFO_STARTER_PRODUCT_ID;
+  const productConfig = PRODUCT_CATALOG[productCode];
+  const productId = env[testMode ? productConfig.testEnv : productConfig.productionEnv] as string | undefined;
   if (!merchantId || !privateKey || !productId) {
     return { error: '支付配置尚未完成' };
   }
@@ -263,7 +314,7 @@ const createWaffoCheckout = async (
     currency: 'USD',
     successUrl: `${origin}/?payment=success`,
     orderMerchantExternalId: merchantOrderId,
-    metadata: { herdown_product: 'starter' },
+    metadata: { herdown_product: productCode },
     language: 'zh-Hans',
   });
 
@@ -592,6 +643,14 @@ export default {
           message: '点数已用完，请购买新的点数包后继续使用',
         }, { status: 402 });
       }
+      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(authInfo.keyOrIp, env);
+      if (freeQuota && freeQuota.remaining < 1) {
+        return json({
+          success: false,
+          code: 'FREE_QUOTA_EXHAUSTED',
+          message: '本月免费额度已用完，请升级后继续使用',
+        }, { status: 402 });
+      }
 
       try {
         let sourceHtml = rawHtml;
@@ -633,6 +692,13 @@ export default {
             message: '点数已用完，请购买新的点数包后继续使用',
           }, { status: 402 });
         }
+        if (!creditStatus.hasPurchasedCredits && !(await consumeFreeQuota(authInfo.keyOrIp, 1, env))) {
+          return json({
+            success: false,
+            code: 'FREE_QUOTA_EXHAUSTED',
+            message: '本月免费额度已用完，请升级后继续使用',
+          }, { status: 402 });
+        }
 
         return json({
           success: true,
@@ -671,10 +737,14 @@ export default {
       const targetUrl = (body.url || '').trim();
       const limit = Math.min(20, Math.max(1, body.limit || 5));
       const creditStatus = authInfo.isKey ? await getCreditStatus(authInfo.keyOrIp, env) : { balance: 0, hasPurchasedCredits: false };
-      const crawlLimit = creditStatus.hasPurchasedCredits ? Math.min(limit, creditStatus.balance) : limit;
+      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(authInfo.keyOrIp, env);
+      const crawlLimit = creditStatus.hasPurchasedCredits ? Math.min(limit, creditStatus.balance) : Math.min(limit, freeQuota?.remaining || 0);
 
       if (creditStatus.hasPurchasedCredits && crawlLimit < 1) {
         return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数已用完，请购买新的点数包后继续使用' }, { status: 402 });
+      }
+      if (!creditStatus.hasPurchasedCredits && crawlLimit < 1) {
+        return json({ success: false, code: 'FREE_QUOTA_EXHAUSTED', message: '本月免费额度已用完，请升级后继续使用' }, { status: 402 });
       }
 
       if (!targetUrl || isForbiddenUrl(targetUrl)) {
@@ -714,6 +784,9 @@ export default {
 
         if (creditStatus.hasPurchasedCredits && !(await consumeCredits(authInfo.keyOrIp, crawlResults.length, 'crawl', env))) {
           return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数不足，请购买新的点数包后继续使用' }, { status: 402 });
+        }
+        if (!creditStatus.hasPurchasedCredits && crawlResults.length > 0 && !(await consumeFreeQuota(authInfo.keyOrIp, crawlResults.length, env))) {
+          return json({ success: false, code: 'FREE_QUOTA_EXHAUSTED', message: '本月免费额度已用完，请升级后继续使用' }, { status: 402 });
         }
 
         return json({
@@ -794,9 +867,12 @@ export default {
         return json({ success: false, message: '请先创建并使用一个API密钥，付款后的点数会发放到该密钥' }, { status: 401 });
       }
 
-      if ((body.product || 'starter') !== 'starter') {
-        return json({ success: false, message: '暂时仅开放10,000次点数包' }, { status: 400 });
+      const requestedProduct = body.product || 'starter';
+      if (!Object.prototype.hasOwnProperty.call(PRODUCT_CATALOG, requestedProduct)) {
+        return json({ success: false, message: '无效的点数包' }, { status: 400 });
       }
+      const productCode = requestedProduct as ProductCode;
+      const productConfig = PRODUCT_CATALOG[productCode];
 
       if (!env.DB) return json({ success: false, message: '支付服务暂时不可用' }, { status: 503 });
 
@@ -806,13 +882,13 @@ export default {
       try {
         await env.DB.prepare(`
           INSERT INTO payment_orders (merchant_order_id, api_key, product_code, credits, payment_status, mode)
-          VALUES (?, ?, 'starter', ?, 'pending', ?)
-        `).bind(merchantOrderId, authInfo.keyOrIp, STARTER_CREDITS, mode).run();
+          VALUES (?, ?, ?, ?, 'pending', ?)
+        `).bind(merchantOrderId, authInfo.keyOrIp, productCode, productConfig.credits, mode).run();
       } catch {
         return json({ success: false, message: '支付订单初始化失败，请稍后重试' }, { status: 500 });
       }
 
-      const checkout = await createWaffoCheckout(env, merchantOrderId, url.origin, testMode);
+      const checkout = await createWaffoCheckout(env, merchantOrderId, url.origin, productCode, testMode);
       if (!checkout.checkoutUrl) {
         await env.DB.prepare("UPDATE payment_orders SET payment_status = 'failed' WHERE merchant_order_id = ?")
           .bind(merchantOrderId)
@@ -822,7 +898,8 @@ export default {
       }
       return json({
         success: true,
-        product: 'starter',
+        product: productCode,
+        credits: productConfig.credits,
         checkout_url: checkout.checkoutUrl,
       });
     }
@@ -924,7 +1001,14 @@ export default {
       const authInfo = await verifyApiKeyOrIp(request, env);
       if (!authInfo.isKey) return json({ success: false, message: '请提供有效的API密钥' }, { status: 401 });
       const creditStatus = await getCreditStatus(authInfo.keyOrIp, env);
-      return json({ success: true, credits: creditStatus.balance, has_paid_credits: creditStatus.hasPurchasedCredits });
+      const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(authInfo.keyOrIp, env);
+      return json({
+        success: true,
+        credits: creditStatus.balance,
+        has_paid_credits: creditStatus.hasPurchasedCredits,
+        free_quota: FREE_MONTHLY_QUOTA,
+        free_remaining: freeQuota?.remaining ?? 0,
+      });
     }
 
     // Dashboard API: Usage Statistics
@@ -947,8 +1031,9 @@ export default {
 
       return json({
         today_requests: todayCount,
-        daily_quota: 20,
-        quota_tier: "按凭证等级限制 (免费 20次/天, Pro 2,000次/天)",
+        daily_quota: 100,
+        monthly_free_quota: FREE_MONTHLY_QUOTA,
+        quota_tier: '免费每月1,000次，API密钥每日最多100次请求',
         active_keys: totalKeys,
       });
     }

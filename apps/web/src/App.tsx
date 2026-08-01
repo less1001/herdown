@@ -48,6 +48,13 @@ interface ApiKeyItem {
 }
 
 type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'help' | 'faq' | null;
+type ProductCode = 'starter' | 'standard' | 'bulk';
+
+const pricingPackages: Array<{ code: ProductCode; price: string; credits: string; label: string; featured?: boolean }> = [
+  { code: 'starter', price: '9.99', credits: '10,000', label: '入门包' },
+  { code: 'standard', price: '29.99', credits: '50,000', label: '标准包', featured: true },
+  { code: 'bulk', price: '49.99', credits: '100,000', label: '大容量包' },
+];
 
 const getToolSlug = (): ToolSlug => {
   const slug = window.location.pathname.replace(/^\//, '') as Exclude<ToolSlug, null>;
@@ -188,6 +195,7 @@ export function App() {
   // Upgrade Modal
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<ProductCode>('starter');
 
   const [outputTab, setOutputTab] = useState<'preview' | 'source' | 'images'>('preview');
   const [copiedMd, setCopiedMd] = useState(false);
@@ -198,6 +206,8 @@ export function App() {
   const [newKeyName, setNewKeyName] = useState('');
   const [creatingKey, setCreatingKey] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [freeRemaining, setFreeRemaining] = useState<number | null>(null);
+  const [hasPaidCredits, setHasPaidCredits] = useState(false);
 
   // Usage stats state
   const [stats, setStats] = useState({ today_requests: 0, daily_quota: 100000, active_keys: 0 });
@@ -228,6 +238,8 @@ export function App() {
   const fetchCredits = async (key?: string) => {
     if (!key) {
       setCreditBalance(null);
+      setFreeRemaining(null);
+      setHasPaidCredits(false);
       return;
     }
     try {
@@ -235,6 +247,8 @@ export function App() {
       if (res.ok) {
         const data = await res.json();
         setCreditBalance(typeof data.credits === 'number' ? data.credits : null);
+        setFreeRemaining(typeof data.free_remaining === 'number' ? data.free_remaining : null);
+        setHasPaidCredits(data.has_paid_credits === true);
       }
     } catch {
       setCreditBalance(null);
@@ -358,12 +372,12 @@ export function App() {
     }
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (product: ProductCode = selectedProduct) => {
     const activeUserKey = apiKeys.find(k => k.status === 'active')?.key;
     if (!activeUserKey) {
       setShowUpgradeModal(false);
       setActiveTab('keys');
-      alert('请先创建一个API密钥。升级完成后，10,000次点数会自动发放到这个密钥。');
+      alert('请先创建一个API密钥。升级完成后，购买的点数会自动发放到这个密钥。');
       return;
     }
     setCheckoutLoading(true);
@@ -371,7 +385,7 @@ export function App() {
       const res = await fetch('/v1/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeUserKey}` },
-        body: JSON.stringify({ product: 'starter' }),
+        body: JSON.stringify({ product }),
       });
       const data = await res.json();
       if (data.success && data.checkout_url) {
@@ -957,7 +971,7 @@ export function App() {
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
                 <span className="text-xs text-slate-400 font-medium">可用点数</span>
-                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{creditBalance === null ? '免费额度' : creditBalance.toLocaleString()}</p>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{hasPaidCredits ? (creditBalance ?? 0).toLocaleString() : `${(freeRemaining ?? 1000).toLocaleString()}次免费`}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
                 <span className="text-xs text-slate-400 font-medium">已生效 API Key</span>
@@ -1365,7 +1379,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             </div>
 
             <div className="mt-5 text-xs">
-              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">一次性点数包</span><span className="text-white font-bold">US$9.99/10,000次解析额度</span>，不自动续费，点数不过期。</div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">免费体验</span><span className="text-white font-bold">每月1,000次免费解析</span>；也可以选择一次性点数包，点数不过期，不自动续费。</div>
             </div>
           </section>
         )}
@@ -1390,28 +1404,30 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               <p className="text-xs text-slate-400">先创建API密钥，付款成功后点数会自动发放到该密钥</p>
             </div>
 
-            <div className="max-w-md mx-auto pt-2">
-              <div className="p-6 rounded-xl bg-gradient-to-b from-[#132320] to-[#111823] border-2 border-emerald-500 space-y-5 shadow-lg shadow-emerald-950/40">
-                <div className="space-y-2">
-                  <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-black">一次性付款</span>
-                  <h4 className="text-xl font-bold text-white">Herdown点数包</h4>
-                  <div className="text-2xl font-black text-emerald-400">US$9.99 <span className="text-xs text-slate-400 font-normal">/10,000次网页与文档解析额度</span></div>
-                  <p className="text-xs text-emerald-200 leading-6">不自动续费。点数不过期。付款成功后自动发放到你用于付款的API密钥。</p>
-                  <ul className="space-y-2 text-xs text-slate-300 pt-1">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持API、MCP、CLI和网页端使用</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Waffo Pancake安全收银台</li>
-                  </ul>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {pricingPackages.map((item) => (
+                <div key={item.code} className={`p-5 rounded-xl bg-gradient-to-b from-[#132320] to-[#111823] border ${item.featured ? 'border-2 border-emerald-500' : 'border-[#29423d]'} space-y-5 shadow-lg shadow-emerald-950/20`}>
+                  <div className="space-y-2">
+                    <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold ${item.featured ? 'bg-emerald-500 text-black' : 'bg-emerald-500/15 text-emerald-300'}`}>{item.label}</span>
+                    <h4 className="text-lg font-bold text-white">一次性付款</h4>
+                    <div className="text-2xl font-black text-emerald-400">US${item.price}</div>
+                    <p className="text-sm text-white font-semibold">{item.credits}次解析额度</p>
+                    <p className="text-xs text-slate-400 leading-6">点数不过期，不自动续费。</p>
+                    <p className="text-xs text-slate-300 flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />支持网页、API、MCP和CLI</p>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedProduct(item.code); void handleCheckout(item.code); }}
+                    disabled={checkoutLoading}
+                    className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
+                  >
+                    {checkoutLoading && selectedProduct === item.code ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    立即升级
+                  </button>
                 </div>
-                <button
-                  onClick={handleCheckout}
-                  disabled={checkoutLoading}
-                  className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
-                >
-                  {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  立即升级
-                </button>
-              </div>
+              ))}
             </div>
+
+            <p className="text-center text-xs text-emerald-200">每个API密钥每月1,000次免费体验，用完后再选择付费点数包。</p>
 
             <div className="text-center text-[11px] text-slate-400 pt-3 border-t border-[#1e293b]/60 leading-relaxed">
               🔒 声明：数字 API 额度属于虚拟商品，开通/充值成功即完成交付，不支持无理由退款。<br />
