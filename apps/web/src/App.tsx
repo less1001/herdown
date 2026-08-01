@@ -271,11 +271,11 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
         reader.readAsDataURL(selectedFile);
       });
       setMarkdown(`![${selectedFile.name}](${dataUrl})`);
-      setMessage(language === 'en' ? 'Image packaged as local Markdown. Use Unlimited-OCRSkill for text recognition.' : '图片已整理为本地Markdown。需要识别图片文字时，请使用Unlimited-OCRSkill。');
+      setMessage(language === 'en' ? 'The image is ready as Markdown. Use the image text tool if you need to recognize text.' : '图片已整理为Markdown。如需识别图片文字，请进入图片文字工具。');
       return;
     }
     if (/\.(docx|pdf|pptx|xlsx)$/.test(name)) {
-      setMessage(language === 'en' ? 'This file stays on your computer. Use the local MarkItDown guide below to convert it.' : '文件保留在你的电脑上，请使用下面的本地MarkItDown命令转换。');
+      setMessage(language === 'en' ? 'This format needs a dedicated processing step. Follow the format guide to continue.' : '这种格式需要进入对应的专用页面，请按照页面提示继续处理。');
       return;
     }
     setMessage(language === 'en' ? 'This file type is not supported yet.' : '暂不支持这个文件类型。');
@@ -294,13 +294,13 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="max-w-3xl">
-        <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'One local entry' : '一个入口，本地处理'}</span>
+        <span className="text-xs font-semibold text-emerald-400">{language === 'en' ? 'Material organizer' : '资料整理入口'}</span>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{toolLabel('tools', language)}</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Files are read in your browser and are not uploaded. Webpages continue through URL to Markdown.' : '文件只在当前浏览器读取，不上传服务器。网页请继续使用URL转Markdown。'}</p>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Choose your material and prepare it as clean Markdown. Use the webpage converter for links.' : '选择资料并整理成干净Markdown。网页链接请使用网页转换。'}</p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-          <div className="flex items-center gap-2 text-white font-bold"><Upload className="w-5 h-5 text-emerald-400" />{language === 'en' ? 'Choose a local file' : '选择本地文件'}</div>
+          <div className="flex items-center gap-2 text-white font-bold"><Upload className="w-5 h-5 text-emerald-400" />{language === 'en' ? 'Choose material' : '选择资料'}</div>
           <div className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4 space-y-3">
             <p className="text-xs text-slate-400">{language === 'en' ? 'Webpage URL' : '网页链接'}</p>
             <div className="flex gap-2">
@@ -311,21 +311,17 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
           <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void handleFile(event.dataTransfer.files?.[0]); }} className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-500/40 bg-[#090d12] px-5 text-center hover:border-emerald-400 transition">
             <Upload className="w-8 h-8 text-emerald-400 mb-3" />
             <span className="text-sm text-slate-200">{file?.name || (language === 'en' ? 'Drop or choose TXT, Markdown, images, Word, PDF, PPT, Excel' : '拖入或选择TXT、Markdown、图片、Word、PDF、PPT、Excel')}</span>
-            <span className="text-xs text-slate-500 mt-2">{language === 'en' ? 'No upload, no extra server cost' : '不上传，不增加服务器成本'}</span>
+            <span className="text-xs text-slate-500 mt-2">{language === 'en' ? 'Common material formats supported' : '支持常见资料格式'}</span>
             <input type="file" accept=".txt,.md,.docx,.pdf,.pptx,.xlsx,image/*" className="hidden" onChange={event => void handleFile(event.target.files?.[0])} />
           </label>
           {message && <p className="text-xs leading-6 text-emerald-200">{message}</p>}
           <div className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4 text-xs text-slate-400 leading-6">
-            <p>{language === 'en' ? 'Word, PDF, PPT, and Excel use local MarkItDown:' : 'Word、PDF、PPT和Excel使用本地MarkItDown：'}</p>
-            <code className="text-emerald-300">python -m pip install markitdown</code>
-            <br />
-            <code className="text-emerald-300">markitdown "your-file" &gt; output.md</code>
-            <p className="mt-2">{language === 'en' ? 'Scans and screenshots use local Unlimited-OCRSkill.' : '扫描件和截图使用本地Unlimited-OCRSkill。'}</p>
+            {language === 'en' ? 'Choose a file to see the best way to continue.' : '选择资料后，页面会提示你下一步怎么做。'}
           </div>
         </div>
         <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
           <div className="flex items-center justify-between"><span className="font-bold text-white">{language === 'en' ? 'Local Markdown result' : '本地Markdown结果'}</span><button onClick={download} disabled={!markdown} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs text-white disabled:opacity-40">{language === 'en' ? 'Download .md' : '下载.md'}</button></div>
-          <pre className="min-h-80 max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || (language === 'en' ? 'TXT and images can be processed here. Office files stay local and use the command above.' : 'TXT和图片可以在这里处理。Office文件保留在本地，使用上面的命令转换。')}</pre>
+          <pre className="min-h-80 max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-sm leading-7 text-emerald-200">{markdown || (language === 'en' ? 'Your prepared Markdown will appear here.' : '整理后的Markdown会显示在这里。')}</pre>
           <a href="/url-to-markdown" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{language === 'en' ? 'Process a webpage URL' : '处理网页链接'}</a>
         </div>
       </div>
@@ -1011,11 +1007,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
     URL.revokeObjectURL(url);
   };
 
-  const fillPreset = (url: string) => {
-    setInputMode('url');
-    setInputUrl(url);
-  };
-
   const activeApiKeySample = apiKeys.find(k => k.status === 'active')?.key || 'sk_live_YOUR_API_KEY';
 
   return (
@@ -1214,16 +1205,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                 {language === 'en' ? 'Clean the source first, then send it to your AI workflow or knowledge tool.' : '先把资料清干净，再交给你的AI工作流或知识库。'}
               </p>
               
-              {/* Presets */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                <span className="text-xs text-slate-500 font-medium">{ui.quickExample}</span>
-                <button
-                  onClick={() => fillPreset('https://mp.weixin.qq.com/s/sample_article')}
-                  className="px-2.5 py-1 rounded-md bg-[#111823] border border-[#1e293b] text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400 transition"
-                >
-                  {ui.article}
-                </button>
-              </div>
             </div>
 
             {/* Input Card */}
