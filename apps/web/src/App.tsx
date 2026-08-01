@@ -1099,6 +1099,69 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             </div>
           </div>
         )}
+
+        {activeTab === 'converter' && (
+          <section id="faq" className="max-w-4xl mx-auto mt-14 scroll-mt-8">
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+                常见问题
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-3">使用前你可能想知道</h2>
+              <p className="text-sm text-slate-400 mt-2">点击问题即可展开答案</p>
+            </div>
+
+            <div className="rounded-2xl border border-[#1e293b] bg-[#0d131d] divide-y divide-[#1e293b] overflow-hidden">
+              <details className="group p-5">
+                <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
+                  Herdown是做什么的？
+                  <span className="text-emerald-400 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="text-sm text-slate-400 leading-7 pt-3">把网页链接或HTML整理成更干净的Markdown，方便保存、阅读、交给AI工作流或知识库继续使用。</p>
+              </details>
+              <details className="group p-5">
+                <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
+                  我提交的内容会被长期保存吗？
+                  <span className="text-emerald-400 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="text-sm text-slate-400 leading-7 pt-3">不会。Herdown以实时处理为主，不提供内容托管或知识库服务。必要的短期技术日志仅用于安全防护、稳定性和故障排查。</p>
+              </details>
+              <details className="group p-5">
+                <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
+                  不会写代码也能用吗？
+                  <span className="text-emerald-400 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="text-sm text-slate-400 leading-7 pt-3">可以。直接粘贴网页链接并点击转换即可。开发者也可以通过API、MCP、CLI或浏览器插件接入自己的工作流。</p>
+              </details>
+              <details className="group p-5">
+                <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
+                  为什么有些网页无法解析？
+                  <span className="text-emerald-400 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="text-sm text-slate-400 leading-7 pt-3">登录限制、付费墙、反爬机制和动态加载都可能影响结果。你可以尝试粘贴已打开页面的HTML源码，或使用浏览器插件在本地提取。</p>
+              </details>
+              <details className="group p-5">
+                <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
+                  点数包如何计费？会自动续费吗？
+                  <span className="text-emerald-400 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="text-sm text-slate-400 leading-7 pt-3">购买前收银台会明确展示金额、包含额度和支付方式。一次性点数包不会自动续费；其他方案以收银台和商品页的具体说明为准。</p>
+              </details>
+              <details className="group p-5">
+                <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
+                  哪些内容不能提交？
+                  <span className="text-emerald-400 transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="text-sm text-slate-400 leading-7 pt-3">请只处理你有权访问和使用的内容。不要用于绕过访问限制、抓取私人数据、侵犯版权或违反第三方平台规则。</p>
+              </details>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 text-xs">
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">单次加油包</span><span className="text-white font-bold">¥68.00</span> / 10,000次解析额度</div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-slate-300 font-bold block mb-1">Developer Pro</span><span className="text-white font-bold">$5.99/月</span> / 2,000次每日额度</div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-slate-300 font-bold block mb-1">Team</span><span className="text-white font-bold">$29.99/月</span> / 50,000次每日额度</div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Pricing Modal */}
@@ -1222,6 +1285,9 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             </a>
             <a href="/privacy" className="hover:text-slate-300 transition">
               隐私政策
+            </a>
+            <a href="/#faq" className="hover:text-slate-300 transition">
+              常见问题
             </a>
           </div>
         </div>
