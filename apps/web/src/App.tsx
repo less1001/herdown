@@ -21,6 +21,7 @@ import {
   CreditCard,
   Camera,
   Layers,
+  PlugZap,
   CheckCircle2,
   X
 } from 'lucide-react';
@@ -362,7 +363,7 @@ export function App() {
     if (!activeUserKey) {
       setShowUpgradeModal(false);
       setActiveTab('keys');
-      alert('请先创建一个API密钥。购买完成后，10,000次点数会自动发放到这个密钥。');
+      alert('请先创建一个API密钥。升级完成后，10,000次点数会自动发放到这个密钥。');
       return;
     }
     setCheckoutLoading(true);
@@ -535,7 +536,8 @@ export function App() {
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
-              🧩 浏览器插件
+              <PlugZap className="w-3.5 h-3.5" />
+              浏览器插件
             </button>
             <button
               onClick={() => setActiveTab('skills')}
@@ -546,7 +548,7 @@ export function App() {
               }`}
             >
               <FileText className="w-3.5 h-3.5" />
-              提取规则 (Skills)
+              Skill
             </button>
           </nav>
 
@@ -556,7 +558,7 @@ export function App() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              购买点数
+              升级
             </button>
             <a
               href="https://github.com/less1001/herdown"
@@ -573,6 +575,16 @@ export function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        <div className="mb-7 flex flex-wrap items-center gap-2 rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
+          <span className="px-3 py-2 font-semibold text-slate-500">工具入口</span>
+          {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+            <a key={slug} href={`/${slug}`} className="rounded-xl px-3 py-2 text-slate-300 hover:bg-[#1e293b] hover:text-emerald-300 transition">
+              {toolPageInfo[slug].title}
+            </a>
+          ))}
+          <a href="/help" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">帮助</a>
+          <a href="/faq" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">FAQ</a>
+        </div>
         {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
           <>
@@ -933,7 +945,7 @@ export function App() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
               >
                 <CreditCard className="w-4 h-4" />
-                购买点数
+                升级
               </button>
             </div>
 
@@ -1374,7 +1386,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 支付收银台
               </span>
-              <h3 className="text-2xl font-extrabold text-white">购买Herdown一次性点数包</h3>
+              <h3 className="text-2xl font-extrabold text-white">升级Herdown额度</h3>
               <p className="text-xs text-slate-400">先创建API密钥，付款成功后点数会自动发放到该密钥</p>
             </div>
 
@@ -1396,7 +1408,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                   className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
                 >
                   {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  购买10,000次点数
+                  立即升级
                 </button>
               </div>
             </div>
