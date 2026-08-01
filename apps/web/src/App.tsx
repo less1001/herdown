@@ -2122,9 +2122,51 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
       )}
 
       {/* Footer */}
-      <footer className="border-t border-[#1e293b] bg-[#070a0e] py-10">
+      <footer className="border-t border-[#1e293b] bg-[#070a0e] py-6 sm:py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 text-xs sm:grid-cols-3">
+          <div className="sm:hidden rounded-2xl border border-[#1e293b] bg-[#0b1119] overflow-hidden text-sm">
+            <details className="group border-b border-[#1e293b]">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 font-semibold text-slate-200">
+                {language === 'en' ? 'Tools' : '工具'}
+                <span className="text-lg font-normal text-emerald-400 transition group-open:rotate-45">+</span>
+              </summary>
+              <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
+                <a href="/tools" className="hover:text-emerald-300 transition">{language === 'en' ? 'All tools' : '全部工具'}</a>
+                {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+                  <a key={slug} href={`/${slug}`} className="hover:text-emerald-300 transition">{toolLabel(slug, language)}</a>
+                ))}
+              </div>
+            </details>
+            <details className="group border-b border-[#1e293b]">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 font-semibold text-slate-200">
+                {language === 'en' ? 'Developers' : '开发者'}
+                <span className="text-lg font-normal text-emerald-400 transition group-open:rotate-45">+</span>
+              </summary>
+              <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
+                <a href="/docs" className="hover:text-emerald-300 transition">{ui.docs}</a>
+                <button onClick={() => setActiveTab('keys')} className="text-left hover:text-emerald-300 transition">{ui.api}</button>
+                <button onClick={() => setActiveTab('mcp')} className="text-left hover:text-emerald-300 transition">{ui.mcp}</button>
+                <button onClick={() => setActiveTab('cli')} className="text-left hover:text-emerald-300 transition">{ui.cli}</button>
+                <button onClick={() => setActiveTab('skills')} className="text-left hover:text-emerald-300 transition">{ui.skill}</button>
+                <button onClick={() => setActiveTab('extension')} className="text-left hover:text-emerald-300 transition">{ui.extension}</button>
+              </div>
+            </details>
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-4 font-semibold text-slate-200">
+                {language === 'en' ? 'Help and legal' : '帮助与政策'}
+                <span className="text-lg font-normal text-emerald-400 transition group-open:rotate-45">+</span>
+              </summary>
+              <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
+                <a href="/faq" className="hover:text-emerald-300 transition">{ui.faq}</a>
+                <a href="/terms" className="hover:text-emerald-300 transition">{ui.terms}</a>
+                <a href="/privacy" className="hover:text-emerald-300 transition">{ui.privacy}</a>
+                <a href="mailto:vkdefi@gmail.com" className="hover:text-emerald-300 transition">{ui.contact}</a>
+                <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">@vkdefi</a>
+                <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">GitHub Repo</a>
+              </div>
+            </details>
+          </div>
+          <div className="hidden gap-8 text-xs sm:grid sm:grid-cols-3">
             <div>
               <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Tools' : '工具'}</h3>
               <div className="flex flex-col items-start gap-2 text-slate-500">
@@ -2157,7 +2199,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               </div>
             </div>
           </div>
-          <div className="mt-10 flex flex-col gap-3 border-t border-[#1e293b] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 flex flex-col gap-3 border-t border-[#1e293b] pt-4 text-xs text-slate-500 sm:mt-10 sm:flex-row sm:items-center sm:justify-between sm:pt-5">
             <div>© 2026 <span className="font-medium text-slate-300">Herdown</span>. All rights reserved.</div>
             <span className="flex items-center gap-1.5 text-emerald-500">
               <ShieldCheck className="w-3.5 h-3.5" />
