@@ -1217,6 +1217,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
               GitHub Repo
             </a>
+            <a href="/terms" className="hover:text-slate-300 transition">
+              服务条款
+            </a>
+            <a href="/privacy" className="hover:text-slate-300 transition">
+              隐私政策
+            </a>
           </div>
         </div>
       </footer>

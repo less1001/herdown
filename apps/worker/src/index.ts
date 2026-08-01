@@ -20,6 +20,72 @@ const json = (data: unknown, init: ResponseInit = {}) => {
   });
 };
 
+const legalPage = (
+  title: string,
+  description: string,
+  sections: Array<{ heading: string; body: string }>,
+) => {
+  const sectionHtml = sections
+    .map(
+      ({ heading, body }) => `
+        <section>
+          <h2>${heading}</h2>
+          <p>${body}</p>
+        </section>`,
+    )
+    .join('');
+
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="${description}" />
+    <title>${title} | Herdown</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; background: #070a0e; color: #d8e1e8; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { max-width: 760px; margin: 0 auto; padding: 56px 24px 72px; }
+      a { color: #52d9ad; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .brand { display: inline-block; color: #ffffff; font-weight: 800; font-size: 20px; margin-bottom: 44px; }
+      h1 { color: #ffffff; font-size: clamp(30px, 6vw, 44px); line-height: 1.15; margin: 0 0 12px; }
+      h2 { color: #ffffff; font-size: 20px; margin: 34px 0 8px; }
+      p { margin: 0; color: #aebdca; }
+      .updated { color: #7f91a0; font-size: 14px; }
+      footer { border-top: 1px solid #1e293b; margin-top: 48px; padding-top: 20px; color: #7f91a0; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a class="brand" href="/">Herdown</a>
+      <h1>${title}</h1>
+      <p class="updated">生效日期：2026年8月1日</p>
+      ${sectionHtml}
+      <footer>
+        <a href="/terms">服务条款</a> · <a href="/privacy">隐私政策</a> · <a href="https://github.com/less1001/herdown/issues">联系支持</a>
+      </footer>
+    </main>
+  </body>
+</html>`;
+};
+
+const termsPage = () => legalPage('服务条款', 'Herdown服务条款', [
+  { heading: '服务说明', body: 'Herdown提供网页、文档和图片转为Markdown的在线工具、API、MCP与相关开发者工具。您应仅提交有权处理的内容，并遵守适用法律及第三方网站规则。' },
+  { heading: '一次性点数包', body: '付费服务以商品页面展示的一次性点数包为准，不包含自动续费。支付完成并经支付平台确认后，系统会按商品说明发放相应服务额度。' },
+  { heading: '数字服务与退款', body: '点数属于数字服务额度。除法律另有规定或服务未能按约提供外，已发放或已使用的数字额度通常不支持退款。退款申请会依据支付平台规则与具体订单情况处理。' },
+  { heading: '服务可用性', body: 'Herdown会尽力保持服务稳定，但不承诺对任何第三方网站、受登录限制内容或动态页面始终可解析。不得将服务用于违法、侵权、绕过访问控制或影响他人系统安全的用途。' },
+  { heading: '条款更新', body: '我们可能因功能、合规或安全需要更新本条款。继续使用服务即表示您接受更新后的条款。' },
+]);
+
+const privacyPage = () => legalPage('隐私政策', 'Herdown隐私政策', [
+  { heading: '处理的信息', body: '为完成请求，Herdown会处理您主动提交的网页链接、HTML内容、文件内容、API请求参数以及必要的技术日志。' },
+  { heading: '数据使用方式', body: '提交内容仅用于完成当前的解析、转换、错误排查与安全防护。Herdown不以出售、出租或广告定向为目的使用您的内容。' },
+  { heading: '内容与存储', body: 'Herdown采用实时处理方式，不提供用户内容托管或长期知识库服务。必要的短期日志可能用于防滥用、保障服务稳定与定位故障。' },
+  { heading: '第三方服务', body: '支付由Waffo Pancake等独立支付服务商处理。支付服务商会依其自身隐私政策处理付款信息；Herdown不会直接保存完整银行卡信息。' },
+  { heading: '您的选择', body: '请勿提交您无权处理的个人信息、机密信息或受访问限制内容。如需反馈隐私问题，请通过项目支持渠道联系。' },
+]);
+
 const getClientIp = (request: Request): string => {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || '127.0.0.1';
 };
@@ -750,6 +816,18 @@ export default {
 
         return json({ jsonrpc: '2.0', id: body.id ?? null, error: { code: -32601, message: 'Method not found' } }, { status: 404 });
       }
+    }
+
+    if (url.pathname === '/terms' || url.pathname === '/terms/') {
+      return new Response(termsPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
+      });
+    }
+
+    if (url.pathname === '/privacy' || url.pathname === '/privacy/') {
+      return new Response(privacyPage(), {
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600' },
+      });
     }
 
     if (url.pathname === '/' || url.pathname === '/index.html') {
