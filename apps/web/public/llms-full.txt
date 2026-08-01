@@ -1,0 +1,23 @@
+# Herdown Full Context
+
+Herdown is a clean-data extraction product for AI workflows.
+
+It focuses on:
+- Web pages
+- Documents
+- Images and screenshots
+- Markdown output
+- JSON structured output
+- Sitemap discovery
+
+It is not trying to replace downstream knowledge base systems.
+
+Recommended downstream tools:
+- Dify
+- Coze
+- FastGPT
+- n8n
+
+Core user promise:
+- Take messy source material and turn it into clean material that AI tools can use directly.
+
