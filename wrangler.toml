@@ -1,0 +1,24 @@
+name = "herdown-worker"
+main = "apps/worker/src/index.ts"
+compatibility_date = "2026-07-26"
+
+routes = [
+  { pattern = "api.herdown.com", custom_domain = true },
+  { pattern = "herdown.com", custom_domain = true },
+  { pattern = "allto.agentok.top", custom_domain = true }
+]
+
+[vars]
+APP_NAME = "herdown"
+
+[assets]
+directory = "apps/web/dist"
+binding = "ASSETS"
+
+[build]
+command = "pnpm build"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mdforagents"
+database_id = "7478e1ef-3a30-4abf-9184-29a0cc4785ed"
