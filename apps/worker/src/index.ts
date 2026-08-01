@@ -3,8 +3,13 @@ import { parseMarkdown, detectPlatform, extractSitemapUrls, chunkMarkdownForRAG,
 export interface Env {
   DB?: D1Database;
   APP_NAME?: string;
-  STRIPE_SECRET_KEY?: string;
-  STRIPE_WEBHOOK_SECRET?: string;
+  WAFFO_MERCHANT_ID?: string;
+  WAFFO_PRIVATE_KEY?: string;
+  WAFFO_STARTER_PRODUCT_ID?: string;
+  WAFFO_CURRENCY?: string;
+  WAFFO_ENVIRONMENT?: 'test' | 'prod';
+  WAFFO_TEST_WEBHOOK_PUBLIC_KEY?: string;
+  WAFFO_PROD_WEBHOOK_PUBLIC_KEY?: string;
   ASSETS?: { fetch: (request: Request) => Promise<Response> };
 }
 
@@ -89,6 +94,191 @@ const privacyPage = () => legalPage('隐私政策', 'Herdown隐私政策', [
 
 const getClientIp = (request: Request): string => {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-real-ip') || '127.0.0.1';
+};
+
+type WaffoWebhookEvent = {
+  eventType?: string;
+  eventId?: string;
+  mode?: 'test' | 'prod';
+  data?: {
+    orderId?: string;
+    orderMerchantExternalId?: string;
+  };
+};
+
+const WAFFO_CHECKOUT_PATH = '/v1/actions/checkout/create-session';
+const STARTER_CREDITS = 10_000;
+
+const toArrayBuffer = (bytes: Uint8Array): ArrayBuffer =>
+  bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+
+const base64ToBytes = (value: string): Uint8Array => {
+  const binary = atob(value.replace(/\s/g, ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+};
+
+const bytesToBase64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 1) binary += String.fromCharCode(bytes[index]);
+  return btoa(binary);
+};
+
+const encodeDerLength = (length: number): Uint8Array => {
+  if (length < 128) return new Uint8Array([length]);
+  const values: number[] = [];
+  let current = length;
+  while (current > 0) {
+    values.unshift(current & 0xff);
+    current >>= 8;
+  }
+  return new Uint8Array([0x80 | values.length, ...values]);
+};
+
+const wrapPkcs1PrivateKey = (pkcs1: Uint8Array): Uint8Array => {
+  // Web Crypto accepts PKCS#8. Waffo may export the older RSA PKCS#1 PEM form.
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+  const rsaAlgorithm = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,
+  ]);
+  const content = new Uint8Array(version.length + rsaAlgorithm.length + pkcs1.length);
+  content.set(version, 0);
+  content.set(rsaAlgorithm, version.length);
+  content.set(pkcs1, version.length + rsaAlgorithm.length);
+  const length = encodeDerLength(content.length);
+  const wrapped = new Uint8Array(1 + length.length + content.length);
+  wrapped[0] = 0x30;
+  wrapped.set(length, 1);
+  wrapped.set(content, 1 + length.length);
+  return wrapped;
+};
+
+const pemToDer = (pem: string, privateKey = false): Uint8Array => {
+  const normalized = pem.replace(/\\n/g, '\n').trim();
+  const body = normalized
+    .replace(/-----BEGIN (?:RSA )?(?:PUBLIC|PRIVATE) KEY-----/g, '')
+    .replace(/-----END (?:RSA )?(?:PUBLIC|PRIVATE) KEY-----/g, '')
+    .replace(/\s/g, '');
+  const der = base64ToBytes(body);
+  return privateKey && normalized.includes('BEGIN RSA PRIVATE KEY') ? wrapPkcs1PrivateKey(der) : der;
+};
+
+const sha256Base64 = async (value: string): Promise<string> => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return bytesToBase64(new Uint8Array(digest));
+};
+
+const waffoRequestSignature = async (method: string, path: string, body: string, privateKeyPem: string): Promise<string> => {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  const canonical = `${method}\n${path}\n${timestamp}\n${await sha256Base64(body)}`;
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    toArrayBuffer(pemToDer(privateKeyPem, true)),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, new TextEncoder().encode(canonical));
+  return `${timestamp}.${bytesToBase64(new Uint8Array(signature))}`;
+};
+
+const verifyWaffoWebhook = async (rawBody: string, signatureHeader: string, publicKeyPem: string): Promise<boolean> => {
+  const parts = Object.fromEntries(signatureHeader.split(',').map((part) => {
+    const [key, ...rest] = part.split('=');
+    return [key.trim(), rest.join('=').trim()];
+  }));
+  const timestamp = Number(parts.t);
+  const signature = parts.v1;
+  if (!timestamp || !signature || Math.abs(Date.now() - timestamp) > 5 * 60 * 1000) return false;
+
+  try {
+    const publicKey = await crypto.subtle.importKey(
+      'spki',
+      toArrayBuffer(pemToDer(publicKeyPem)),
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+    return crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      publicKey,
+      toArrayBuffer(base64ToBytes(signature)),
+      new TextEncoder().encode(`${timestamp}.${rawBody}`),
+    );
+  } catch {
+    return false;
+  }
+};
+
+const getCreditStatus = async (apiKey: string, env: Env): Promise<{ balance: number; hasPurchasedCredits: boolean }> => {
+  if (!env.DB) return { balance: 0, hasPurchasedCredits: false };
+  try {
+    const [balanceRow, purchaseRow] = await env.DB.batch([
+      env.DB.prepare('SELECT COALESCE(SUM(credits), 0) AS balance FROM credit_ledger WHERE api_key = ?').bind(apiKey),
+      env.DB.prepare("SELECT COUNT(*) AS count FROM credit_ledger WHERE api_key = ? AND reason = 'purchase'").bind(apiKey),
+    ]);
+    const balance = Number((balanceRow.results?.[0] as { balance?: number } | undefined)?.balance || 0);
+    const hasPurchasedCredits = Number((purchaseRow.results?.[0] as { count?: number } | undefined)?.count || 0) > 0;
+    return { balance, hasPurchasedCredits };
+  } catch {
+    // The ledger migration has not been applied yet. Keep existing limits working.
+    return { balance: 0, hasPurchasedCredits: false };
+  }
+};
+
+const consumeOneCredit = async (apiKey: string, env: Env): Promise<boolean> => {
+  if (!env.DB) return false;
+  try {
+    const id = `parse_${crypto.randomUUID()}`;
+    const result = await env.DB.prepare(`
+      INSERT INTO credit_ledger (api_key, credits, reason, external_order_id)
+      SELECT ?, -1, 'parse', ?
+      WHERE (SELECT COALESCE(SUM(credits), 0) FROM credit_ledger WHERE api_key = ?) > 0
+    `).bind(apiKey, id, apiKey).run();
+    return (result.meta.changes || 0) === 1;
+  } catch {
+    return false;
+  }
+};
+
+const createWaffoCheckout = async (
+  env: Env,
+  merchantOrderId: string,
+  origin: string,
+): Promise<{ checkoutUrl?: string; error?: string }> => {
+  if (!env.WAFFO_MERCHANT_ID || !env.WAFFO_PRIVATE_KEY || !env.WAFFO_STARTER_PRODUCT_ID) {
+    return { error: '支付配置尚未完成' };
+  }
+
+  const body = JSON.stringify({
+    productId: env.WAFFO_STARTER_PRODUCT_ID,
+    currency: env.WAFFO_CURRENCY || 'USD',
+    successUrl: `${origin}/?payment=success`,
+    orderMerchantExternalId: merchantOrderId,
+    metadata: { herdown_product: 'starter' },
+    language: 'zh-Hans',
+  });
+
+  try {
+    const signature = await waffoRequestSignature('POST', WAFFO_CHECKOUT_PATH, body, env.WAFFO_PRIVATE_KEY);
+    const [timestamp, signatureValue] = signature.split('.', 2);
+    const response = await fetch(`https://api.waffo.ai${WAFFO_CHECKOUT_PATH}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-merchant-id': env.WAFFO_MERCHANT_ID,
+        'x-timestamp': timestamp,
+        'x-signature': signatureValue,
+      },
+      body,
+    });
+    const payload = await response.json().catch(() => ({})) as { data?: { checkoutUrl?: string } };
+    if (!response.ok || !payload.data?.checkoutUrl) return { error: '支付平台暂时无法创建订单' };
+    return { checkoutUrl: payload.data.checkoutUrl };
+  } catch {
+    return { error: '支付平台暂时无法创建订单' };
+  }
 };
 
 const isForbiddenUrl = (urlString: string): boolean => {
@@ -380,6 +570,15 @@ export default {
         }, { status: 400 });
       }
 
+      const creditStatus = authInfo.isKey ? await getCreditStatus(authInfo.keyOrIp, env) : { balance: 0, hasPurchasedCredits: false };
+      if (creditStatus.hasPurchasedCredits && creditStatus.balance < 1) {
+        return json({
+          success: false,
+          code: 'CREDITS_EXHAUSTED',
+          message: '点数已用完，请购买新的点数包后继续使用',
+        }, { status: 402 });
+      }
+
       try {
         let sourceHtml = rawHtml;
         if (!sourceHtml && targetUrl) {
@@ -408,6 +607,14 @@ export default {
         }
 
         const result: ParseResult = parseMarkdown(sourceHtml, targetUrl);
+
+        if (creditStatus.hasPurchasedCredits && !(await consumeOneCredit(authInfo.keyOrIp, env))) {
+          return json({
+            success: false,
+            code: 'CREDITS_EXHAUSTED',
+            message: '点数已用完，请购买新的点数包后继续使用',
+          }, { status: 402 });
+        }
 
         return json({
           success: true,
@@ -546,50 +753,95 @@ export default {
       });
     }
 
-    // Feature 4: Stripe Integration - POST /v1/checkout
+    // Create a server-side Waffo checkout session. The API key identifies the credit recipient.
     if (url.pathname === '/v1/checkout' && request.method === 'POST') {
-      const body = (await request.json().catch(() => ({}))) as { plan?: string; key_name?: string };
-      const plan = body.plan || 'pro';
-      
-      let checkoutUrl = 'https://buy.stripe.com/4gM14n18xc3c6SfaB43Ru0a';
-      if (plan === 'team') {
-        checkoutUrl = 'https://buy.stripe.com/00w6oHbNbebkgsP24y3Ru0b';
-      } else if (plan === 'onetime') {
-        checkoutUrl = 'https://buy.stripe.com/5kQ3cvcRf5EOa4r7oS3Ru09';
+      const body = (await request.json().catch(() => ({}))) as { product?: string };
+      const authInfo = await verifyApiKeyOrIp(request, env);
+      if (!authInfo.isKey) {
+        return json({ success: false, message: '请先创建并使用一个API密钥，付款后的点数会发放到该密钥' }, { status: 401 });
       }
 
+      if ((body.product || 'starter') !== 'starter') {
+        return json({ success: false, message: '暂时仅开放10,000次点数包' }, { status: 400 });
+      }
+
+      if (!env.DB) return json({ success: false, message: '支付服务暂时不可用' }, { status: 503 });
+
+      const merchantOrderId = `hd_${crypto.randomUUID().replace(/-/g, '')}`;
+      const mode = env.WAFFO_ENVIRONMENT === 'test' ? 'test' : 'prod';
+      try {
+        await env.DB.prepare(`
+          INSERT INTO payment_orders (merchant_order_id, api_key, product_code, credits, payment_status, mode)
+          VALUES (?, ?, 'starter', ?, 'pending', ?)
+        `).bind(merchantOrderId, authInfo.keyOrIp, STARTER_CREDITS, mode).run();
+      } catch {
+        return json({ success: false, message: '支付订单初始化失败，请稍后重试' }, { status: 500 });
+      }
+
+      const checkout = await createWaffoCheckout(env, merchantOrderId, url.origin);
+      if (!checkout.checkoutUrl) {
+        await env.DB.prepare("UPDATE payment_orders SET payment_status = 'failed' WHERE merchant_order_id = ?")
+          .bind(merchantOrderId)
+          .run()
+          .catch(() => null);
+        return json({ success: false, message: checkout.error || '支付通道初始化失败' }, { status: 503 });
+      }
       return json({
         success: true,
-        plan,
-        checkout_url: checkoutUrl,
-        message: `正在为您跳转至 Stripe 官方收银台...`,
+        product: 'starter',
+        checkout_url: checkout.checkoutUrl,
       });
     }
 
-    // Stripe Webhook Endpoint: POST /v1/webhook/stripe
-    if (url.pathname === '/v1/webhook/stripe' && request.method === 'POST') {
-      const signature = request.headers.get('stripe-signature') || '';
-      const bodyText = await request.text();
-
-      // Simulate Stripe Webhook auto key provisioning
-      const newKey = `sk_live_stripe_${Date.now().toString(36)}`;
-      if (env.DB) {
-        try {
-          await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, 'usr_stripe_paid', 'Stripe Paid Key', 'active').run();
-        } catch {
-          // ignore
-        }
+    // Waffo retries webhooks. A unique external order id makes credit delivery idempotent.
+    if (url.pathname === '/v1/webhook/waffo' && request.method === 'POST') {
+      const rawBody = await request.text();
+      const event = JSON.parse(rawBody || '{}') as WaffoWebhookEvent;
+      const publicKey = event.mode === 'test' ? env.WAFFO_TEST_WEBHOOK_PUBLIC_KEY : env.WAFFO_PROD_WEBHOOK_PUBLIC_KEY;
+      const signature = request.headers.get('x-waffo-signature') || '';
+      if (!publicKey || !(await verifyWaffoWebhook(rawBody, signature, publicKey))) {
+        return json({ received: false, message: '无效的支付通知签名' }, { status: 401 });
       }
 
-      return json({ received: true, key: newKey });
+      if (event.eventType !== 'order.completed' || !event.data?.orderMerchantExternalId || !event.data.orderId || !env.DB) {
+        return json({ received: true, processed: false });
+      }
+
+      try {
+        const order = await env.DB.prepare(`
+          SELECT api_key, credits FROM payment_orders
+          WHERE merchant_order_id = ? AND payment_status = 'pending' AND mode = ?
+        `).bind(event.data.orderMerchantExternalId, event.mode || 'prod').first<{ api_key: string; credits: number }>();
+
+        if (!order) return json({ received: true, processed: false });
+
+        await env.DB.batch([
+          env.DB.prepare(`
+            INSERT OR IGNORE INTO credit_ledger (api_key, credits, reason, external_order_id)
+            VALUES (?, ?, 'purchase', ?)
+          `).bind(order.api_key, order.credits, event.data.orderId),
+          env.DB.prepare(`
+            UPDATE payment_orders
+            SET payment_status = 'completed', waffo_order_id = ?, completed_at = CURRENT_TIMESTAMP
+            WHERE merchant_order_id = ? AND payment_status = 'pending'
+          `).bind(event.data.orderId, event.data.orderMerchantExternalId),
+        ]);
+      } catch {
+        return json({ received: false, message: '支付通知处理失败' }, { status: 500 });
+      }
+
+      return json({ received: true, processed: true });
     }
 
     // Dashboard API: API Key Management
     if (url.pathname === '/v1/keys') {
       if (request.method === 'GET') {
-        if (!env.DB) return json({ keys: [] });
+        const authInfo = await verifyApiKeyOrIp(request, env);
+        if (!authInfo.isKey || !env.DB) return json({ keys: [] });
         try {
-          const { results } = await env.DB.prepare('SELECT name, key, status, created_at FROM api_keys WHERE status != "revoked" ORDER BY created_at DESC').all();
+          const { results } = await env.DB.prepare('SELECT name, key, status, created_at FROM api_keys WHERE key = ? AND status != "revoked"')
+            .bind(authInfo.keyOrIp)
+            .all();
           return json({ keys: results || [] });
         } catch {
           return json({ keys: [] });
@@ -600,13 +852,12 @@ export default {
         const body = (await request.json().catch(() => ({}))) as { name?: string };
         const keyName = (body.name || 'API Key').trim();
         const newKey = `sk_live_free_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
-        const userId = 'usr_default';
+        const userId = `usr_${crypto.randomUUID().replace(/-/g, '')}`;
 
         if (env.DB) {
           try {
-            // Guarantee user existence first to satisfy D1 Foreign Key constraints
             await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, plan) VALUES (?, ?, 'pro')")
-              .bind(userId, 'user@herdown.com')
+              .bind(userId, `${userId}@key.local`)
               .run();
 
             await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
@@ -621,6 +872,10 @@ export default {
 
     if (url.pathname.startsWith('/v1/keys/') && request.method === 'DELETE') {
       const keyToDelete = url.pathname.replace('/v1/keys/', '');
+      const authInfo = await verifyApiKeyOrIp(request, env);
+      if (!authInfo.isKey || authInfo.keyOrIp !== keyToDelete) {
+        return json({ success: false, message: '只能删除当前使用的API密钥' }, { status: 401 });
+      }
       if (env.DB && keyToDelete) {
         try {
           await env.DB.prepare('UPDATE api_keys SET status = "revoked" WHERE key = ?').bind(keyToDelete).run();
@@ -629,6 +884,13 @@ export default {
         }
       }
       return json({ success: true, key: keyToDelete });
+    }
+
+    if (url.pathname === '/v1/credits' && request.method === 'GET') {
+      const authInfo = await verifyApiKeyOrIp(request, env);
+      if (!authInfo.isKey) return json({ success: false, message: '请提供有效的API密钥' }, { status: 401 });
+      const creditStatus = await getCreditStatus(authInfo.keyOrIp, env);
+      return json({ success: true, credits: creditStatus.balance, has_paid_credits: creditStatus.hasPurchasedCredits });
     }
 
     // Dashboard API: Usage Statistics
