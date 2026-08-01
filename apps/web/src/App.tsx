@@ -320,6 +320,15 @@ export function App() {
   const fetchKeys = async () => {
     if (sessionUser) {
       try {
+        const savedKeys = JSON.parse(window.localStorage.getItem('herdown_api_keys') || '[]');
+        if (Array.isArray(savedKeys)) {
+          await Promise.all(savedKeys.map((item: ApiKeyItem) => fetch('/v1/account/link-key', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: item.key }),
+          }).catch(() => undefined)));
+        }
         const response = await fetch('/v1/keys', { credentials: 'include' });
         const data = await response.json();
         if (response.ok && Array.isArray(data.keys)) {
