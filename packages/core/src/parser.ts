@@ -80,6 +80,66 @@ const extractTitle = (html: string, fallbackUrl: string): string => {
   return fallbackUrl || 'Untitled Page';
 };
 
+type EmbeddedJsonContent = {
+  content: string;
+  title?: string;
+  images: string[];
+};
+
+const extractEmbeddedJsonContent = (html: string): EmbeddedJsonContent | null => {
+  const candidates = [
+    /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1],
+    /<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1],
+    /(?:window\.)?(?:__INITIAL_STATE__|__NUXT__|__APOLLO_STATE__)\s*=\s*([\s\S]*?)(?:;\s*<\/script>|<\/script>)/i.exec(html)?.[1],
+  ].filter((value): value is string => Boolean(value));
+
+  let state: unknown;
+  for (const candidate of candidates) {
+    try {
+      state = JSON.parse(candidate.trim().replace(/;\s*$/, ''));
+      break;
+    } catch {
+      // Try the next supported embedded JSON format.
+    }
+  }
+  if (!state) return null;
+
+  const contentCandidates: Array<{ value: string; score: number }> = [];
+  const titleCandidates: string[] = [];
+  const images = new Set<string>();
+  const contentKeys = /^(content|body|html|articlebody|article_content|正文|text|description)$/i;
+  const titleKeys = /^(title|headline|name|article_title|page_title)$/i;
+  const imageKeys = /(?:image|images|thumbnail|cover|src|url)/i;
+  const walk = (value: unknown, key = '', depth = 0): void => {
+    if (depth > 12 || value === null || value === undefined) return;
+    if (typeof value === 'string') {
+      const text = value.replace(/\\u002F/gi, '/').replace(/\\\//g, '/').trim();
+      if (titleKeys.test(key) && text.length > 2 && text.length < 300) titleCandidates.push(text);
+      if (contentKeys.test(key) && text.length >= 80) {
+        const htmlScore = /<\/?(?:p|article|section|div|h[1-6]|img|br)[\s>]/i.test(text) ? 3 : 1;
+        contentCandidates.push({ value: text, score: text.length * htmlScore });
+      }
+      if (imageKeys.test(key)) {
+        (text.match(/https?:\/\/[^\s"'<>]+/g) || []).forEach(url => images.add(url.replace(/[),;]+$/, '')));
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.slice(0, 200).forEach(item => walk(item, key, depth + 1));
+      return;
+    }
+    if (typeof value === 'object') {
+      Object.entries(value as Record<string, unknown>).slice(0, 300).forEach(([childKey, childValue]) => walk(childValue, childKey, depth + 1));
+    }
+  };
+  walk(state);
+
+  const best = contentCandidates.sort((a, b) => b.score - a.score)[0];
+  if (!best) return null;
+  const content = /<\/?[a-z][\s>]/i.test(best.value) ? best.value : `<p>${best.value}</p>`;
+  return { content, title: titleCandidates[0], images: Array.from(images).slice(0, 100) };
+};
+
 // WeChat Photo Gallery (picture_page_info_list) image extraction with deduplication
 const extractWeChatPhotoGalleryImages = (html: string): string[] => {
   const images: string[] = [];
@@ -747,13 +807,17 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
     } catch {}
   }
 
-  const title = jsonTitle || extractTitle(rawHtml, targetUrl);
-  const meta = extractMetadata(rawHtml, platform);
+  const originalHtml = rawHtml;
+  const embeddedJson = platform === 'general' ? extractEmbeddedJsonContent(originalHtml) : null;
+  if (!jsonTitle && embeddedJson?.title) jsonTitle = embeddedJson.title;
+
+  const title = jsonTitle || extractTitle(originalHtml, targetUrl);
+  const meta = extractMetadata(originalHtml, platform);
   if (jsonAuthor) meta.author = jsonAuthor;
   if (jsonDate) meta.publish_date = jsonDate;
 
-  let extractedContent = rawHtml;
-  let images: string[] = [];
+  let extractedContent = embeddedJson?.content || rawHtml;
+  let images: string[] = embeddedJson?.images || [];
 
   if (platform === 'wechat') {
     const res = extractWeChatBody(html);
