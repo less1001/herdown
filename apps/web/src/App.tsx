@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import JSZip from 'jszip';
 import {
   Sparkles,
@@ -49,6 +49,60 @@ interface ApiKeyItem {
 
 type ToolSlug = 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'help' | 'faq' | null;
 type ProductCode = 'starter' | 'standard' | 'bulk';
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: Record<string, unknown>) => string | number;
+      remove?: (widgetId: string | number) => void;
+    };
+  }
+}
+
+function TurnstileWidget({ siteKey, onToken }: { siteKey: string; onToken: (token: string) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onTokenRef = useRef(onToken);
+  onTokenRef.current = onToken;
+
+  useEffect(() => {
+    if (!siteKey) return;
+    let widgetId: string | number | undefined;
+    let active = true;
+    const render = () => {
+      if (!active || !containerRef.current || !window.turnstile) return;
+      containerRef.current.replaceChildren();
+      widgetId = window.turnstile.render(containerRef.current, {
+        sitekey: siteKey,
+        theme: 'dark',
+        callback: (token: string) => onTokenRef.current(token),
+        'expired-callback': () => onTokenRef.current(''),
+        'error-callback': () => onTokenRef.current(''),
+      });
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-herdown-turnstile]');
+    if (window.turnstile) {
+      render();
+    } else if (existingScript) {
+      existingScript.addEventListener('load', render, { once: true });
+    } else {
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      script.async = true;
+      script.defer = true;
+      script.dataset.herdownTurnstile = 'true';
+      script.addEventListener('load', render, { once: true });
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      active = false;
+      if (widgetId !== undefined) window.turnstile?.remove?.(widgetId);
+    };
+  }, [siteKey]);
+
+  return <div ref={containerRef} className="min-h-16" />;
+}
 
 const pricingPackages: Array<{ code: ProductCode; price: string; credits: string; label: string; featured?: boolean }> = [
   { code: 'starter', price: '9.99', credits: '10,000', label: '入门包' },
@@ -205,6 +259,9 @@ export function App() {
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
   const [creatingKey, setCreatingKey] = useState(false);
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [keyCreationMessage, setKeyCreationMessage] = useState('');
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [freeRemaining, setFreeRemaining] = useState<number | null>(null);
   const [hasPaidCredits, setHasPaidCredits] = useState(false);
@@ -215,6 +272,10 @@ export function App() {
   useEffect(() => {
     fetchKeys();
     fetchStats();
+    fetch('/v1/security-config')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => setTurnstileSiteKey(typeof data?.turnstile_site_key === 'string' ? data.turnstile_site_key : ''))
+      .catch(() => setTurnstileSiteKey(''));
   }, []);
 
   useEffect(() => {
@@ -402,16 +463,22 @@ export function App() {
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
+    if (!turnstileSiteKey || !turnstileToken) {
+      setKeyCreationMessage('请先完成安全验证。');
+      return;
+    }
     setCreatingKey(true);
+    setKeyCreationMessage('');
     try {
       const res = await fetch('/v1/keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newKeyName.trim() }),
+        body: JSON.stringify({ name: newKeyName.trim(), turnstile_token: turnstileToken }),
       });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         setNewKeyName('');
+        setTurnstileToken('');
         const item: ApiKeyItem = {
           key: data.key,
           name: data.name,
@@ -420,9 +487,11 @@ export function App() {
         };
         saveKeys([...apiKeys.filter(key => key.key !== item.key), item]);
         await fetchStats();
+      } else {
+        setKeyCreationMessage(data.message || 'API密钥创建失败，请稍后重试。');
       }
     } catch {
-      // ignore
+      setKeyCreationMessage('网络异常，API密钥创建失败。');
     } finally {
       setCreatingKey(false);
     }
@@ -980,22 +1049,33 @@ export function App() {
             </div>
 
             {/* Key Creator */}
-            <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b] flex items-center gap-3">
-              <input
-                type="text"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="输入 Key 名称 (如: Claude Agent / Cursor Pro)"
-                className="flex-1 px-4 py-2 rounded-lg bg-[#090d12] border border-[#1e293b] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-              <button
-                onClick={handleCreateKey}
-                disabled={creatingKey || !newKeyName.trim()}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center gap-1.5 transition"
-              >
-                <Plus className="w-4 h-4" />
-                生成新 Key
-              </button>
+            <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="输入Key名称，如ClaudeAgent或CursorPro"
+                  className="flex-1 px-4 py-2 rounded-lg bg-[#090d12] border border-[#1e293b] text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  onClick={handleCreateKey}
+                  disabled={creatingKey || !newKeyName.trim() || !turnstileToken}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-semibold text-white flex items-center justify-center gap-1.5 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  生成新Key
+                </button>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                <div>
+                  {turnstileSiteKey ? <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} /> : (
+                    <p className="text-xs text-amber-300">安全验证正在配置中，暂时不能创建新密钥。</p>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 leading-6">同一IP每周最多创建1个API密钥。免费额度按IP、设备和密钥共同计算，换密钥不会重置。</p>
+              </div>
+              {keyCreationMessage && <p className="text-xs text-rose-300">{keyCreationMessage}</p>}
             </div>
 
             {/* Keys Table */}
