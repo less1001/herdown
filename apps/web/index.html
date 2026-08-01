@@ -3,14 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Herdown (herdown.com) - 给 AI Agent 用的干净 Markdown 入口</title>
-    <meta name="description" content="专为 AI Agent、开发者与自动化工作流打造的网页转 Markdown 工具链、REST API 与 MCP 平台。" />
+    <title>Herdown - Clean Markdown for AI agents</title>
+    <meta name="description" content="Turn webpages, documents, and images into clean materials for AI workflows. 将网页、文档和图片整理成适合AI使用的干净资料。" />
+    <meta name="keywords" content="web to markdown, webpage to markdown, document to markdown, AI knowledge base, REST API, MCP, 网页转Markdown, 文档转Markdown" />
     <meta name="theme-color" content="#090d10" />
-    <meta property="og:title" content="Herdown - 给 AI Agent 用的干净 Markdown 入口" />
-    <meta property="og:description" content="把网页、文档和图片整理成适合AI知识库使用的干净资料。" />
+    <meta property="og:title" content="Herdown - Clean Markdown for AI agents" />
+    <meta property="og:description" content="Turn webpages, documents, and images into clean materials for AI workflows." />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://herdown.com/" />
     <link rel="canonical" href="https://herdown.com/" />
+    <link rel="alternate" hreflang="en" href="https://herdown.com/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://herdown.com/" />
+    <link rel="alternate" hreflang="x-default" href="https://herdown.com/" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -18,5 +24,29 @@
   <body class="bg-[#090d10] text-[#e1e7ec] antialiased selection:bg-[#0f6b4f] selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script type="application/ld+json">
+      {
+        "@context":"https://schema.org",
+        "@type":"WebApplication",
+        "name":"Herdown",
+        "url":"https://herdown.com/",
+        "applicationCategory":"DeveloperApplication",
+        "operatingSystem":"Web",
+        "description":"Turn webpages, documents, and images into clean Markdown and structured materials for AI workflows.",
+        "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},
+        "featureList":["Webpage to Markdown","Document to Markdown","REST API","MCP","CLI","Browser extension"]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context":"https://schema.org",
+        "@type":"FAQPage",
+        "mainEntity":[
+          {"@type":"Question","name":"What does Herdown do?","acceptedAnswer":{"@type":"Answer","text":"Herdown turns webpages, documents, and images into clean Markdown and structured materials for AI workflows."}},
+          {"@type":"Question","name":"Is my content stored long-term?","acceptedAnswer":{"@type":"Answer","text":"Herdown processes content in real time and does not provide content hosting or a knowledge base."}},
+          {"@type":"Question","name":"Does Herdown auto-renew paid credits?","acceptedAnswer":{"@type":"Answer","text":"Paid credit packs are one-time purchases. Credits do not expire and do not auto-renew."}}
+        ]
+      }
+    </script>
   </body>
 </html>
