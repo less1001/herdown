@@ -422,7 +422,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
   return (
     <div className="mx-auto max-w-[1440px]">
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[220px_minmax(0,1fr)_180px]">
-        <aside className="self-start xl:sticky xl:top-6">
+        <aside className="hidden self-start xl:sticky xl:top-6 xl:block">
           <div className="rounded-2xl border border-[#1e293b] bg-[#0d131c] p-4">
             <div className="mb-4 flex items-center gap-2">
               <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-300"><FileText className="h-4 w-4" /></div>
@@ -445,6 +445,20 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             </nav>
           </div>
         </aside>
+
+        <details className="xl:hidden rounded-2xl border border-[#1e293b] bg-[#0d131c]">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-white">{isEnglish ? 'Browse documentation' : '浏览文档目录'}</summary>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-[#1e293b] p-4 sm:grid-cols-3">
+            {sections.map(section => (
+              <div key={section.title}>
+                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{section.title}</p>
+                <div className="space-y-1">
+                  {section.items.map(([id, label]) => <a key={id} href={'#' + id} className="block py-1 text-xs text-slate-400 hover:text-emerald-300">{label}</a>)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </details>
 
         <article className="min-w-0 space-y-12">
           <section id="overview" className="scroll-mt-8">
@@ -996,22 +1010,22 @@ export function App() {
 
       {/* Top Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#070a0e]/80 border-b border-[#1e293b]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center gap-2">
+          <a href="/" className="flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0f6b4f] to-[#10b981] p-[1px] shadow-lg shadow-[#0f6b4f]/20">
               <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-base">
                 HD
               </div>
             </div>
             <div>
-              <span className="font-extrabold text-xl tracking-tight text-white font-['Outfit']">
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white font-['Outfit']">
                 Herdown
               </span>
             </div>
           </a>
 
           {/* Navigation Tabs */}
-          <nav className="flex overflow-x-auto whitespace-nowrap scrollbar-none items-center gap-1 bg-[#111823] p-1 rounded-xl border border-[#1e293b] max-w-[60%] sm:max-w-none">
+          <nav className="hidden sm:flex overflow-x-auto whitespace-nowrap scrollbar-none items-center gap-1 bg-[#111823] p-1 rounded-xl border border-[#1e293b] max-w-[60%] sm:max-w-none">
             <button
               onClick={() => setActiveTab('converter')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
@@ -1104,13 +1118,13 @@ export function App() {
             </button>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
             <button
               onClick={() => setShowUpgradeModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              {ui.upgrade}
+              <span className="hidden sm:inline">{ui.upgrade}</span>
             </button>
             <button
               onClick={() => setLanguage(current => current === 'zh' ? 'en' : 'zh')}
@@ -1162,7 +1176,7 @@ export function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        <div className="mb-7 flex flex-wrap items-center gap-2 rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
+        <div className="mb-7 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
           <span className="px-3 py-2 font-semibold text-slate-500">{ui.tools}</span>
           <a href="/tools" className="rounded-xl px-3 py-2 text-emerald-300 hover:bg-[#1e293b] transition">{language === 'en' ? 'Unified entry' : '统一入口'}</a>
           {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
