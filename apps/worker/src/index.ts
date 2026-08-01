@@ -1086,10 +1086,12 @@ export default {
 
       const body = (await request.json().catch(() => ({}))) as { url?: string; limit?: number };
       const targetUrl = (body.url || '').trim();
-      const limit = Math.min(20, Math.max(1, body.limit || 5));
+      const requestedLimit = Math.max(1, Math.floor(Number(body.limit) || 5));
       const creditStatus = authInfo.isKey ? await getCreditStatus(authInfo.keyOrIp, env) : { balance: 0, hasPurchasedCredits: false };
       const freeQuota = creditStatus.hasPurchasedCredits ? null : await getFreeQuotaStatus(getFreeQuotaIdentity(authInfo), env);
-      const crawlLimit = creditStatus.hasPurchasedCredits ? Math.min(limit, creditStatus.balance) : Math.min(limit, freeQuota?.remaining || 0);
+      const crawlLimit = creditStatus.hasPurchasedCredits
+        ? Math.min(requestedLimit, creditStatus.balance, 100)
+        : Math.min(requestedLimit, 5, freeQuota?.remaining || 0);
 
       if (creditStatus.hasPurchasedCredits && crawlLimit < 1) {
         return json({ success: false, code: 'CREDITS_EXHAUSTED', message: '点数已用完，请购买新的点数包后继续使用' }, { status: 402 });

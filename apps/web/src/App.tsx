@@ -296,6 +296,7 @@ export function App() {
   
   // Crawl state
   const [crawlUrl, setCrawlUrl] = useState('');
+  const [crawlPageLimit, setCrawlPageLimit] = useState(5);
   const [crawlLoading, setCrawlLoading] = useState(false);
   const [crawlResult, setCrawlResult] = useState<any>(null);
   const [downloadingZip, setDownloadingZip] = useState(false);
@@ -539,7 +540,10 @@ export function App() {
           'Content-Type': 'application/json',
           ...(activeUserKey ? { 'Authorization': `Bearer ${activeUserKey}` } : {}),
         },
-        body: JSON.stringify({ url: crawlUrl.trim(), limit: 5 }),
+        body: JSON.stringify({
+          url: crawlUrl.trim(),
+          limit: hasPaidCredits ? Math.min(100, Math.max(1, crawlPageLimit)) : Math.min(5, Math.max(1, crawlPageLimit)),
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -803,10 +807,11 @@ export function App() {
             ) : (
               <button
                 onClick={handleGoogleLogin}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-slate-900 hover:bg-slate-200 text-xs font-bold transition"
+                className="p-2 rounded-lg bg-white text-slate-900 hover:bg-slate-200 transition"
+                title={ui.login}
+                aria-label={ui.login}
               >
                 <LogIn className="w-3.5 h-3.5" />
-                {ui.login}
               </button>
             )}
             <a
@@ -1135,6 +1140,17 @@ export function App() {
                   placeholder="输入目标域名（如 https://docs.example.com 或 https://example.com/sitemap.xml）"
                   className="flex-1 px-4 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                 />
+                <label className="w-28 shrink-0 text-xs text-slate-400">
+                  抓取页数
+                  <input
+                    type="number"
+                    min={1}
+                    max={hasPaidCredits ? 100 : 5}
+                    value={crawlPageLimit}
+                    onChange={(e) => setCrawlPageLimit(Math.max(1, Math.min(hasPaidCredits ? 100 : 5, Number(e.target.value) || 1)))}
+                    className="mt-1 w-full px-3 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </label>
                 <button
                   onClick={handleCrawl}
                   disabled={crawlLoading || !crawlUrl.trim()}
@@ -1144,6 +1160,7 @@ export function App() {
                   {crawlLoading ? '递归抓取中...' : '开始全站 Crawl'}
                 </button>
               </div>
+              <p className="text-xs text-slate-500">{hasPaidCredits ? '付费点数按实际抓取页数扣除，单次最多100页。' : '免费用户每次最多抓取5页，付费后可提高单次抓取页数。'}</p>
 
               {crawlResult && (
                 <div className="mt-6 space-y-4">
