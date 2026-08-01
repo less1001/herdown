@@ -43,7 +43,7 @@ interface ApiKeyItem {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli' | 'extension'>('converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'mcp' | 'cli' | 'extension' | 'skills'>('converter');
   const [inputUrl, setInputUrl] = useState('');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
@@ -205,7 +205,7 @@ export function App() {
     }
   };
 
-  const handleStripeCheckout = async (plan: 'pro' | 'team' | 'onetime') => {
+  const handleCheckout = async (plan: 'pro' | 'team' | 'onetime') => {
     setCheckoutLoading(true);
     try {
       const res = await fetch('/v1/checkout', {
@@ -217,10 +217,10 @@ export function App() {
       if (data.success && data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        alert('Stripe 订阅链接生成失败');
+        alert('支付链接生成失败');
       }
     } catch {
-      alert('Stripe 订阅通道初始化失败');
+      alert('支付通道初始化失败');
     } finally {
       setCheckoutLoading(false);
     }
@@ -371,6 +371,17 @@ export function App() {
             >
               🧩 浏览器插件
             </button>
+            <button
+              onClick={() => setActiveTab('skills')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'skills'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              提取规则 (Skills)
+            </button>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -379,7 +390,7 @@ export function App() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/20 transition"
             >
               <CreditCard className="w-3.5 h-3.5" />
-              升级 Stripe Pro
+              升级配额
             </button>
             <a
               href="https://github.com/less1001/herdown"
@@ -403,15 +414,15 @@ export function App() {
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                支持微信/小红书/知乎全网提取 + 全站 Sitemap 递归爬取
+                支持网页、文档和图片整理成适合AI知识库使用的干净资料
               </div>
               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-normal">
                 给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown 入口</span>
               </h1>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                微信公众号、小红书笔记、知乎专栏/回答、X/Twitter 及通用网页。
+                通用网页、公众号文章、PDF、Word、PPT、Excel、图片和截图。
                 <br className="hidden sm:block" />
-                2ms 极速解析，零存储隐私安全。
+                先把资料清干净，再交给你的AI工作流或知识库。
               </p>
               
               {/* Presets */}
@@ -421,19 +432,7 @@ export function App() {
                   onClick={() => fillPreset('https://mp.weixin.qq.com/s/sample_article')}
                   className="px-2.5 py-1 rounded-md bg-[#111823] border border-[#1e293b] text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400 transition"
                 >
-                  🟢 微信贴图长文
-                </button>
-                <button
-                  onClick={() => fillPreset('https://www.xiaohongshu.com/explore/sample_note')}
-                  className="px-2.5 py-1 rounded-md bg-[#111823] border border-[#1e293b] text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400 transition"
-                >
-                  🔴 小红书图文笔记
-                </button>
-                <button
-                  onClick={() => fillPreset('https://zhuanlan.zhihu.com/p/sample_zhihu')}
-                  className="px-2.5 py-1 rounded-md bg-[#111823] border border-[#1e293b] text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-400 transition"
-                >
-                  🔵 知乎 问答
+                  网页文章
                 </button>
               </div>
             </div>
@@ -737,7 +736,7 @@ export function App() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
               >
                 <CreditCard className="w-4 h-4" />
-                Stripe 一键升级配额
+                升级配额
               </button>
             </div>
 
@@ -844,7 +843,7 @@ export function App() {
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
               <h2 className="text-2xl font-bold text-white">远程 MCP & REST 高级 API 指南</h2>
-              <p className="text-slate-400 text-xs mt-1">支持全站 Crawl、网页截图 Screenshot、RAG Vector 分块及 MCP 协议</p>
+                <p className="text-slate-400 text-xs mt-1">支持全站抓取、网页截图、结构化接口和MCP协议</p>
             </div>
 
             {/* MCP Integration Card */}
@@ -902,7 +901,7 @@ export function App() {
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
               <h2 className="text-2xl font-bold text-white">npx @herdown/cli 命令行工具</h2>
-              <p className="text-slate-400 text-xs mt-1">无需全局安装，在终端一键抓取并生成干净 Markdown</p>
+                <p className="text-slate-400 text-xs mt-1">无需全局安装，在终端一键抓取并生成干净Markdown</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
@@ -917,18 +916,69 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
           </div>
         )}
 
-        {/* TAB 6: SKILL */}
-        {activeTab === 'skill' && (
-          <div className="space-y-8 max-w-4xl mx-auto">
+        {/* TAB 6: SKILLS */}
+        {activeTab === 'skills' && (
+          <div className="space-y-8 max-w-4xl mx-auto animate-fadeIn">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
                 <Sparkles className="w-3.5 h-3.5" />
-                标准 Agent Skill 扩展包 (SKILL.md)
+                标准 Agent Skill 扩展包 & 平台支持规范
               </div>
               <h2 className="text-2xl font-bold text-white">一键为 AI Agent 安装 Herdown 技能</h2>
-              <p className="text-slate-400 text-xs mt-1">
-                兼容 Hermes Agent, Claude Code, OpenClaw, QClaw, Antigravity 等所有标准 Agent。直接将 Skill 内容配置到你的 Agent 中即可。
+                <p className="text-slate-400 text-xs mt-1">
+                兼容 Hermes Agent, Claude Code, OpenClaw, QClaw, Antigravity 等标准Agent。直接将Skill内容配置到你的Agent中即可。
               </p>
+            </div>
+
+            {/* 平台规则细则卡片 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">🟢 微信公众号 (mp.weixin.qq)</span>
+<span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                </div>
+                <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
+                  <li>自动过滤底部在看、分享、往期推荐</li>
+                  <li>支持 table 微信特殊表格的 Markdown 还原</li>
+                  <li><strong>特有抗防盗链</strong>：自动注入无 Referer 代理图片，便于本地预览</li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">网页图文 (通用)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                </div>
+                <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
+                  <li>自动剥离底部分享、相似推荐、评论区</li>
+                  <li>一键提取完整图集及高清原图，还原排版</li>
+                  <li>支持无 Referer 高清图片防盗链突破</li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">问答文章 (知乎)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                </div>
+                <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
+                  <li>支持单篇回答、多条回答及超长 Question 提取</li>
+                  <li>自动剔除顶部搜索、侧边热榜、折叠评论区</li>
+                  <li>支持 19 位超长大数 ID 与顶级 PC 浏览器伪装</li>
+                </ul>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
+                <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
+                  <span className="text-xs font-bold text-white flex items-center gap-2">社交帖子 (X / Twitter)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                </div>
+                <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
+                  <li>一键剥离侧边趋势、推荐关注和多余的时间戳</li>
+                  <li>支持多图、主帖正文提取并规范排版</li>
+                  <li>自动附带适合本地知识管理工具的元数据属性</li>
+                </ul>
+              </div>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
@@ -938,7 +988,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                   onClick={() => {
                     navigator.clipboard.writeText(`---
 name: herdown
-description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
+                    description: Complete web-to-markdown, sitemap crawling, webpage screenshotting, and clean data extraction skill for AI agents. Activates when fetching web pages, extracting公众号文章,问答和图文内容, crawling sitemaps, or preparing clean markdown for downstream AI tools.
 ---
 
 # Herdown — AI Agent Skill Reference
@@ -956,12 +1006,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`);
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
 {`---
 name: herdown
-description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
+                    description: Complete web-to-markdown, sitemap crawling, webpage screenshotting, and clean data extraction skill for AI agents. Activates when fetching web pages, extracting公众号文章,问答和图文内容, crawling sitemaps, or preparing clean markdown for downstream AI tools.
 ---
 
 # Herdown — AI Agent Skill Reference
 
-当用户需要读取网页、微信公众号长文、知乎回答或小红书笔记时，请直接在终端执行：
+当用户需要读取网页、公众号文章、问答或图文内容时，请直接在终端执行：
 npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               </pre>
             </div>
@@ -974,13 +1024,13 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             <div className="text-center space-y-4 pt-4">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                Herdown 浏览器扩展 V1.0 (Obsidian 剪藏神器)
+                Herdown 浏览器扩展 V1.0
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
                 直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span>
               </h1>
               <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-                免除一切云端服务器转算成本！通过浏览器原生 DOM 渲染，利用您已登录的 Cookie，100% 免疫知乎、微信公众号与小红书的防爬封锁。
+                免除一切云端服务器转算成本！通过浏览器原生 DOM 渲染，利用您已登录的 Cookie，直接把页面整理成干净资料。
               </p>
             </div>
 
@@ -1030,11 +1080,11 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-300">
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">💜 Obsidian 直连 (obsidian://)</strong>
-                  无需下载保存文件，点击按钮一秒调起 Obsidian 原生软件生成带 YAML 属性与 Tags 标签的新笔记。
+                  <strong className="text-emerald-400 block mb-1">本地Markdown导出</strong>
+                  无需额外服务器，点击按钮即可导出适合本地工具继续处理的Markdown。
                 </div>
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">💡 知乎定制化提取</strong>
+                  <strong className="text-emerald-400 block mb-1">问答定制化提取</strong>
                   自动感应知乎问答，提供 <code className="text-slate-200">[Top N 回答数]</code> 与 <code className="text-slate-200">[高赞/最新排序]</code> 自由选框。
                 </div>
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
@@ -1051,7 +1101,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
         )}
       </main>
 
-      {/* Stripe Pricing Modal */}
+      {/* Pricing Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0f1722] border border-[#1e293b] rounded-2xl max-w-4xl w-full p-6 space-y-6 relative shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -1064,10 +1114,10 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
 
             <div className="text-center space-y-2">
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                Stripe 极速安全收银台
+                支付收银台
               </span>
-              <h3 className="text-2xl font-extrabold text-white">升级 Herdown 商业配额</h3>
-              <p className="text-xs text-slate-400">解锁高额度 API 解析、全站 Sitemap Crawl 与网页截图功能</p>
+              <h3 className="text-2xl font-extrabold text-white">升级Herdown商业配额</h3>
+              <p className="text-xs text-slate-400">解锁高额度API解析、全站抓取与网页截图功能</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
@@ -1078,25 +1128,25 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                 </div>
                 <div className="space-y-2 pt-1">
                   <h4 className="text-base font-bold text-white flex items-center gap-1.5">
-                    微信/支付宝单次加油包
+                    单次加油包
                   </h4>
                   <div className="text-2xl font-black text-emerald-400">¥68.00 <span className="text-xs text-slate-400 font-normal">/ 10,000次</span></div>
                   <p className="text-[11px] text-emerald-300 font-medium bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                    💡 想用微信支付或支付宝请选择此选项（一次性买断，无自动续费）
+                    💡 适合想先小额试用的用户，一次性买断，无自动续费
                   </p>
                   <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
                     <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 10,000 次 API 解析额度</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持微信扫码 & 支付宝</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持多种支付方式</li>
                     <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 额度永不过期，不自动续费</li>
                   </ul>
                 </div>
                 <button
-                  onClick={() => handleStripeCheckout('onetime')}
+                  onClick={() => handleCheckout('onetime')}
                   disabled={checkoutLoading}
                   className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
                 >
                   {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  微信 / 支付宝买断点数
+                  购买点数
                 </button>
               </div>
 
@@ -1113,12 +1163,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                   </ul>
                 </div>
                 <button
-                  onClick={() => handleStripeCheckout('pro')}
+                  onClick={() => handleCheckout('pro')}
                   disabled={checkoutLoading}
                   className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
                 >
                   {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  Stripe 订阅 Pro ($5.99/月)
+                  订阅 Pro ($5.99/月)
                 </button>
               </div>
 
@@ -1135,7 +1185,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                   </ul>
                 </div>
                 <button
-                  onClick={() => handleStripeCheckout('team')}
+                  onClick={() => handleCheckout('team')}
                   disabled={checkoutLoading}
                   className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
                 >
