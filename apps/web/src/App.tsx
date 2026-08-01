@@ -206,6 +206,10 @@ export function App() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    document.title = toolSlug ? `${toolPageInfo[toolSlug].title} | Herdown` : 'Herdown - 给AIAgent用的干净Markdown入口';
+  }, [toolSlug]);
+
   const fetchKeys = async () => {
     try {
       const savedKeys = JSON.parse(window.localStorage.getItem('herdown_api_keys') || '[]');
