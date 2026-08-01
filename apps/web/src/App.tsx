@@ -334,20 +334,45 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
 
 function DocsPage({ language }: { language: Language }) {
   const ui = messages[language];
+  const isEnglish = language === 'en';
+  const copy = {
+    quickTitle: isEnglish ? '1. Quick start' : '1、快速开始',
+    quickBody: isEnglish ? 'For one page, paste a public URL on the homepage and click Convert to Markdown. Copy the result or download it as a Markdown file.' : '处理单个网页时，在首页粘贴公开网页链接，点击转换为Markdown。结果可以复制，也可以下载为Markdown文件。',
+    apiTitle: isEnglish ? '2. REST API' : '2、RESTAPI',
+    apiBody: isEnglish ? 'Create a key from the API page and send it in the Authorization header. The website and API use the same domain.' : '在API页面创建密钥，然后放进Authorization请求头。网站和API使用同一个域名。',
+    parseTitle: isEnglish ? 'Parse one page' : '单页解析',
+    crawlTitle: isEnglish ? 'Crawl a website' : '全站抓取',
+    responseTitle: isEnglish ? 'Response fields' : '返回字段',
+    responseBody: isEnglish ? 'The parse response includes title, markdown, images, platform, elapsed_ms, source_tokens, markdown_tokens, token_savings, and token_savings_percent.' : '单页解析会返回标题、Markdown、图片、平台、耗时，以及原网页Token、清洗后Token、节省Token和节省比例。',
+    mcpTitle: isEnglish ? '3. Remote MCP' : '3、远程MCP',
+    mcpBody: isEnglish ? 'Use this endpoint in an MCP client. The server exposes parse_webpage, crawl_website, and health_check.' : '在支持远程MCP的客户端中使用这个地址。服务提供parse_webpage、crawl_website和health_check。',
+    cliTitle: isEnglish ? '4. CLI' : '4、CLI命令行',
+    cliBody: isEnglish ? 'Run the CLI without a global install. Use -o to save Markdown locally and -k to use your API key.' : '不需要全局安装，直接运行CLI。使用-o保存Markdown，使用-k传入API密钥。',
+    workflowTitle: isEnglish ? '5. Workflow integrations' : '5、工作流平台接入',
+    workflowBody: isEnglish ? 'Herdown cleans the source material. The workflow platform receives the markdown field and continues with summarization, tagging, storage, or automation.' : 'Herdown负责清洗资料，工作流平台接收返回结果里的markdown字段，再继续摘要、打标签、入库或自动化处理。',
+    localTitle: isEnglish ? '6. Local document and image tools' : '6、本地文档和图片工具',
+    localBody: isEnglish ? 'TXT and Markdown files can be handled in the browser. Word, PDF, PPT, and Excel use local MarkItDown. Scans and screenshots use the local Unlimited-OCRSkill. Files do not need to be uploaded to Herdown.' : 'TXT和Markdown文件可以在浏览器本地处理。Word、PDF、PPT和Excel使用本地MarkItDown，扫描件和截图使用本地Unlimited-OCRSkill。文件不需要上传到Herdown。',
+    securityTitle: isEnglish ? '7. Quota and security' : '7、额度和安全',
+    securityBody: isEnglish ? 'Free users receive 1,000 parses per month. Free site crawl is limited to 5 pages per request. Paid credits are one-time credits, do not expire, and paid crawl supports up to 100 pages per request within the available balance. Private network targets are blocked.' : '免费用户每月1000次解析，免费全站抓取每次最多5页。付费点数一次性购买，不过期；付费全站抓取每次最多100页，但不能超过账户剩余点数。内网和私有地址会被拦截。',
+  };
+  const parseExample = ['curl -X POST https://herdown.com/v1/parse \\', '  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\', '  -H "Content-Type: application/json" \\', "  -d '{\"url\":\"https://example.com/article\"}'"].join('\n');
+  const crawlExample = ['curl -X POST https://herdown.com/v1/crawl \\', '  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\', '  -H "Content-Type: application/json" \\', "  -d '{\"url\":\"https://example.com\",\"limit\":5}'"].join('\n');
+  const mcpExample = ['{', '  "mcpServers": {', '    "herdown": {', '      "url": "https://herdown.com/mcp"', '    }', '  }', '}'].join('\n');
+  const cliExample = ['npx @herdown/cli "https://example.com/article"', 'npx @herdown/cli "https://example.com/article" -o article.md', 'npx @herdown/cli "https://example.com/article" -k "sk_live_YOUR_API_KEY"'].join('\n');
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
         <span className="text-xs font-semibold text-emerald-400">{ui.docsTitle}</span>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{ui.docsSubtitle}</h1>
-        <p className="text-sm text-slate-400 mt-3 leading-7">{language === 'en' ? 'Choose a guide below. The examples only use features currently available on Herdown.' : '从下面选择对应说明。文档只介绍当前Herdown已经提供的功能。'}</p>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{isEnglish ? 'Copy the examples below and connect Herdown to your AI workflow. The guides describe features currently available on Herdown.' : '下面的示例可以直接复制使用。文档只介绍当前Herdown已经提供的功能。'}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          [ui.quickStart, ui.docsStart],
-          [ui.apiDocs, ui.docsApi],
-          [ui.integrations, ui.docsWorkflow],
-          [ui.localTools, ui.docsLocal],
-          [ui.security, language === 'en' ? 'Free quota is shared by user, IP, device, and API key. Paid credits do not expire and do not renew automatically.' : '免费额度按用户、IP、设备和API密钥共同计算。付费点数不过期，也不会自动续费。'],
+          [copy.quickTitle, copy.quickBody],
+          [copy.apiTitle, copy.apiBody],
+          [copy.workflowTitle, copy.workflowBody],
+          [copy.localTitle, copy.localBody],
+          [copy.securityTitle, copy.securityBody],
         ].map(([title, body]) => (
           <div key={title} className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b]">
             <h2 className="font-bold text-white">{title}</h2>
@@ -356,18 +381,57 @@ function DocsPage({ language }: { language: Language }) {
         ))}
       </div>
       <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
-        <h2 className="text-xl font-bold text-white">{language === 'en' ? 'REST API' : 'RESTAPI'}</h2>
-        <p className="text-sm text-slate-400 leading-7">{language === 'en' ? 'Create an API key from the API tab, then send it as a Bearer token.' : '在API页面创建密钥，然后把密钥作为BearerToken发送。'}</p>
-        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{`curl -X POST https://herdown.com/v1/parse \\
-  -H "Authorization: Bearer sk_live_YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{"url":"https://example.com/article"}'`}</pre>
+        <h2 className="text-xl font-bold text-white">{copy.apiTitle}</h2>
+        <p className="text-sm text-slate-400 leading-7">{copy.apiBody}</p>
+        <h3 className="font-bold text-white">{copy.parseTitle}</h3>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{parseExample}</pre>
+        <h3 className="font-bold text-white">{copy.crawlTitle}</h3>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{crawlExample}</pre>
+        <p className="text-sm text-slate-400 leading-7">{copy.responseTitle}：{copy.responseBody}</p>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n')}</pre>
       </div>
       <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
-        <h2 className="text-xl font-bold text-white">{language === 'en' ? 'Available tools' : '当前可用工具'}</h2>
-        <p className="text-sm text-slate-400 leading-7">{language === 'en' ? 'Web conversion, site crawl, REST API, MCP, CLI, browser extension, local MarkItDown, and local Unlimited-OCRSkill.' : '网页转换、全站抓取、RESTAPI、MCP、CLI、浏览器插件、本地MarkItDown和本地Unlimited-OCRSkill。'}</p>
+        <h2 className="text-xl font-bold text-white">{copy.mcpTitle}</h2>
+        <p className="text-sm text-slate-400 leading-7">{copy.mcpBody}</p>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{mcpExample}</pre>
+        <p className="text-xs text-slate-500 leading-6">{isEnglish ? 'If your MCP client asks for a token, use the API key created on the API page as a Bearer token.' : '如果MCP客户端要求填写Token，使用API页面创建的密钥作为BearerToken。'}</p>
+      </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+        <h2 className="text-xl font-bold text-white">{copy.cliTitle}</h2>
+        <p className="text-sm text-slate-400 leading-7">{copy.cliBody}</p>
+        <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{cliExample}</pre>
+        <a href="https://github.com/less1001/herdown/tree/main/packages/cli" target="_blank" rel="noreferrer" className="inline-flex text-sm text-emerald-300 hover:text-emerald-200">{isEnglish ? 'View CLI source on GitHub' : '在GitHub查看CLI源码'}</a>
+      </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+        <h2 className="text-xl font-bold text-white">{copy.workflowTitle}</h2>
+        <p className="text-sm text-slate-400 leading-7">{copy.workflowBody}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            ['Dify', isEnglish ? 'Add an HTTP request tool. Use POST https://herdown.com/v1/parse, add Authorization: Bearer YOUR_API_KEY, send {"url":"{{url}}"}, and pass the markdown field to the next node.' : '添加HTTP请求工具。方法选POST，地址填https://herdown.com/v1/parse，请求头填Authorization: Bearer YOUR_API_KEY，请求体填{"url":"{{url}}"}，后续节点使用markdown字段。'],
+            ['Coze', isEnglish ? 'Create an HTTP plugin or workflow HTTP node with the same URL and header. Map the incoming URL to url and return markdown as the text output.' : '创建HTTP插件或工作流HTTP节点。地址和请求头同上，把用户输入的网址传给url，返回markdown作为文本结果。'],
+            ['FastGPT', isEnglish ? 'Create an HTTP request tool, set POST /v1/parse, add the Bearer header, and map response markdown into the knowledge or dialogue step.' : '创建HTTP请求工具，设置POST /v1/parse，添加Bearer请求头，把返回的markdown交给知识库或对话节点。'],
+            ['n8n', isEnglish ? 'Use an HTTP Request node with POST, JSON body, and Authorization header. Pass {{$json.url}} as input and use {{$json.markdown}} downstream.' : '使用HTTP Request节点，方法选POST，发送JSON并添加Authorization请求头。把{{$json.url}}传给接口，后续使用{{$json.markdown}}。'],
+          ].map(([title, body]) => (
+            <div key={title} className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4">
+              <h3 className="font-bold text-white">{title}</h3>
+              <p className="mt-2 text-xs leading-6 text-slate-400">{body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
+        <h2 className="text-xl font-bold text-white">{copy.localTitle}</h2>
+        <p className="text-sm text-slate-400 leading-7">{copy.localBody}</p>
         <div className="flex flex-wrap gap-2 text-xs text-emerald-300">
-          {['/url-to-markdown', '/txt-to-markdown', '/pdf-to-markdown', '/ppt-to-markdown', '/excel-to-markdown'].map(path => <a key={path} href={path} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">{path.replace('/', '')}</a>)}
+          {['/tools', '/url-to-markdown', '/txt-to-markdown', '/pdf-to-markdown', '/ppt-to-markdown', '/excel-to-markdown'].map(path => <a key={path} href={path} className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">{path.replace('/', '')}</a>)}
+        </div>
+      </div>
+      <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
+        <h2 className="text-xl font-bold text-white">{copy.securityTitle}</h2>
+        <p className="text-sm text-slate-400 leading-7">{copy.securityBody}</p>
+        <div className="flex flex-wrap gap-2 text-xs text-emerald-300">
+          <a href="/faq" className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">FAQ</a>
+          <a href="/privacy" className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 hover:bg-emerald-500/20">{isEnglish ? 'Privacy' : '隐私政策'}</a>
         </div>
       </div>
     </div>
