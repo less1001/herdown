@@ -124,6 +124,18 @@ const checkAndLogRateLimit = async (keyOrIp: string, isKey: boolean, env: Env): 
 
 const MAX_PAYLOAD_BYTES = 10 * 1024 * 1024; // 10MB 防爆内存限制
 
+const getPlatformReferer = (platform: ReturnType<typeof detectPlatform>): string | undefined => ({
+  wechat: 'https://mp.weixin.qq.com/',
+  xiaohongshu: 'https://www.xiaohongshu.com/',
+  zhihu: 'https://www.zhihu.com/',
+  twitter: 'https://x.com/',
+} as Partial<Record<ReturnType<typeof detectPlatform>, string>>)[platform];
+
+const isInvalidWeChatPage = (html: string): boolean => {
+  const text = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '');
+  return /参数错误|页面不存在|链接已失效|内容已被删除/.test(text) && !/<div[^>]+id=["']js_content["']/i.test(html);
+};
+
 async function safeFetchPageHtml(targetUrl: string, referer?: string, timeoutMs = 8000, zhihuLimit = 5, zhihuSort = 'default'): Promise<{ html: string; status: number }> {
   // Check if URL is zhihu.com to rewrite fetch request to mobile API
   if (targetUrl.includes('zhihu.com/question/')) {
@@ -253,7 +265,8 @@ export default {
         headers: {
           'access-control-allow-origin': '*',
           'access-control-allow-methods': 'GET, POST, OPTIONS, DELETE',
-          'access-control-allow-headers': 'Content-Type, Authorization, Stripe-Signature',
+          'access-control-allow-headers': '*',
+          'access-control-max-age': '86400',
         },
       });
     }
@@ -261,7 +274,7 @@ export default {
     if (url.pathname === '/health') {
       return json({
         status: 'ok',
-        app: env.APP_NAME || 'mdforagents',
+        app: env.APP_NAME || 'Herdown',
         version: '2.4.0',
         timestamp: new Date().toISOString(),
       });
@@ -304,7 +317,7 @@ export default {
         let sourceHtml = rawHtml;
         if (!sourceHtml && targetUrl) {
           const platform = detectPlatform(targetUrl);
-          const referer = platform === 'xiaohongshu' ? 'https://www.xiaohongshu.com/' : 'https://mp.weixin.qq.com/';
+          const referer = getPlatformReferer(platform);
 
           const fetchResult = await safeFetchPageHtml(targetUrl, referer, 8000, body.zhihuLimit, body.zhihuSort);
 
@@ -317,6 +330,14 @@ export default {
           }
 
           sourceHtml = fetchResult.html;
+
+          if (platform === 'wechat' && isInvalidWeChatPage(sourceHtml)) {
+            return json({
+              success: false,
+              code: 'INVALID_SOURCE',
+              message: '微信公众号文章链接无效、已删除或已失效',
+            }, { status: 422 });
+          }
         }
 
         const result: ParseResult = parseMarkdown(sourceHtml, targetUrl);
@@ -518,7 +539,7 @@ export default {
           try {
             // Guarantee user existence first to satisfy D1 Foreign Key constraints
             await env.DB.prepare("INSERT OR IGNORE INTO users (id, email, plan) VALUES (?, ?, 'pro')")
-              .bind(userId, 'user@mdforagents.com')
+              .bind(userId, 'user@herdown.com')
               .run();
 
             await env.DB.prepare('INSERT INTO api_keys (key, user_id, name, status) VALUES (?, ?, ?, ?)').bind(newKey, userId, keyName, 'active').run();
@@ -572,15 +593,36 @@ export default {
     // MCP Remote Endpoint (MCP 2026-07-28 Stateless Protocol Standard)
     if (url.pathname === '/mcp') {
       if (request.method === 'GET') {
-        return json({
-          name: 'herdown',
-          serverName: 'Herdown MCP Server',
-          protocol: 'mcp',
-          protocolVersion: '2026-07-28',
-          stateless: true,
-          transport: 'http',
-          endpoint: 'https://api.herdown.com/mcp',
-          status: 'ready',
+        const sessionId = Math.random().toString(36).substring(2, 15);
+        
+        const stream = new ReadableStream({
+          start(controller) {
+            const encoder = new TextEncoder();
+            const endpointUrl = `${new URL(request.url).origin}/mcp?session_id=${sessionId}`;
+            
+            // Send endpoint immediately
+            controller.enqueue(encoder.encode(`event: endpoint\ndata: ${endpointUrl}\n\n`));
+            
+            // Active heartbeat interval to keep SSE connection alive
+            const interval = setInterval(() => {
+              try {
+                controller.enqueue(encoder.encode(`: ping\n\n`));
+              } catch {
+                clearInterval(interval);
+              }
+            }, 15000);
+          }
+        });
+        
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Methods': '*',
+          },
         });
       }
 
@@ -677,15 +719,19 @@ export default {
 
             if (targetUrl && !sourceHtml) {
               const platform = detectPlatform(targetUrl);
-              const referer = platform === 'xiaohongshu' ? 'https://www.xiaohongshu.com/' : 'https://mp.weixin.qq.com/';
-              const res = await fetch(targetUrl, {
-                headers: {
-                  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                  'referer': referer,
-                },
-              }).catch(() => null);
-              if (res && res.ok) {
-                sourceHtml = await res.text();
+              let referer = '';
+              if (platform === 'xiaohongshu') {
+                referer = 'https://www.xiaohongshu.com/';
+              } else if (platform === 'wechat') {
+                referer = 'https://mp.weixin.qq.com/';
+              } else if (platform === 'zhihu') {
+                referer = 'https://www.zhihu.com/';
+              } else if (platform === 'twitter') {
+                referer = 'https://x.com/';
+              }
+              const fetchRes = await safeFetchPageHtml(targetUrl, referer, 8000).catch(() => null);
+              if (fetchRes) {
+                sourceHtml = fetchRes.html;
               }
             }
 
@@ -712,7 +758,7 @@ export default {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MD for Agents (mdforagents.com) - 给 AI Agent 用的干净 Markdown 入口</title>
+    <title>Herdown - 给 AI Agent 用的干净 Markdown 入口</title>
     <meta name="description" content="专为 AI Agent、开发者与自动化工作流打造的网页转 Markdown 工具链、REST API 与远程 MCP 平台。" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
