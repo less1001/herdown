@@ -463,7 +463,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             <p className="mt-2 text-sm leading-7 text-slate-300">{isEnglish ? 'Herdown prepares clean source material. It does not provide a complete knowledge-base Q&A system. Send the Markdown to the platform you already use.' : 'Herdown负责准备干净资料，不负责搭建完整知识库问答系统。解析后的Markdown可以交给你已经在使用的知识库或工作流平台。'}</p>
           </section>
 
-          <section id="getting-started" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('getting-started', isEnglish ? 'Get started' : '开始使用', isEnglish ? 'The fastest path is one public URL and one click.' : '最快的方式是粘贴一个公开网页链接，然后点击一次。')}
             <div className="grid gap-3 md:grid-cols-3">
               {[
@@ -480,7 +480,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             <a href="/tools" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open unified tools' : '打开统一工具入口'}</a>
           </section>
 
-          <section id="authentication" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('authentication', isEnglish ? 'API key and authentication' : 'API密钥和身份验证', isEnglish ? 'Create a key from the API page. Keep it on your server or in a local environment variable.' : '在API页面创建密钥。密钥应保存在自己的服务器或本地环境变量中。')}
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm leading-7 text-amber-100">
               {isEnglish ? 'Do not put a live API key in frontend code, a public repository, or a screenshot.' : '不要把正式API密钥放进前端代码、公开仓库或截图。'}
@@ -488,7 +488,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             {codeBlock('env', 'Environment variable', 'export HERDOWN_API_KEY="sk_live_YOUR_API_KEY"')}
           </section>
 
-          <section id="quota" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('quota', isEnglish ? 'Quota and billing' : '额度和计费', isEnglish ? 'Free usage is monthly. Paid packages are one-time credits and do not renew automatically.' : '免费额度按月计算。付费套餐是一次性点数，不会自动续费。')}
             <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
               <table className="w-full text-left text-xs">
@@ -501,7 +501,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             </div>
           </section>
 
-          <section id="rest-api" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('rest-api', 'RESTAPI', isEnglish ? 'HTTP endpoints for your backend, scripts, and workflow tools.' : '适合后端、脚本和工作流平台调用的HTTP接口。')}
             <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-5 text-sm leading-7 text-slate-400">
               <p>{isEnglish ? 'Base URL' : '基础地址'}：<code className="text-emerald-300">{apiBase}</code></p>
@@ -511,7 +511,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             </div>
           </section>
 
-          <section id="parse" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('parse', 'POST /v1/parse', isEnglish ? 'Parse one public webpage or raw HTML into clean Markdown.' : '把一个公开网页或HTML源码解析成干净Markdown。')}
             {codeBlock('parse', 'Request', quickstartExample)}
             <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
@@ -527,13 +527,13 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             {codeBlock('response', 'Response', ['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n'))}
           </section>
 
-          <section id="crawl" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('crawl', 'POST /v1/crawl', isEnglish ? 'Discover and parse pages from a public website or sitemap.' : '从公开网站或Sitemap发现并解析网页。')}
             {codeBlock('crawl', 'Request', crawlExample)}
             <p className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4 text-sm leading-7 text-slate-400">{isEnglish ? 'The response contains total_pages, results, title, markdown, and elapsed_ms. Free users are limited to 5 pages per request. Paid crawl can use up to 100 pages within the available balance.' : '返回内容包括total_pages、results、title、markdown和elapsed_ms。免费用户每次最多5页，付费用户每次最多100页，但不能超过剩余点数。'}</p>
           </section>
 
-          <section id="errors" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('errors', isEnglish ? 'Errors and limits' : '错误和限制', isEnglish ? 'Use the HTTP status and code field to decide whether to retry or ask the user to act.' : '结合HTTP状态码和code字段判断是重试，还是提示用户处理。')}
             <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
               <table className="w-full text-left text-xs">
@@ -549,13 +549,13 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             </div>
           </section>
 
-          <section id="mcp" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('mcp', isEnglish ? 'Remote MCP' : '远程MCP', isEnglish ? 'Connect an MCP client to discover and call Herdown tools.' : '让支持MCP的客户端发现并调用Herdown工具。')}
             {codeBlock('mcp', 'mcp.json', mcpExample)}
             <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'Available tools: parse_webpage, crawl_website, and health_check. If a client asks for authentication, provide your API key as a Bearer token.' : '可用工具：parse_webpage、crawl_website和health_check。如果客户端要求身份验证，把API密钥作为BearerToken提供。'}</p>
           </section>
 
-          <section id="skill" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('skill', 'Skill', isEnglish ? 'Instructions that help an AI agent choose and use Herdown correctly.' : '帮助AIAgent正确选择和使用Herdown的操作说明。')}
             <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'A Skill is not another server. It tells an agent when to use the browser, RESTAPI, MCP, or CLI, how to preserve useful metadata, and how to handle failures. Install the Herdown Skill in the agent environment, then give the agent a public URL or a document task.' : 'Skill不是另一个服务器，而是给AIAgent看的操作说明。它告诉Agent什么时候使用网页、RESTAPI、MCP或CLI，如何保留有用的元数据，以及失败时怎么处理。把HerdownSkill安装到Agent环境后，就可以让Agent处理公开网页或文档任务。'}</p>
             {codeBlock('skill', 'Skill behavior', skillExample)}
@@ -565,13 +565,13 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             </div>
           </section>
 
-          <section id="cli" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('cli', 'CLI', isEnglish ? 'Run Herdown from a terminal and save the result locally.' : '在终端运行Herdown，并把结果保存到本地。')}
             {codeBlock('cli', 'Terminal', cliExample)}
             <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'The -o option writes a Markdown file. The -k option selects an API key. Without -o, the Markdown is printed to the terminal.' : '-o参数把结果写入Markdown文件，-k参数指定API密钥。不使用-o时，Markdown会直接输出到终端。'}</p>
           </section>
 
-          <section id="local-tools" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('local-tools', isEnglish ? 'Local document and image tools' : '本地文档和图片工具', isEnglish ? 'Keep local files on your computer whenever possible.' : '本地文件尽量留在自己的电脑上处理。')}
             <div className="grid gap-3 sm:grid-cols-2">
               {[
@@ -583,14 +583,14 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             </div>
           </section>
 
-          <section id="integrations" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('integrations', isEnglish ? 'Workflow integrations' : '工作流接入', isEnglish ? 'Use an HTTP request node, send the URL to /v1/parse, and pass the markdown field forward.' : '使用HTTP请求节点，把网址传给/v1/parse，再把返回的markdown字段交给后续节点。')}
             <div className="grid gap-3 sm:grid-cols-2">
               {['Dify', 'Coze', 'FastGPT', 'n8n'].map(name => <div key={name} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{name}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'HTTP POST tool → Authorization Bearer header → JSON body {url} → use response.markdown.' : 'HTTPPOST工具→AuthorizationBearer请求头→JSON请求体{url}→使用返回的markdown。'}</p></div>)}
             </div>
           </section>
 
-          <section id="faq" className="scroll-mt-8 space-y-5">
+          <section className="space-y-5">
             {sectionTitle('faq', 'FAQ', isEnglish ? 'Answers about access, data handling, and usage limits.' : '关于访问、数据处理和使用限制的常见问题。')}
             <a href="/faq" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open full FAQ' : '打开完整FAQ'}</a>
           </section>
