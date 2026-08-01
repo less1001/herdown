@@ -71,6 +71,7 @@ export function App() {
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
   const [creatingKey, setCreatingKey] = useState(false);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
 
   // Usage stats state
   const [stats, setStats] = useState({ today_requests: 0, daily_quota: 100000, active_keys: 0 });
@@ -82,15 +83,37 @@ export function App() {
 
   const fetchKeys = async () => {
     try {
-      const res = await fetch('/v1/keys');
-      if (res.ok) {
-        const data = await res.json();
-        setApiKeys(data.keys || []);
-      }
+      const savedKeys = JSON.parse(window.localStorage.getItem('herdown_api_keys') || '[]');
+      setApiKeys(Array.isArray(savedKeys) ? savedKeys : []);
     } catch {
-      // ignore
+      setApiKeys([]);
     }
   };
+
+  const saveKeys = (keys: ApiKeyItem[]) => {
+    setApiKeys(keys);
+    window.localStorage.setItem('herdown_api_keys', JSON.stringify(keys));
+  };
+
+  const fetchCredits = async (key?: string) => {
+    if (!key) {
+      setCreditBalance(null);
+      return;
+    }
+    try {
+      const res = await fetch('/v1/credits', { headers: { Authorization: `Bearer ${key}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setCreditBalance(typeof data.credits === 'number' ? data.credits : null);
+      }
+    } catch {
+      setCreditBalance(null);
+    }
+  };
+
+  useEffect(() => {
+    fetchCredits(apiKeys.find(k => k.status === 'active')?.key);
+  }, [apiKeys]);
 
   const fetchStats = async () => {
     try {
@@ -157,7 +180,7 @@ export function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeUserKey || 'sk_admin_test_unlimited_8888'}`,
+          ...(activeUserKey ? { 'Authorization': `Bearer ${activeUserKey}` } : {}),
         },
         body: JSON.stringify({
           url: inputMode === 'url' ? inputUrl.trim() : undefined,
@@ -190,7 +213,7 @@ export function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeUserKey || 'sk_admin_test_unlimited_8888'}`,
+          ...(activeUserKey ? { 'Authorization': `Bearer ${activeUserKey}` } : {}),
         },
         body: JSON.stringify({ url: crawlUrl.trim(), limit: 5 }),
       });
@@ -205,19 +228,26 @@ export function App() {
     }
   };
 
-  const handleCheckout = async (plan: 'pro' | 'team' | 'onetime') => {
+  const handleCheckout = async () => {
+    const activeUserKey = apiKeys.find(k => k.status === 'active')?.key;
+    if (!activeUserKey) {
+      setShowUpgradeModal(false);
+      setActiveTab('keys');
+      alert('请先创建一个API密钥。购买完成后，10,000次点数会自动发放到这个密钥。');
+      return;
+    }
     setCheckoutLoading(true);
     try {
       const res = await fetch('/v1/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeUserKey}` },
+        body: JSON.stringify({ product: 'starter' }),
       });
       const data = await res.json();
       if (data.success && data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        alert('支付链接生成失败');
+        alert(data.message || '支付链接生成失败');
       }
     } catch {
       alert('支付通道初始化失败');
@@ -236,8 +266,15 @@ export function App() {
         body: JSON.stringify({ name: newKeyName.trim() }),
       });
       if (res.ok) {
+        const data = await res.json();
         setNewKeyName('');
-        await fetchKeys();
+        const item: ApiKeyItem = {
+          key: data.key,
+          name: data.name,
+          status: 'active',
+          created_at: data.created_at,
+        };
+        saveKeys([...apiKeys.filter(key => key.key !== item.key), item]);
         await fetchStats();
       }
     } catch {
@@ -249,9 +286,9 @@ export function App() {
 
   const handleRevokeKey = async (key: string) => {
     try {
-      const res = await fetch(`/v1/keys/${key}`, { method: 'DELETE' });
+      const res = await fetch(`/v1/keys/${key}`, { method: 'DELETE', headers: { Authorization: `Bearer ${key}` } });
       if (res.ok) {
-        fetchKeys();
+        saveKeys(apiKeys.map(item => item.key === key ? { ...item, status: 'revoked' } : item));
       }
     } catch {
       // ignore
@@ -729,7 +766,7 @@ export function App() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-white">API 密钥控制台</h2>
-                <p className="text-slate-400 text-xs mt-1">生成与管理专属 API Key (突破匿名 IP 限制)</p>
+                <p className="text-slate-400 text-xs mt-1">密钥只保存在当前浏览器。付款后的点数会自动发放到你用于付款的密钥。</p>
               </div>
               <button
                 onClick={() => setShowUpgradeModal(true)}
@@ -747,8 +784,8 @@ export function App() {
                 <p className="text-2xl font-extrabold text-white mt-1">{stats.today_requests} 次</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">每日可用配额 (Quota)</span>
-                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{stats.daily_quota.toLocaleString()} 次</p>
+                <span className="text-xs text-slate-400 font-medium">可用点数</span>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{creditBalance === null ? '免费额度' : creditBalance.toLocaleString()}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
                 <span className="text-xs text-slate-400 font-medium">已生效 API Key</span>
@@ -791,7 +828,7 @@ export function App() {
                   {apiKeys.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-slate-500">
-                        尚无活跃 API Key，点击上方“生成新 Key”创建专属密钥
+                        尚无活跃API Key。点击上方“生成新Key”创建专属密钥后，密钥会保存在当前浏览器。
                       </td>
                     </tr>
                   ) : (
@@ -1144,7 +1181,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                   点数包如何计费？会自动续费吗？
                   <span className="text-emerald-400 transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="text-sm text-slate-400 leading-7 pt-3">购买前收银台会明确展示金额、包含额度和支付方式。一次性点数包不会自动续费；其他方案以收银台和商品页的具体说明为准。</p>
+                <p className="text-sm text-slate-400 leading-7 pt-3">收银台会明确展示金额、包含额度和支付方式。Herdown目前只提供一次性点数包，不会自动续费。</p>
               </details>
               <details className="group p-5">
                 <summary className="cursor-pointer list-none text-sm font-bold text-white flex items-center justify-between gap-4">
@@ -1155,10 +1192,8 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               </details>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 text-xs">
-              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">单次加油包</span><span className="text-white font-bold">¥68.00</span> / 10,000次解析额度</div>
-              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-slate-300 font-bold block mb-1">Developer Pro</span><span className="text-white font-bold">$5.99/月</span> / 2,000次每日额度</div>
-              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-slate-300 font-bold block mb-1">Team</span><span className="text-white font-bold">$29.99/月</span> / 50,000次每日额度</div>
+            <div className="mt-5 text-xs">
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131d] p-4"><span className="text-emerald-400 font-bold block mb-1">一次性点数包</span><span className="text-white font-bold">10,000次解析额度</span>，不自动续费，点数不过期。</div>
             </div>
           </section>
         )}
@@ -1179,81 +1214,29 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 支付收银台
               </span>
-              <h3 className="text-2xl font-extrabold text-white">升级Herdown商业配额</h3>
-              <p className="text-xs text-slate-400">解锁高额度API解析、全站抓取与网页截图功能</p>
+              <h3 className="text-2xl font-extrabold text-white">购买Herdown一次性点数包</h3>
+              <p className="text-xs text-slate-400">先创建API密钥，付款成功后点数会自动发放到该密钥</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-              {/* Option 1: WeChat Pay / Alipay One-Time Pack */}
-              <div className="p-5 rounded-xl bg-gradient-to-b from-[#132320] to-[#111823] border-2 border-emerald-500 space-y-4 flex flex-col justify-between relative shadow-lg shadow-emerald-950/40">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-black uppercase tracking-wider whitespace-nowrap">
-                  微信 / 支付宝扫码付
-                </div>
-                <div className="space-y-2 pt-1">
-                  <h4 className="text-base font-bold text-white flex items-center gap-1.5">
-                    单次加油包
-                  </h4>
-                  <div className="text-2xl font-black text-emerald-400">¥68.00 <span className="text-xs text-slate-400 font-normal">/ 10,000次</span></div>
-                  <p className="text-[11px] text-emerald-300 font-medium bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20">
-                    💡 适合想先小额试用的用户，一次性买断，无自动续费
-                  </p>
-                  <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 10,000 次 API 解析额度</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持多种支付方式</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 额度永不过期，不自动续费</li>
+            <div className="max-w-md mx-auto pt-2">
+              <div className="p-6 rounded-xl bg-gradient-to-b from-[#132320] to-[#111823] border-2 border-emerald-500 space-y-5 shadow-lg shadow-emerald-950/40">
+                <div className="space-y-2">
+                  <span className="inline-flex px-2.5 py-1 rounded-full bg-emerald-500 text-[10px] font-bold text-black">一次性付款</span>
+                  <h4 className="text-xl font-bold text-white">Herdown点数包</h4>
+                  <div className="text-2xl font-black text-emerald-400">10,000次 <span className="text-xs text-slate-400 font-normal">网页与文档解析额度</span></div>
+                  <p className="text-xs text-emerald-200 leading-6">不自动续费。点数不过期。付款成功后自动发放到你用于付款的API密钥。</p>
+                  <ul className="space-y-2 text-xs text-slate-300 pt-1">
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持API、MCP、CLI和网页端使用</li>
+                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Waffo Pancake安全收银台</li>
                   </ul>
                 </div>
                 <button
-                  onClick={() => handleCheckout('onetime')}
+                  onClick={handleCheckout}
                   disabled={checkoutLoading}
                   className="w-full py-2.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-bold text-xs text-white shadow-lg flex items-center justify-center gap-2"
                 >
                   {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  购买点数
-                </button>
-              </div>
-
-              {/* Option 2: Pro Subscription */}
-              <div className="p-5 rounded-xl bg-[#111823] border border-[#1e293b] space-y-4 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h4 className="text-base font-bold text-white">Developer Pro 订阅</h4>
-                  <div className="text-2xl font-black text-white">$5.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
-                  <p className="text-[11px] text-slate-400">双币信用卡 / Apple Pay 按月扣款</p>
-                  <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 2,000 次/日全速 API 调用</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持全站 Sitemap Crawl</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 支持网页截图 API</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={() => handleCheckout('pro')}
-                  disabled={checkoutLoading}
-                  className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
-                >
-                  {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  订阅 Pro ($5.99/月)
-                </button>
-              </div>
-
-              {/* Option 3: Team Plan */}
-              <div className="p-5 rounded-xl bg-[#111823] border border-[#1e293b] space-y-4 flex flex-col justify-between">
-                <div className="space-y-2">
-                  <h4 className="text-base font-bold text-white">Team & Enterprise</h4>
-                  <div className="text-2xl font-black text-white">$29.99 <span className="text-xs text-slate-400 font-normal">/ 月</span></div>
-                  <p className="text-[11px] text-slate-400">企业卡 / 团队共享多并发</p>
-                  <ul className="space-y-1.5 text-xs text-slate-300 pt-1">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 50,000 次/日无限并发</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 专属支持通道</li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> SLA 服务保障</li>
-                  </ul>
-                </div>
-                <button
-                  onClick={() => handleCheckout('team')}
-                  disabled={checkoutLoading}
-                  className="w-full py-2.5 rounded-lg bg-[#1e293b] hover:bg-slate-700 font-bold text-xs text-white flex items-center justify-center gap-2"
-                >
-                  {checkoutLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                  订阅 Team 方案 ($29.99/月)
+                  购买10,000次点数
                 </button>
               </div>
             </div>
