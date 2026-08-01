@@ -224,7 +224,8 @@ function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'ppt-to-
   const ui = messages[language];
   const info = toolPageInfo[slug];
   const extension = slug === 'ppt-to-markdown' ? 'pptx' : slug === 'excel-to-markdown' ? 'xlsx' : 'pdf';
-  const command = ['python -m pip install markitdown', `markitdown "你的文件.${extension}" > output.md`].join('\n');
+  const sampleFileName = language === 'en' ? `your-file.${extension}` : `你的文件.${extension}`;
+  const command = ['python -m pip install markitdown', `markitdown "${sampleFileName}" > output.md`].join('\n');
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -632,6 +633,20 @@ export function App() {
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const ui = messages[language];
+  const tr = (english: string, chinese: string) => language === 'en' ? english : chinese;
+  const skillSnippet = language === 'en'
+    ? `---
+name: herdown
+description: Web-to-Markdown, sitemap crawling, and clean material preparation for AI agents.
+
+When the user asks to read a public webpage or prepare material for an AI workflow, run:
+npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`
+    : `---
+name: herdown
+description: 为AIAgent提供网页转Markdown、Sitemap抓取和干净资料整理。
+
+当用户需要读取公开网页或准备AI工作流资料时，执行：
+npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
   const [inputUrl, setInputUrl] = useState(() => new URLSearchParams(window.location.search).get('url') || '');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
@@ -1176,17 +1191,19 @@ export function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        <div className="mb-7 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
-          <span className="px-3 py-2 font-semibold text-slate-500">{ui.tools}</span>
-          <a href="/tools" className="rounded-xl px-3 py-2 text-emerald-300 hover:bg-[#1e293b] transition">{language === 'en' ? 'Unified entry' : '统一入口'}</a>
-          {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
-            <a key={slug} href={`/${slug}`} className="rounded-xl px-3 py-2 text-slate-300 hover:bg-[#1e293b] hover:text-emerald-300 transition">
-              {toolLabel(slug, language)}
-            </a>
-          ))}
-          <a href="/docs" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.docs}</a>
-          <a href="/faq" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.faq}</a>
-        </div>
+        {toolSlug !== 'docs' && toolSlug !== 'help' && (
+          <div className="mb-7 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
+            <span className="px-3 py-2 font-semibold text-slate-500">{ui.tools}</span>
+            <a href="/tools" className="rounded-xl px-3 py-2 text-emerald-300 hover:bg-[#1e293b] transition">{language === 'en' ? 'Unified entry' : '统一入口'}</a>
+            {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+              <a key={slug} href={`/${slug}`} className="rounded-xl px-3 py-2 text-slate-300 hover:bg-[#1e293b] hover:text-emerald-300 transition">
+                {toolLabel(slug, language)}
+              </a>
+            ))}
+            <a href="/docs" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.docs}</a>
+            <a href="/faq" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.faq}</a>
+          </div>
+        )}
         {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
           <>
@@ -1475,9 +1492,9 @@ export function App() {
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <Layers className="w-6 h-6 text-emerald-400" />
-                全站 Sitemap 递归 Crawl 引擎
+                {tr('Sitemap recursive crawl', '全站Sitemap递归抓取')}
               </h2>
-              <p className="text-slate-400 text-xs mt-1">输入域名或 sitemap.xml 链接，自动递归并发提取全站子页面 Markdown 列表</p>
+              <p className="text-slate-400 text-xs mt-1">{tr('Enter a domain or sitemap.xml URL to discover and parse a list of Markdown pages.', '输入域名或sitemap.xml链接，自动发现并解析网页Markdown列表。')}</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
@@ -1486,11 +1503,11 @@ export function App() {
                   type="url"
                   value={crawlUrl}
                   onChange={(e) => setCrawlUrl(e.target.value)}
-                  placeholder="输入目标域名（如 https://docs.example.com 或 https://example.com/sitemap.xml）"
+                  placeholder={tr('Target domain, such as https://docs.example.com or https://example.com/sitemap.xml', '输入目标域名，如https://docs.example.com或https://example.com/sitemap.xml')}
                   className="flex-1 px-4 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                 />
                 <label className="w-28 shrink-0 text-xs text-slate-400">
-                  抓取页数
+                  {tr('Pages', '抓取页数')}
                   <input
                     type="number"
                     min={1}
@@ -1506,24 +1523,24 @@ export function App() {
                   className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-sm font-semibold text-white flex items-center gap-2 transition"
                 >
                   {crawlLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
-                  {crawlLoading ? '递归抓取中...' : '开始全站 Crawl'}
+                  {crawlLoading ? tr('Crawling...', '递归抓取中...') : tr('Start site crawl', '开始全站抓取')}
                 </button>
               </div>
-              <p className="text-xs text-slate-500">{hasPaidCredits ? '付费点数按实际抓取页数扣除，单次最多100页。' : '免费用户每次最多抓取5页，付费后可提高单次抓取页数。'}</p>
+              <p className="text-xs text-slate-500">{hasPaidCredits ? tr('Paid credits are charged by actual pages, up to 100 pages per request.', '付费点数按实际抓取页数扣除，每次最多100页。') : tr('Free users can crawl up to 5 pages per request. Upgrade for a higher limit.', '免费用户每次最多抓取5页，付费后可提高单次抓取页数。')}</p>
 
               {crawlResult && (
                 <div className="mt-6 space-y-4">
                   <div className="flex items-center justify-between text-xs text-slate-400 border-b border-[#1e293b] pb-2">
-                    <span>域名: <strong className="text-white">{crawlResult.domain}</strong></span>
+                    <span>{tr('Domain', '域名')}: <strong className="text-white">{crawlResult.domain}</strong></span>
                     <div className="flex items-center gap-3">
-                      <span>批量抓取页面: <strong className="text-emerald-400">{crawlResult.total_pages} 页</strong> (耗时 {crawlResult.elapsed_ms}ms)</span>
+                      <span>{tr('Pages', '抓取页面')}: <strong className="text-emerald-400">{crawlResult.total_pages}</strong> <span className="hidden sm:inline">({tr('took', '耗时')} {crawlResult.elapsed_ms}ms)</span></span>
                       <button
                         onClick={handleDownloadZip}
                         disabled={downloadingZip}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-emerald-600/10 transition-all cursor-pointer"
                       >
                         {downloadingZip ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
-                        {downloadingZip ? '正在打包...' : '💾 一键打包下载全站 Markdown (.zip)'}
+                        {downloadingZip ? tr('Packaging...', '正在打包...') : tr('Download all Markdown (.zip)', '一键打包下载全站Markdown(.zip)')}
                       </button>
                     </div>
                   </div>
@@ -1651,7 +1668,7 @@ export function App() {
                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 text-white font-bold text-xs flex items-center gap-2 shadow-lg"
               >
                 <CreditCard className="w-4 h-4" />
-                升级
+                {tr('Upgrade', '升级')}
               </button>
             </div>
 
@@ -1693,10 +1710,10 @@ export function App() {
               <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                 <div>
                   {turnstileSiteKey ? <TurnstileWidget siteKey={turnstileSiteKey} onToken={setTurnstileToken} /> : (
-                    <p className="text-xs text-amber-300">安全验证正在配置中，暂时不能创建新密钥。</p>
+                    <p className="text-xs text-amber-300">{tr('Security verification is being configured. New keys are temporarily unavailable.', '安全验证正在配置中，暂时不能创建新密钥。')}</p>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 leading-6">同一IP每周最多创建1个API密钥。免费额度按IP、设备和密钥共同计算，换密钥不会重置。</p>
+                <p className="text-xs text-slate-500 leading-6">{tr('Each IP can create one API key per week. Free quota is shared across IP, device, and key; changing keys does not reset it.', '同一IP每周最多创建1个API密钥。免费额度按IP、设备和密钥共同计算，换密钥不会重置。')}</p>
               </div>
               {keyCreationMessage && <p className="text-xs text-rose-300">{keyCreationMessage}</p>}
             </div>
@@ -1706,11 +1723,11 @@ export function App() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-[#111823] border-b border-[#1e293b] text-[11px] font-semibold text-slate-400 uppercase">
-                    <th className="p-4">Key 名称</th>
+                    <th className="p-4">{tr('Key name', 'Key名称')}</th>
                     <th className="p-4">{language === 'en' ? 'API token' : 'API密钥Token'}</th>
-                    <th className="p-4">创建时间</th>
-                    <th className="p-4">状态</th>
-                    <th className="p-4 text-right">操作</th>
+                    <th className="p-4">{tr('Created', '创建时间')}</th>
+                    <th className="p-4">{tr('Status', '状态')}</th>
+                    <th className="p-4 text-right">{tr('Actions', '操作')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#1e293b] text-xs">
@@ -1768,15 +1785,15 @@ export function App() {
         {activeTab === 'mcp' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-              <h2 className="text-2xl font-bold text-white">远程 MCP & REST 高级 API 指南</h2>
-                <p className="text-slate-400 text-xs mt-1">支持全站抓取、网页截图、结构化接口和MCP协议</p>
+              <h2 className="text-2xl font-bold text-white">{tr('Remote MCP and advanced RESTAPI', '远程MCP和高级RESTAPI指南')}</h2>
+                <p className="text-slate-400 text-xs mt-1">{tr('Site crawl, webpage screenshots, structured endpoints, and MCP protocol.', '支持全站抓取、网页截图、结构化接口和MCP协议。')}</p>
             </div>
 
             {/* MCP Integration Card */}
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-emerald-400" />
-                <h3 className="text-base font-bold text-white">1. 远程 MCP 端点配置 (Anthropic MCP Standard)</h3>
+                <h3 className="text-base font-bold text-white">{tr('Remote MCP endpoint configuration', '远程MCP端点配置')} <span className="text-slate-500">Anthropic MCP Standard</span></h3>
               </div>
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-emerald-300 overflow-x-auto leading-relaxed">
 {`{
@@ -1798,7 +1815,7 @@ export function App() {
               <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b] space-y-2">
                 <h4 className="text-xs font-bold text-white flex items-center gap-2">
                   <Layers className="w-4 h-4 text-emerald-400" />
-                  全站 Crawl API (<code className="text-emerald-400">POST /v1/crawl</code>)
+                  {tr('Site crawl API', '全站抓取API')} (<code className="text-emerald-400">POST /v1/crawl</code>)
                 </h4>
                 <pre className="p-3 rounded-lg bg-[#090d12] font-mono text-[11px] text-slate-300 overflow-x-auto">
 {`curl -X POST "https://api.herdown.com/v1/crawl" \\
@@ -1810,7 +1827,7 @@ export function App() {
               <div className="p-5 rounded-xl bg-[#0f1722] border border-[#1e293b] space-y-2">
                 <h4 className="text-xs font-bold text-white flex items-center gap-2">
                   <Camera className="w-4 h-4 text-emerald-400" />
-                  网页截图 API (<code className="text-emerald-400">POST /v1/screenshot</code>)
+                  {tr('Web screenshot API', '网页截图API')} (<code className="text-emerald-400">POST /v1/screenshot</code>)
                 </h4>
                 <pre className="p-3 rounded-lg bg-[#090d12] font-mono text-[11px] text-slate-300 overflow-x-auto">
 {`curl -X POST "https://api.herdown.com/v1/screenshot" \\
@@ -1826,16 +1843,16 @@ export function App() {
         {activeTab === 'cli' && (
           <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-              <h2 className="text-2xl font-bold text-white">npx @herdown/cli 命令行工具</h2>
-                <p className="text-slate-400 text-xs mt-1">无需全局安装，在终端一键抓取并生成干净Markdown</p>
+              <h2 className="text-2xl font-bold text-white">npx @herdown/cli {tr('CLI tool', '命令行工具')}</h2>
+                <p className="text-slate-400 text-xs mt-1">{tr('Run it from a terminal without a global install and generate clean Markdown.', '无需全局安装，在终端一键抓取并生成干净Markdown。')}</p>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-emerald-300 overflow-x-auto">
-{`# 在终端直接打印 Markdown
+{`# ${language === 'en' ? 'Print Markdown in the terminal' : '在终端直接打印Markdown'}
 npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx"
 
-# 保存输出到本地 output.md 文件
+# ${language === 'en' ? 'Save output to a local output.md file' : '保存输出到本地output.md文件'}
 npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               </pre>
             </div>
@@ -1848,11 +1865,11 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-2">
                 <Sparkles className="w-3.5 h-3.5" />
-                标准 Agent Skill 扩展包 & 平台支持规范
+                {tr('Standard Agent Skill package and platform guide', '标准AgentSkill扩展包和平台支持规范')}
               </div>
-              <h2 className="text-2xl font-bold text-white">一键为 AI Agent 安装 Herdown 技能</h2>
+              <h2 className="text-2xl font-bold text-white">{tr('Install Herdown for your AI agent', '一键为AIAgent安装Herdown技能')}</h2>
                 <p className="text-slate-400 text-xs mt-1">
-                兼容 Hermes Agent, Claude Code, OpenClaw, QClaw, Antigravity 等标准Agent。直接将Skill内容配置到你的Agent中即可。
+                {tr('Works with Hermes Agent, Claude Code, OpenClaw, QClaw, and Antigravity. Configure the Skill in your agent environment.', '兼容Hermes Agent、Claude Code、OpenClaw、QClaw和Antigravity。把Skill配置到你的Agent环境即可。')}
               </p>
             </div>
 
@@ -1860,49 +1877,49 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">🟢 微信公众号 (mp.weixin.qq)</span>
-<span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                  <span className="text-xs font-bold text-white flex items-center gap-2">🟢 {tr('WeChat Official Account', '微信公众号')} (mp.weixin.qq)</span>
+<span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">{tr('Supported', '已支持')}</span>
                 </div>
                 <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
-                  <li>自动过滤底部在看、分享、往期推荐</li>
-                  <li>支持 table 微信特殊表格的 Markdown 还原</li>
-                  <li><strong>特有抗防盗链</strong>：自动注入无 Referer 代理图片，便于本地预览</li>
+                  <li>{tr('Removes related posts, sharing controls, and recommendations.', '自动过滤底部在看、分享、往期推荐。')}</li>
+                  <li>{tr('Restores WeChat tables as Markdown.', '支持table微信特殊表格的Markdown还原。')}</li>
+                  <li><strong>{tr('Image hotlink handling', '特有抗防盗链')}</strong>: {tr('Adds local-friendly image references for preview.', '自动处理图片引用，便于本地预览。')}</li>
                 </ul>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">网页图文 (通用)</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                  <span className="text-xs font-bold text-white flex items-center gap-2">{tr('General webpages', '网页图文')} </span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">{tr('Supported', '已支持')}</span>
                 </div>
                 <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
-                  <li>自动剥离底部分享、相似推荐、评论区</li>
-                  <li>一键提取完整图集及高清原图，还原排版</li>
-                  <li>支持无 Referer 高清图片防盗链突破</li>
+                  <li>{tr('Removes sharing controls, related content, and comments.', '自动剥离底部分享、相似推荐、评论区。')}</li>
+                  <li>{tr('Extracts image galleries and preserves page structure.', '一键提取完整图集及高清原图，还原排版。')}</li>
+                  <li>{tr('Handles common image hotlink restrictions.', '支持常见图片防盗链处理。')}</li>
                 </ul>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">问答文章 (知乎)</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                  <span className="text-xs font-bold text-white flex items-center gap-2">{tr('Q&A pages', '问答文章')} (Zhihu)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">{tr('Supported', '已支持')}</span>
                 </div>
                 <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
-                  <li>支持单篇回答、多条回答及超长 Question 提取</li>
-                  <li>自动剔除顶部搜索、侧边热榜、折叠评论区</li>
-                  <li>支持 19 位超长大数 ID 与顶级 PC 浏览器伪装</li>
+                  <li>{tr('Supports one answer, multiple answers, and long questions.', '支持单篇回答、多条回答及超长Question提取。')}</li>
+                  <li>{tr('Removes search, side rankings, and collapsed comments.', '自动剔除顶部搜索、侧边热榜、折叠评论区。')}</li>
+                  <li>{tr('Handles long IDs and desktop browser formatting.', '支持长ID和桌面浏览器格式。')}</li>
                 </ul>
               </div>
 
               <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">社交帖子 (X / Twitter)</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">已支持</span>
+                  <span className="text-xs font-bold text-white flex items-center gap-2">{tr('Social posts', '社交帖子')} (X / Twitter)</span>
+                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">{tr('Supported', '已支持')}</span>
                 </div>
                 <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
-                  <li>一键剥离侧边趋势、推荐关注和多余的时间戳</li>
-                  <li>支持多图、主帖正文提取并规范排版</li>
-                  <li>自动附带适合本地知识管理工具的元数据属性</li>
+                  <li>{tr('Removes trends, suggested accounts, and redundant timestamps.', '一键剥离侧边趋势、推荐关注和多余的时间戳。')}</li>
+                  <li>{tr('Extracts post text and multiple images with clean formatting.', '支持多图、主帖正文提取并规范排版。')}</li>
+                  <li>{tr('Adds metadata suitable for local knowledge tools.', '自动附带适合本地知识管理工具的元数据属性。')}</li>
                 </ul>
               </div>
             </div>
@@ -1912,33 +1929,18 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <span className="text-xs font-bold text-slate-300">packages/cli/SKILL.md</span>
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`---
-name: herdown
-                    description: Complete web-to-markdown, sitemap crawling, webpage screenshotting, and clean data extraction skill for AI agents. Activates when fetching web pages, extracting公众号文章,问答和图文内容, crawling sitemaps, or preparing clean markdown for downstream AI tools.
----
-
-# Herdown — AI Agent Skill Reference
-
-npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`);
-                    alert('SKILL.md 已成功复制到剪贴板！');
+                    navigator.clipboard.writeText(skillSnippet);
+                    alert(tr('SKILL.md copied to clipboard.', 'SKILL.md已成功复制到剪贴板！'));
                   }}
                   className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow"
                 >
                   <Copy className="w-3.5 h-3.5" />
-                  一键复制 SKILL.md
+                  {tr('Copy SKILL.md', '一键复制SKILL.md')}
                 </button>
               </div>
 
               <pre className="p-4 rounded-xl bg-[#090d12] border border-[#1e293b] font-mono text-xs text-slate-300 overflow-x-auto leading-relaxed">
-{`---
-name: herdown
-                    description: Complete web-to-markdown, sitemap crawling, webpage screenshotting, and clean data extraction skill for AI agents. Activates when fetching web pages, extracting公众号文章,问答和图文内容, crawling sitemaps, or preparing clean markdown for downstream AI tools.
----
-
-# Herdown — AI Agent Skill Reference
-
-当用户需要读取网页、公众号文章、问答或图文内容时，请直接在终端执行：
-npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
+{skillSnippet}
               </pre>
             </div>
           </div>
@@ -1950,13 +1952,13 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             <div className="text-center space-y-4 pt-4">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                Herdown 浏览器扩展 V1.0
+                {tr('Herdown browser extension V1.0', 'Herdown浏览器扩展V1.0')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
-                直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span>
+                {language === 'en' ? <>A <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">zero-cost extraction extension</span> running locally in your browser</> : <>直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span></>}
               </h1>
               <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-                免除一切云端服务器转算成本！通过浏览器原生 DOM 渲染，利用您已登录的 Cookie，直接把页面整理成干净资料。
+                {tr('Avoid cloud processing costs. Herdown uses the browser DOM and your signed-in cookies to turn the current page into clean material.', '免除一切云端服务器转算成本！通过浏览器原生DOM渲染，利用您已登录的Cookie，直接把页面整理成干净资料。')}
               </p>
             </div>
 
@@ -1965,9 +1967,9 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
                   1
                 </div>
-                <h3 className="text-lg font-bold text-white">方式一：加载本地离线扩展包（立刻可用）</h3>
+                <h3 className="text-lg font-bold text-white">{tr('Option 1: Load the local extension package', '方式一：加载本地离线扩展包')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  无需等待 Chrome 商店审核！下载解压包后，在 Chrome 打开 <code className="text-emerald-400">chrome://extensions/</code>，开启右上方“开发者模式”，点击“加载已解压的扩展程序”选择本目录即可！
+                  {language === 'en' ? <>No need to wait for store review. Download and unzip the package, open <code className="text-emerald-400">chrome://extensions/</code> in Chrome, enable Developer mode, then choose Load unpacked.</> : <>无需等待Chrome商店审核！下载解压包后，在Chrome打开<code className="text-emerald-400">chrome://extensions/</code>，开启右上方“开发者模式”，点击“加载已解压的扩展程序”选择本目录即可！</>}
                 </p>
                 <div className="pt-2">
                   <a
@@ -1977,7 +1979,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
                   >
                     <Download className="w-4 h-4" />
-                    下载 / 查看插件源码 ZIP
+                    {tr('Download / view extension source ZIP', '下载/查看插件源码ZIP')}
                   </a>
                 </div>
               </div>
@@ -1986,14 +1988,14 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
                 <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-lg">
                   2
                 </div>
-                <h3 className="text-lg font-bold text-white">方式二：Chrome Web Store 官方商店安装</h3>
+                <h3 className="text-lg font-bold text-white">{tr('Option 2: Install from the Chrome Web Store', '方式二：ChromeWebStore官方商店安装')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  官方扩展商店审核与发布中。上架后只需点击一次“添加至 Chrome”，即可在全网任意网页通过快捷键 <code className="text-teal-300">Alt + Shift + H</code> 一秒唤起剪藏面板！
+                  {language === 'en' ? <>The official extension is under review. Once listed, click Add to Chrome and press <code className="text-teal-300">Alt + Shift + H</code> on any webpage to open the clipping panel.</> : <>官方扩展商店审核与发布中。上架后只需点击一次“添加至Chrome”，即可在全网任意网页通过快捷键<code className="text-teal-300">Alt + Shift + H</code>一秒唤起剪藏面板！</>}
                 </p>
                 <div className="pt-2">
                   <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold border border-slate-700">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Chrome Web Store 上市审核中...
+                    {tr('Chrome Web Store review in progress...', 'ChromeWebStore上市审核中...')}
                   </span>
                 </div>
               </div>
@@ -2002,24 +2004,24 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`}
             <div className="p-6 rounded-2xl bg-[#0a0f16] border border-emerald-500/20 space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-emerald-400" />
-                插件特色功能全览：
+                {tr('Extension features', '插件特色功能全览')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-300">
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">本地Markdown导出</strong>
-                  无需额外服务器，点击按钮即可导出适合本地工具继续处理的Markdown。
+                  <strong className="text-emerald-400 block mb-1">{tr('Local Markdown export', '本地Markdown导出')}</strong>
+                  {tr('No extra server is required. Export Markdown for local tools with one click.', '无需额外服务器，点击按钮即可导出适合本地工具继续处理的Markdown。')}
                 </div>
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">问答定制化提取</strong>
-                  自动感应知乎问答，提供 <code className="text-slate-200">[Top N 回答数]</code> 与 <code className="text-slate-200">[高赞/最新排序]</code> 自由选框。
+                  <strong className="text-emerald-400 block mb-1">{tr('Custom Q&A extraction', '问答定制化提取')}</strong>
+                  {language === 'en' ? <>Detect Q&A pages and choose <code className="text-slate-200">[Top N answers]</code> with <code className="text-slate-200">[Top/Newest]</code> sorting.</> : <>自动感应知乎问答，提供<code className="text-slate-200">[Top N回答数]</code>与<code className="text-slate-200">[高赞/最新排序]</code>自由选框。</>}
                 </div>
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">🎯 网页元素 Inspector 拾取器</strong>
-                  当遇到复杂网页时，开启鼠标拾取模式，点击任意区域精确转换该 HTML 块。
+                  <strong className="text-emerald-400 block mb-1">{tr('Web element Inspector picker', '网页元素Inspector拾取器')}</strong>
+                  {tr('For complex pages, enable picker mode and click any area to convert that HTML block.', '遇到复杂网页时，开启鼠标拾取模式，点击任意区域精确转换该HTML块。')}
                 </div>
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">🏷️ 自动化字数与阅读时长统计</strong>
-                  全自动清洗不可见字符，智能预估 <code className="text-slate-200">word_count</code> 与 <code className="text-slate-200">reading_time</code> 并自动打上 <code className="text-slate-200">tags: [herdown, clippings]</code>。
+                  <strong className="text-emerald-400 block mb-1">{tr('Word count and reading time', '自动化字数与阅读时长统计')}</strong>
+                  {language === 'en' ? <>Clean invisible characters, estimate <code className="text-slate-200">word_count</code> and <code className="text-slate-200">reading_time</code>, and add <code className="text-slate-200">tags: [herdown, clippings]</code>.</> : <>全自动清洗不可见字符，智能预估<code className="text-slate-200">word_count</code>与<code className="text-slate-200">reading_time</code>并自动打上<code className="text-slate-200">tags: [herdown, clippings]</code>。</>}
                 </div>
               </div>
             </div>
