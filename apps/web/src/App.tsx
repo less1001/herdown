@@ -1110,17 +1110,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               {ui.cli}
             </button>
             <button
-              onClick={() => setActiveTab('extension')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'extension'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <PlugZap className="w-3.5 h-3.5" />
-              {ui.extension}
-            </button>
-            <button
               onClick={() => setActiveTab('skills')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'skills'
@@ -1130,6 +1119,17 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             >
               <FileText className="w-3.5 h-3.5" />
               {ui.skill}
+            </button>
+            <button
+              onClick={() => setActiveTab('extension')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                activeTab === 'extension'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <PlugZap className="w-3.5 h-3.5" />
+              {ui.extension}
             </button>
           </nav>
 
@@ -1191,19 +1191,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
-        {toolSlug !== 'docs' && toolSlug !== 'help' && (
-          <div className="mb-7 flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none rounded-2xl border border-[#1e293b] bg-[#0d131c] p-2 text-xs">
-            <span className="px-3 py-2 font-semibold text-slate-500">{ui.tools}</span>
-            <a href="/tools" className="rounded-xl px-3 py-2 text-emerald-300 hover:bg-[#1e293b] transition">{language === 'en' ? 'Unified entry' : '统一入口'}</a>
-            {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
-              <a key={slug} href={`/${slug}`} className="rounded-xl px-3 py-2 text-slate-300 hover:bg-[#1e293b] hover:text-emerald-300 transition">
-                {toolLabel(slug, language)}
-              </a>
-            ))}
-            <a href="/docs" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.docs}</a>
-            <a href="/faq" className="rounded-xl px-3 py-2 text-slate-400 hover:bg-[#1e293b] hover:text-emerald-300 transition">{ui.faq}</a>
-          </div>
-        )}
         {/* TAB 1: Single Page Converter */}
         {activeTab === 'converter' && (
           <>
@@ -1329,14 +1316,11 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                   {errorMessage}
                 </div>
               )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
-                <a key={slug} href={`/${slug}`} className="rounded-xl border border-[#1e293b] bg-[#0d131c] px-3 py-3 text-center text-xs text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 transition">
-                  {toolLabel(slug, language)}
-                </a>
-              ))}
+              {(!toolSlug || toolSlug === 'url-to-markdown') && (
+                <p className="mt-3 text-center text-xs text-slate-500">
+                  {language === 'en' ? '1,000 free webpage parses per month. Homepage and API usage share the same quota; site crawl counts each page.' : '每月1000次免费网页解析：首页和API共用额度，全站抓取按页面计数。'}
+                </p>
+              )}
             </div>
 
             {/* Result Area */}
@@ -2143,34 +2127,47 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
       )}
 
       {/* Footer */}
-      <footer className="border-t border-[#1e293b] bg-[#070a0e] py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div>
-            © 2026 <span className="text-slate-300 font-medium">Herdown</span> (herdown.com). All rights reserved.
+      <footer className="border-t border-[#1e293b] bg-[#070a0e] py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 gap-8 text-xs sm:grid-cols-3">
+            <div>
+              <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Tools' : '工具'}</h3>
+              <div className="flex flex-col items-start gap-2 text-slate-500">
+                <a href="/tools" className="hover:text-emerald-300 transition">{language === 'en' ? 'All tools' : '全部工具'}</a>
+                {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+                  <a key={slug} href={`/${slug}`} className="hover:text-emerald-300 transition">{toolLabel(slug, language)}</a>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Developers' : '开发者'}</h3>
+              <div className="flex flex-col items-start gap-2 text-slate-500">
+                <a href="/docs" className="hover:text-emerald-300 transition">{ui.docs}</a>
+                <button onClick={() => setActiveTab('keys')} className="hover:text-emerald-300 transition">{ui.api}</button>
+                <button onClick={() => setActiveTab('mcp')} className="hover:text-emerald-300 transition">{ui.mcp}</button>
+                <button onClick={() => setActiveTab('cli')} className="hover:text-emerald-300 transition">{ui.cli}</button>
+                <button onClick={() => setActiveTab('skills')} className="hover:text-emerald-300 transition">{ui.skill}</button>
+                <button onClick={() => setActiveTab('extension')} className="hover:text-emerald-300 transition">{ui.extension}</button>
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Help and legal' : '帮助与政策'}</h3>
+              <div className="flex flex-col items-start gap-2 text-slate-500">
+                <a href="/faq" className="hover:text-emerald-300 transition">{ui.faq}</a>
+                <a href="/terms" className="hover:text-emerald-300 transition">{ui.terms}</a>
+                <a href="/privacy" className="hover:text-emerald-300 transition">{ui.privacy}</a>
+                <a href="mailto:vkdefi@gmail.com" className="hover:text-emerald-300 transition">{ui.contact}</a>
+                <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">@vkdefi</a>
+                <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">GitHub Repo</a>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="mt-10 flex flex-col gap-3 border-t border-[#1e293b] pt-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <div>© 2026 <span className="font-medium text-slate-300">Herdown</span>. All rights reserved.</div>
             <span className="flex items-center gap-1.5 text-emerald-500">
               <ShieldCheck className="w-3.5 h-3.5" />
               {language === 'en' ? 'End-to-End Privacy Preserved' : '端到端隐私保护'}
             </span>
-            <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
-              GitHub Repo
-            </a>
-            <a href="/terms" className="hover:text-slate-300 transition">
-              {ui.terms}
-            </a>
-            <a href="/privacy" className="hover:text-slate-300 transition">
-              {ui.privacy}
-            </a>
-            <a href="/#faq" className="hover:text-slate-300 transition">
-              {ui.faq}
-            </a>
-            <a href="mailto:vkdefi@gmail.com" className="hover:text-slate-300 transition">
-              {ui.contact}
-            </a>
-            <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-slate-300 transition">
-              @vkdefi
-            </a>
           </div>
         </div>
       </footer>
