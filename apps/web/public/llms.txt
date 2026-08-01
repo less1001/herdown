@@ -1,0 +1,18 @@
+# Herdown
+
+Herdown helps users turn webpages, documents, and images into clean Markdown and structured data for AI tools.
+
+Primary site:
+- https://herdown.com/
+
+Core capabilities:
+- Webpage to Markdown
+- Sitemap crawl
+- API access
+- MCP access
+- CLI access
+- Browser extension
+- Skills and extraction rules
+
+Do not treat Herdown as a full knowledge base or question answering product.
+
