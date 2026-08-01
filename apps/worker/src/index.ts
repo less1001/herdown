@@ -6,8 +6,10 @@ export interface Env {
   WAFFO_MERCHANT_ID?: string;
   WAFFO_PRIVATE_KEY?: string;
   WAFFO_STARTER_PRODUCT_ID?: string;
-  WAFFO_CURRENCY?: string;
-  WAFFO_ENVIRONMENT?: 'test' | 'prod';
+  WAFFO_TEST_MERCHANT_ID?: string;
+  WAFFO_TEST_PRIVATE_KEY?: string;
+  WAFFO_TEST_STARTER_PRODUCT_ID?: string;
+  HERDOWN_TEST_TOKEN?: string;
   WAFFO_TEST_WEBHOOK_PUBLIC_KEY?: string;
   WAFFO_PROD_WEBHOOK_PUBLIC_KEY?: string;
   ASSETS?: { fetch: (request: Request) => Promise<Response> };
@@ -246,14 +248,18 @@ const createWaffoCheckout = async (
   env: Env,
   merchantOrderId: string,
   origin: string,
+  testMode: boolean,
 ): Promise<{ checkoutUrl?: string; error?: string }> => {
-  if (!env.WAFFO_MERCHANT_ID || !env.WAFFO_PRIVATE_KEY || !env.WAFFO_STARTER_PRODUCT_ID) {
+  const merchantId = testMode ? env.WAFFO_TEST_MERCHANT_ID : env.WAFFO_MERCHANT_ID;
+  const privateKey = testMode ? env.WAFFO_TEST_PRIVATE_KEY : env.WAFFO_PRIVATE_KEY;
+  const productId = testMode ? env.WAFFO_TEST_STARTER_PRODUCT_ID : env.WAFFO_STARTER_PRODUCT_ID;
+  if (!merchantId || !privateKey || !productId) {
     return { error: '支付配置尚未完成' };
   }
 
   const body = JSON.stringify({
-    productId: env.WAFFO_STARTER_PRODUCT_ID,
-    currency: env.WAFFO_CURRENCY || 'USD',
+    productId,
+    currency: 'USD',
     successUrl: `${origin}/?payment=success`,
     orderMerchantExternalId: merchantOrderId,
     metadata: { herdown_product: 'starter' },
@@ -261,13 +267,13 @@ const createWaffoCheckout = async (
   });
 
   try {
-    const signature = await waffoRequestSignature('POST', WAFFO_CHECKOUT_PATH, body, env.WAFFO_PRIVATE_KEY);
+    const signature = await waffoRequestSignature('POST', WAFFO_CHECKOUT_PATH, body, privateKey);
     const [timestamp, signatureValue] = signature.split('.', 2);
     const response = await fetch(`https://api.waffo.ai${WAFFO_CHECKOUT_PATH}`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-merchant-id': env.WAFFO_MERCHANT_ID,
+        'x-merchant-id': merchantId,
         'x-timestamp': timestamp,
         'x-signature': signatureValue,
       },
@@ -755,7 +761,7 @@ export default {
 
     // Create a server-side Waffo checkout session. The API key identifies the credit recipient.
     if (url.pathname === '/v1/checkout' && request.method === 'POST') {
-      const body = (await request.json().catch(() => ({}))) as { product?: string };
+      const body = (await request.json().catch(() => ({}))) as { product?: string; test?: boolean };
       const authInfo = await verifyApiKeyOrIp(request, env);
       if (!authInfo.isKey) {
         return json({ success: false, message: '请先创建并使用一个API密钥，付款后的点数会发放到该密钥' }, { status: 401 });
@@ -767,8 +773,9 @@ export default {
 
       if (!env.DB) return json({ success: false, message: '支付服务暂时不可用' }, { status: 503 });
 
+      const testMode = body.test === true && Boolean(env.HERDOWN_TEST_TOKEN) && request.headers.get('x-herdown-test-token') === env.HERDOWN_TEST_TOKEN;
       const merchantOrderId = `hd_${crypto.randomUUID().replace(/-/g, '')}`;
-      const mode = env.WAFFO_ENVIRONMENT === 'test' ? 'test' : 'prod';
+      const mode = testMode ? 'test' : 'prod';
       try {
         await env.DB.prepare(`
           INSERT INTO payment_orders (merchant_order_id, api_key, product_code, credits, payment_status, mode)
@@ -778,7 +785,7 @@ export default {
         return json({ success: false, message: '支付订单初始化失败，请稍后重试' }, { status: 500 });
       }
 
-      const checkout = await createWaffoCheckout(env, merchantOrderId, url.origin);
+      const checkout = await createWaffoCheckout(env, merchantOrderId, url.origin, testMode);
       if (!checkout.checkoutUrl) {
         await env.DB.prepare("UPDATE payment_orders SET payment_status = 'failed' WHERE merchant_order_id = ?")
           .bind(merchantOrderId)
