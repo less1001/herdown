@@ -2016,10 +2016,6 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
 
             <div className="grid grid-cols-1 gap-6 pt-2">
               <div className="p-6 rounded-2xl bg-[#0d131d] border border-[#1e293b] space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
-                  1
-                </div>
-                <h3 className="text-lg font-bold text-white">{tr('Option 1: Load the local extension package', '方式一：加载本地离线扩展包')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {language === 'en' ? <>Download the ZIP package, unzip it, open <code className="text-emerald-400">chrome://extensions/</code> in Chrome, enable Developer mode, then choose Load unpacked.</> : <>下载ZIP包并解压后，在Chrome打开<code className="text-emerald-400">chrome://extensions/</code>，开启右上方“开发者模式”，点击“加载已解压的扩展程序”选择本目录即可！</>}
                 </p>
