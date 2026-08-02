@@ -1781,7 +1781,7 @@ export default {
               tools: [
                 {
                   name: 'parse_webpage',
-                  description: 'Parse public web pages (WeChat, Xiaohongshu, Zhihu, etc.) into clean Markdown formatted for AI Agents.',
+                  description: 'Parse public web pages into clean Markdown formatted for AI workflows.',
                   inputSchema: {
                     type: 'object',
                     properties: {
