@@ -1,6 +1,7 @@
 node_modules
 .wrangler
 dist
+apps/web/public/downloads
 .DS_Store
 .env
 .env.*
