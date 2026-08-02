@@ -167,7 +167,7 @@ const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: st
 
 const toolLabel = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enTitle : toolPageInfo[slug].title;
 const toolDescription = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enDescription : toolPageInfo[slug].description;
-const localizedHref = (path: string, language: Language) => language === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path;
+const localizedHref = (path: string, language: Language) => `${path}${path.includes('?') ? '&' : '?'}lang=${language}`;
 
 function TextMarkdownTool({ language }: { language: Language }) {
   const ui = messages[language];
@@ -231,6 +231,17 @@ function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'word-to
   const extension = slug === 'word-to-markdown' ? 'docx' : slug === 'ppt-to-markdown' ? 'pptx' : slug === 'excel-to-markdown' ? 'xlsx' : 'pdf';
   const sampleFileName = language === 'en' ? `your-file.${extension}` : `你的文件.${extension}`;
   const command = ['python -m pip install markitdown', `markitdown "${sampleFileName}" > output.md`].join('\n');
+  const details = language === 'en' ? {
+    'word-to-markdown': { suitable: 'DOCX files with headings, paragraphs, lists, tables, and links.', output: 'Produces structured Markdown that is easy to search, edit, and send to an AI workflow.', note: 'Complex layout, tracked changes, and embedded objects may need a quick review.' },
+    'pdf-to-markdown': { suitable: 'Text-based PDFs such as reports, papers, manuals, and articles.', output: 'Extracts readable text and document structure into Markdown.', note: 'Scanned PDFs are images. Use the local Unlimited-OCRSkill for those files.' },
+    'ppt-to-markdown': { suitable: 'PPT and PPTX presentations with slide titles, text, and tables.', output: 'Turns slide content into a linear Markdown document for reading and search.', note: 'Visual positioning, animations, and charts may not map perfectly to Markdown.' },
+    'excel-to-markdown': { suitable: 'XLSX spreadsheets with worksheets, tables, and cell values.', output: 'Converts worksheet data into Markdown tables for review and AI workflows.', note: 'Formulas are exported as available values; charts and complex formatting may need review.' },
+  }[slug] : {
+    'word-to-markdown': { suitable: '包含标题、段落、列表、表格和链接的DOCX文档。', output: '整理成结构清晰的Markdown，方便搜索、编辑和交给AI工作流。', note: '复杂排版、修订记录和嵌入对象可能需要人工检查。' },
+    'pdf-to-markdown': { suitable: '报告、论文、说明书和文章等可提取文字的PDF。', output: '提取可阅读的文字和文档结构，整理成Markdown。', note: '扫描PDF本质上是图片，请使用本地Unlimited-OCRSkill。' },
+    'ppt-to-markdown': { suitable: '包含幻灯片标题、文字和表格的PPT、PPTX演示文稿。', output: '把幻灯片内容整理成便于阅读和搜索的Markdown文档。', note: '视觉位置、动画和图表无法完全还原为Markdown。' },
+    'excel-to-markdown': { suitable: '包含工作表、表格和单元格内容的XLSX电子表格。', output: '把工作表数据转换成Markdown表格，方便查看和交给AI工作流。', note: '公式会按可读取的值导出，图表和复杂格式可能需要检查。' },
+  }[slug];
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -245,6 +256,20 @@ function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'word-to
           <p className="text-sm text-slate-400 mt-2 leading-7">{language === 'en' ? 'Install local MarkItDown and run the command below. Your file stays on your computer.' : '安装本地MarkItDown后，在终端执行下面的命令。文件留在你的电脑上，Herdown不接收文件内容。'}</p>
         </div>
         <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{command}</pre>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-[#0a0f16] border border-[#1e293b] p-4">
+            <h3 className="text-sm font-bold text-white">{language === 'en' ? 'Suitable files' : '适合的文件'}</h3>
+            <p className="mt-2 text-xs leading-6 text-slate-400">{details.suitable}</p>
+          </div>
+          <div className="rounded-xl bg-[#0a0f16] border border-[#1e293b] p-4">
+            <h3 className="text-sm font-bold text-white">{language === 'en' ? 'Output' : '输出结果'}</h3>
+            <p className="mt-2 text-xs leading-6 text-slate-400">{details.output}</p>
+          </div>
+          <div className="rounded-xl bg-[#0a0f16] border border-[#1e293b] p-4">
+            <h3 className="text-sm font-bold text-white">{language === 'en' ? 'Please note' : '使用提示'}</h3>
+            <p className="mt-2 text-xs leading-6 text-slate-400">{details.note}</p>
+          </div>
+        </div>
         <p className="text-xs text-slate-500 leading-6">{language === 'en' ? 'For scans or screenshots, use the local Unlimited-OCRSkill. It runs locally and needs no extra Herdown server.' : '复杂扫描件或截图请使用本地Unlimited-OCRSkill。它在本地运行，不需要Herdown额外服务器。'}</p>
       </div>
     </div>
@@ -539,7 +564,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm leading-7 text-amber-100">
               {isEnglish ? 'Do not put a live API key in frontend code, a public repository, or a screenshot.' : '不要把正式API密钥放进前端代码、公开仓库或截图。'}
             </div>
-            {codeBlock('env', 'Environment variable', 'export HERDOWN_API_KEY="sk_live_YOUR_API_KEY"')}
+            {codeBlock('env', isEnglish ? 'Environment variable' : '环境变量', 'export HERDOWN_API_KEY="sk_live_YOUR_API_KEY"')}
           </section>
 
           <section className="space-y-5">
@@ -556,7 +581,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
           </section>
 
           <section className="space-y-5">
-            {sectionTitle('rest-api', 'RESTAPI', isEnglish ? 'HTTP endpoints for your backend, scripts, and workflow tools.' : '适合后端、脚本和工作流平台调用的HTTP接口。')}
+            {sectionTitle('rest-api', isEnglish ? 'RESTAPI' : 'RESTAPI接口', isEnglish ? 'HTTP endpoints for your backend, scripts, and workflow tools.' : '适合后端、脚本和工作流平台调用的HTTP接口。')}
             <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-5 text-sm leading-7 text-slate-400">
               <p>{isEnglish ? 'Base URL' : '基础地址'}：<code className="text-emerald-300">{apiBase}</code></p>
               <p>{isEnglish ? 'Method' : '请求方式'}：<code className="text-emerald-300">POST</code></p>
@@ -567,7 +592,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
 
           <section className="space-y-5">
             {sectionTitle('parse', 'POST /v1/parse', isEnglish ? 'Parse one public webpage or raw HTML into clean Markdown.' : '把一个公开网页或HTML源码解析成干净Markdown。')}
-            {codeBlock('parse', 'Request', quickstartExample)}
+            {codeBlock('parse', isEnglish ? 'Request' : '请求', quickstartExample)}
             <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
               <table className="min-w-[560px] w-full text-left text-xs">
                 <thead className="bg-[#111a26] text-slate-300"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">{isEnglish ? 'Description' : '说明'}</th></tr></thead>
@@ -577,7 +602,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
                 </tbody>
               </table>
             </div>
-            {codeBlock('response', 'Response', ['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n'))}
+            {codeBlock('response', isEnglish ? 'Response' : '响应', ['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n'))}
             <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'images is an array of image URL strings extracted from the source page. Markdown may also contain image references; the array is provided so clients can list or download them separately.' : 'images是从原网页提取出的图片URL字符串数组。Markdown中也可能包含图片引用，单独返回这个数组方便客户端列出或下载图片。'}</p>
           </section>
 
@@ -618,10 +643,10 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
           </section>
 
           <section className="space-y-5">
-            {sectionTitle('skill', 'Skill', isEnglish ? 'Instructions that help an AI agent choose and use Herdown correctly.' : '帮助AIAgent正确选择和使用Herdown的操作说明。')}
+            {sectionTitle('skill', isEnglish ? 'Skill' : 'Skill说明', isEnglish ? 'Instructions that help an AI agent choose and use Herdown correctly.' : '帮助AIAgent正确选择和使用Herdown的操作说明。')}
             <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'A Skill is not another server. It tells an agent when to use the browser, RESTAPI, MCP, or CLI, how to preserve useful metadata, and how to handle failures.' : 'Skill不是另一个服务器，而是给AIAgent看的操作说明。它告诉Agent什么时候使用网页、RESTAPI、MCP或CLI，如何保留有用的元数据，以及失败时怎么处理。'}</p>
-            {codeBlock('skill-install', isEnglish ? 'Install' : '安装', isEnglish ? 'mkdir -p ~/.agents/skills/herdown\ncurl -L https://raw.githubusercontent.com/less1001/herdown/main/packages/cli/SKILL.md -o ~/.agents/skills/herdown/SKILL.md' : 'mkdir -p ~/.agents/skills/herdown\ncurl -L https://raw.githubusercontent.com/less1001/herdown/main/packages/cli/SKILL.md -o ~/.agents/skills/herdown/SKILL.md')}
-            {codeBlock('skill', 'Skill behavior', skillExample)}
+            {codeBlock('skill-install', isEnglish ? 'Install' : '安装命令', isEnglish ? 'mkdir -p ~/.agents/skills/herdown\ncurl -L https://raw.githubusercontent.com/less1001/herdown/main/packages/cli/SKILL.md -o ~/.agents/skills/herdown/SKILL.md' : 'mkdir -p ~/.agents/skills/herdown\ncurl -L https://raw.githubusercontent.com/less1001/herdown/main/packages/cli/SKILL.md -o ~/.agents/skills/herdown/SKILL.md')}
+            {codeBlock('skill', isEnglish ? 'Skill behavior' : 'Skill用法', skillExample)}
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Herdown Skill' : 'HerdownSkill'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'Web extraction, clean Markdown, API, MCP, and CLI routing.' : '网页提取、干净Markdown、API、MCP和CLI调用。'}</p></div>
               <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Local Unlimited-OCRSkill' : '本地Unlimited-OCRSkill'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'Local processing for scans and screenshots without an extra online OCR server.' : '本地处理扫描件和截图，不增加额外在线OCR服务器。'}</p></div>
@@ -630,7 +655,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
 
           <section className="space-y-5">
             {sectionTitle('cli', 'CLI', isEnglish ? 'Run Herdown from a terminal and save the result locally.' : '在终端运行Herdown，并把结果保存到本地。')}
-            {codeBlock('cli', 'Terminal', cliExample)}
+            {codeBlock('cli', isEnglish ? 'Terminal' : '终端命令', cliExample)}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Install and help' : '安装和帮助'}</p><pre className="mt-2 overflow-x-auto text-xs leading-6 text-emerald-300">npx @herdown/cli --help\nnpx @herdown/cli --version</pre></div>
               <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Options' : '参数'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? '-o writes a Markdown file. -k provides an API key. Without -o, Markdown is printed to the terminal.' : '-o把结果写入Markdown文件，-k提供API密钥。不使用-o时，Markdown直接输出到终端。'}</p></div>
@@ -1265,11 +1290,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             ) : (
               <button
                 onClick={handleGoogleLogin}
-                className="p-2 rounded-lg bg-white text-slate-900 hover:bg-slate-200 transition"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white text-slate-900 hover:bg-slate-200 transition text-xs font-semibold"
                 title={ui.login}
                 aria-label={ui.login}
               >
                 <LogIn className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{language === 'en' ? 'Sign in' : '登录'}</span>
               </button>
             )}
             <a
@@ -1797,11 +1823,11 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                 <p className="text-2xl font-extrabold text-white mt-1">{stats.today_requests}{language === 'en' ? '' : '次'}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Available credits' : '可用点数'}</span>
-                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{hasPaidCredits ? (creditBalance ?? 0).toLocaleString() : `${(freeRemaining ?? 1000).toLocaleString()}${language === 'en' ? ' free' : '次免费'}`}</p>
+                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Available parse quota' : '可用解析额度'}</span>
+                <p className="text-2xl font-extrabold text-emerald-400 mt-1">{hasPaidCredits ? `${(creditBalance ?? 0).toLocaleString()}${language === 'en' ? ' parses' : '次'}` : `${(freeRemaining ?? 1000).toLocaleString()}${language === 'en' ? ' parses' : '次'}`}</p>
               </div>
               <div className="p-4 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Active API keys' : '已生效APIKey'}</span>
+                <span className="text-xs text-slate-400 font-medium">{language === 'en' ? 'Active API keys' : '已生效API密钥'}</span>
                 <p className="text-2xl font-extrabold text-white mt-1">{apiKeys.filter(k => k.status === 'active').length}</p>
               </div>
             </div>
