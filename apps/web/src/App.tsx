@@ -1169,87 +1169,36 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             </div>
           </a>
 
-          {/* Navigation Tabs */}
-          <nav className="hidden sm:flex overflow-x-auto whitespace-nowrap scrollbar-none items-center gap-1 bg-[#111823] p-1 rounded-xl border border-[#1e293b] max-w-[60%] sm:max-w-none">
+          {/* Desktop navigation */}
+          <nav className="hidden sm:flex items-center gap-1 rounded-xl border border-[#1e293b] bg-[#111823] p-1">
             <a
               href={localizedHref('/', language)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              className={`rounded-lg px-4 py-1.5 text-xs font-medium transition-all ${
                 activeTab === 'converter' && (!toolSlug || ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'word-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'].includes(toolSlug))
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
             >
-              <Zap className="w-3.5 h-3.5" />
               {ui.single}
             </a>
-            <a
-              href={localizedHref('/api', language)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                toolSlug === 'api'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Key className="w-3.5 h-3.5" />
-              {ui.api}
-            </a>
-            {sessionUser?.is_admin && (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  activeTab === 'admin'
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                {ui.admin}
-              </button>
-            )}
-            <a
-              href={localizedHref('/mcp', language)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                toolSlug === 'mcp'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Cpu className="w-3.5 h-3.5" />
-              {ui.mcp}
-            </a>
-            <a
-              href={localizedHref('/cli', language)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                toolSlug === 'cli'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              {ui.cli}
-            </a>
-            <a
-              href={localizedHref('/skill', language)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                toolSlug === 'skill'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5" />
-              {ui.skill}
-            </a>
-            <a
-              href={localizedHref('/browser-extension', language)}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                toolSlug === 'browser-extension'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <PlugZap className="w-3.5 h-3.5" />
-              {ui.extension}
-            </a>
+            <details className="group relative">
+              <summary className={`cursor-pointer list-none rounded-lg px-4 py-1.5 text-xs font-medium transition-all ${['api', 'mcp', 'cli', 'skill', 'browser-extension'].includes(toolSlug || '') ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}`}>
+                {language === 'en' ? 'Developers' : '开发者'}<span className="ml-1 text-[10px]">⌄</span>
+              </summary>
+              <div className="absolute left-0 top-full z-50 mt-2 min-w-44 rounded-xl border border-[#1e293b] bg-[#0d131c] p-1.5 shadow-2xl">
+                {[
+                  ['/api', ui.api],
+                  ['/mcp', ui.mcp],
+                  ['/cli', ui.cli],
+                  ['/skill', ui.skill],
+                  ['/browser-extension', ui.extension],
+                ].map(([path, label]) => (
+                  <a key={path} href={localizedHref(path, language)} className="block rounded-lg px-3 py-2 text-xs text-slate-400 hover:bg-[#111823] hover:text-white">{label}</a>
+                ))}
+                <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="block rounded-lg px-3 py-2 text-xs text-slate-400 hover:bg-[#111823] hover:text-white">GitHub</a>
+                {sessionUser?.is_admin && <button type="button" onClick={() => setActiveTab('admin')} className="block w-full rounded-lg px-3 py-2 text-left text-xs text-slate-400 hover:bg-[#111823] hover:text-white">{ui.admin}</button>}
+              </div>
+            </details>
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-3">
@@ -1303,15 +1252,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                 <span className="hidden sm:inline">{language === 'en' ? 'Sign in' : '登录'}</span>
               </button>
             )}
-            <a
-              href="https://github.com/less1001/herdown"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden sm:flex p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-400 hover:text-white hover:bg-slate-800 transition"
-              title={ui.github}
-            >
-              <Code2 className="w-4 h-4" />
-            </a>
             <button
               type="button"
               onClick={() => setMobileMenuOpen(value => !value)}
@@ -1361,7 +1301,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             {(toolSlug === 'pdf-to-markdown' || toolSlug === 'word-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} language={language} />}
             {toolSlug === 'pricing' && <PricingPage language={language} onUpgrade={() => setShowUpgradeModal(true)} />}
             {(toolSlug === 'docs' || toolSlug === 'help') && <HelpPage language={language} />}
-            {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-8">
+            {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-14">
             {/* Hero Banner */}
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
@@ -1482,7 +1422,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                     disabled={loading || !inputUrl.trim()}
                     className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm text-white shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
                   >
-                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-white" />}
+                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
                       {loading ? ui.parsing : language === 'en' ? 'Generate AI-ready Markdown' : '生成AI Markdown'}
                   </button>
                 </div>
@@ -1521,12 +1461,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               )}
             </div>
 
-            <section className="space-y-4 pt-2">
+            <section className="space-y-6 pt-8">
               <div className="text-center">
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">{language === 'en' ? 'Why AI agents need clean context' : '为什么AI Agent需要Clean Context？'}</h2>
                 <p className="mt-2 text-sm text-slate-500">{language === 'en' ? 'Less noise in, better material for the agent.' : '减少无效信息，给Agent更高质量的资料。'}</p>
               </div>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-5 md:grid-cols-3">
                 {[
                   [language === 'en' ? 'Reduce Context Waste' : '减少无效上下文', language === 'en' ? 'Remove HTML noise, ads, navigation, and recommendations. Reduce unnecessary context by up to 80%.' : '清理HTML、广告、导航和推荐内容，最多减少80%的无效上下文。'],
                   [language === 'en' ? 'Better Agent Understanding' : '提高Agent理解能力', language === 'en' ? 'Structured Markdown gives agents cleaner material for retrieval, reasoning, and answering.' : '结构化Markdown让Agent获得更干净的资料，更好地检索、推理和回答。'],
@@ -2194,7 +2134,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
         )}
 
         {activeTab === 'converter' && (!toolSlug || toolSlug === 'url-to-markdown' || toolSlug === 'faq') && (
-          <section id="faq" className="max-w-4xl mx-auto mt-14 scroll-mt-8">
+          <section id="faq" className="max-w-4xl mx-auto mt-24 scroll-mt-8">
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{language === 'en' ? 'FAQ' : '常见问题'}</h2>
             </div>
