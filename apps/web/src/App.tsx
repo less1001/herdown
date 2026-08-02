@@ -2021,17 +2021,16 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </div>
                 <h3 className="text-lg font-bold text-white">{tr('Option 1: Load the local extension package', '方式一：加载本地离线扩展包')}</h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  {language === 'en' ? <>No need to wait for store review. Download and unzip the package, open <code className="text-emerald-400">chrome://extensions/</code> in Chrome, enable Developer mode, then choose Load unpacked.</> : <>无需等待Chrome商店审核！下载解压包后，在Chrome打开<code className="text-emerald-400">chrome://extensions/</code>，开启右上方“开发者模式”，点击“加载已解压的扩展程序”选择本目录即可！</>}
+                  {language === 'en' ? <>Download the ZIP package, unzip it, open <code className="text-emerald-400">chrome://extensions/</code> in Chrome, enable Developer mode, then choose Load unpacked.</> : <>下载ZIP包并解压后，在Chrome打开<code className="text-emerald-400">chrome://extensions/</code>，开启右上方“开发者模式”，点击“加载已解压的扩展程序”选择本目录即可！</>}
                 </p>
                 <div className="pt-2">
                   <a
-                    href="https://github.com/less1001/herdown/tree/main/apps/extension"
-                    target="_blank"
-                    rel="noreferrer"
+                    href="/downloads/herdown-extension.zip"
+                    download
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
                   >
                     <Download className="w-4 h-4" />
-                    {tr('Download / view extension source ZIP', '下载/查看插件源码ZIP')}
+                    {ui.extensionZip}
                   </a>
                 </div>
               </div>

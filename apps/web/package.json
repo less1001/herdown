@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/build-extension-zip.mjs",
     "build": "vite build",
     "check": "tsc --noEmit",
     "lint": "eslint ."
