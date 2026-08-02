@@ -1155,7 +1155,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
 
       {/* Top Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#070a0e]/80 border-b border-[#1e293b]">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center gap-2">
+        <div className="relative max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center gap-2">
           <a href={localizedHref('/', language)} className="flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0f6b4f] to-[#10b981] p-[1px] shadow-lg shadow-[#0f6b4f]/20">
               <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-base">
@@ -1170,7 +1170,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
           </a>
 
           {/* Desktop navigation */}
-          <nav className="hidden sm:flex items-center gap-1 rounded-xl border border-[#1e293b] bg-[#111823] p-1">
+          <nav className="hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 rounded-xl border border-[#1e293b] bg-[#111823] p-1">
             <a
               href={localizedHref('/', language)}
               className={`rounded-lg px-4 py-1.5 text-xs font-medium transition-all ${
@@ -1255,7 +1255,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             <button
               type="button"
               onClick={() => setMobileMenuOpen(value => !value)}
-              className="flex sm:hidden items-center justify-center p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-300 hover:text-white transition"
+              className="flex lg:hidden items-center justify-center p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-300 hover:text-white transition"
               aria-label={language === 'en' ? 'Open menu' : '打开菜单'}
               aria-expanded={mobileMenuOpen}
             >
@@ -1264,7 +1264,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
           </div>
         </div>
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-[#1e293b] bg-[#090d12]/95 px-4 py-3 shadow-2xl">
+          <div className="lg:hidden border-t border-[#1e293b] bg-[#090d12]/95 px-4 py-3 shadow-2xl">
             <a
               href={localizedHref('/', language)}
               onClick={() => setMobileMenuOpen(false)}
@@ -1301,7 +1301,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             {(toolSlug === 'pdf-to-markdown' || toolSlug === 'word-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} language={language} />}
             {toolSlug === 'pricing' && <PricingPage language={language} onUpgrade={() => setShowUpgradeModal(true)} />}
             {(toolSlug === 'docs' || toolSlug === 'help') && <HelpPage language={language} />}
-            {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-14">
+            {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-20">
             {/* Hero Banner */}
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
@@ -1461,16 +1461,16 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               )}
             </div>
 
-            <section className="space-y-6 pt-8">
+            <section className="space-y-6 pt-10">
               <div className="text-center">
                 <h2 className="text-2xl sm:text-3xl font-bold text-white">{language === 'en' ? 'Why AI agents need clean context' : '为什么AI Agent需要Clean Context？'}</h2>
                 <p className="mt-2 text-sm text-slate-500">{language === 'en' ? 'Less noise in, better material for the agent.' : '减少无效信息，给Agent更高质量的资料。'}</p>
               </div>
               <div className="grid gap-5 md:grid-cols-3">
                 {[
-                  [language === 'en' ? 'Reduce Context Waste' : '减少无效上下文', language === 'en' ? 'Remove HTML noise, ads, navigation, and recommendations. Reduce unnecessary context by up to 80%.' : '清理HTML、广告、导航和推荐内容，最多减少80%的无效上下文。'],
-                  [language === 'en' ? 'Better Agent Understanding' : '提高Agent理解能力', language === 'en' ? 'Structured Markdown gives agents cleaner material for retrieval, reasoning, and answering.' : '结构化Markdown让Agent获得更干净的资料，更好地检索、推理和回答。'],
-                  [language === 'en' ? 'Lower Cost, Faster Responses' : '降低成本，加快响应', language === 'en' ? 'Less unnecessary context means lower input costs, faster responses, and more useful context space.' : '减少无效上下文，带来更低的输入成本、更快的响应和更多有效上下文空间。'],
+                  [language === 'en' ? 'Reduce Context Waste' : '减少无效上下文', language === 'en' ? 'Remove HTML noise, ads, navigation, and recommendations. Reduce unnecessary context by up to 80%, often using fewer input tokens and lowering API costs.' : '清理HTML、广告、导航和推荐内容，最多减少80%的无效上下文，通常也意味着更少的输入Token和更低的调用成本。'],
+                  [language === 'en' ? 'Better Agent Understanding' : '提高Agent理解能力', language === 'en' ? 'Structured Markdown makes it easier for AI agents to retrieve, understand, and use your materials.' : '结构化Markdown让AI Agent更容易检索、理解和使用资料。'],
+                  [language === 'en' ? 'Lower Cost, Faster Responses' : '降低成本，加快响应', language === 'en' ? 'Fewer input tokens usually mean lower model costs, faster responses, and more useful context space.' : '更少的输入Token，通常意味着更低的模型调用成本、更快的响应速度和更多有效上下文空间。'],
                 ].map(([title, body]) => (
                   <div key={title} className="rounded-2xl border border-[#1e293b] bg-[#0f1722] p-5">
                     <h3 className="text-sm font-bold text-white">{title}</h3>
@@ -2134,7 +2134,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
         )}
 
         {activeTab === 'converter' && (!toolSlug || toolSlug === 'url-to-markdown' || toolSlug === 'faq') && (
-          <section id="faq" className="max-w-4xl mx-auto mt-24 scroll-mt-8">
+          <section id="faq" className="max-w-4xl mx-auto mt-28 scroll-mt-8">
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{language === 'en' ? 'FAQ' : '常见问题'}</h2>
             </div>
