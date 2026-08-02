@@ -163,7 +163,7 @@ const renderSeoShell = async (request: Request, env: Env, path: string): Promise
   const page = seoPages[path][language];
   const url = new URL(request.url);
   const canonicalUrl = `${url.origin}${path}${language === 'en' ? '?lang=en' : ''}`;
-  const asset = await env.ASSETS!.fetch(new Request(new URL('/index.html', request.url), request));
+  const asset = await env.ASSETS!.fetch(new Request(new URL('/', request.url), request));
   if (!asset.ok) return asset;
   let html = await asset.text();
   const replace = (pattern: RegExp, replacement: string) => { html = html.replace(pattern, replacement); };
