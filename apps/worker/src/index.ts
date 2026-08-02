@@ -37,6 +37,156 @@ const json = (data: unknown, init: ResponseInit = {}) => {
   });
 };
 
+type SeoLanguage = 'zh' | 'en';
+
+type SeoPage = {
+  title: string;
+  description: string;
+  keywords: string;
+  heading: string;
+  intro: string;
+};
+
+const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
+  '/': {
+    zh: {
+      title: 'Herdown｜给AIAgent用的干净Markdown入口',
+      description: '把网页、文档和图片整理成适合AI工作流使用的干净Markdown。',
+      keywords: '网页转Markdown,文档转Markdown,图片转Markdown,AI工作流',
+      heading: '给AIAgent用的干净Markdown入口',
+      intro: '把网页、文档和图片整理成适合AI工作流使用的干净Markdown。',
+    },
+    en: {
+      title: 'Herdown｜Clean Markdown for AI agents',
+      description: 'Turn webpages, documents, and images into clean Markdown for AI workflows.',
+      keywords: 'webpage to Markdown,document to Markdown,image to Markdown,AI workflow',
+      heading: 'Clean Markdown for AI workflows',
+      intro: 'Turn webpages, documents, and images into clean Markdown for the AI workflow you already use.',
+    },
+  },
+  '/tools': {
+    zh: { title: '本地资料｜Herdown', description: '在浏览器本地整理TXT、Markdown、图片、Word、PDF、PPT和Excel资料。', keywords: '本地文档转换,文档转Markdown,TXT转Markdown,PDF转Markdown', heading: '本地资料', intro: '选择资料并整理成干净Markdown，文件保留在当前设备。' },
+    en: { title: 'Local materials｜Herdown', description: 'Organize TXT, Markdown, images, Word, PDF, PPT, and Excel files locally in your browser.', keywords: 'local document conversion,document to Markdown,TXT to Markdown,PDF to Markdown', heading: 'Local materials', intro: 'Choose a file and turn it into clean Markdown while it stays on your device.' },
+  },
+  '/url-to-markdown': {
+    zh: { title: '网页转Markdown｜Herdown', description: '把公开网页整理成适合AI工作流使用的干净Markdown。', keywords: '网页转Markdown,URL转Markdown,HTML转Markdown', heading: '网页转Markdown', intro: '粘贴一个公开网页链接，提取正文并整理成干净Markdown。' },
+    en: { title: 'URL to Markdown｜Herdown', description: 'Turn a public webpage into clean Markdown for AI workflows.', keywords: 'URL to Markdown,webpage to Markdown,HTML to Markdown', heading: 'URL to Markdown', intro: 'Paste a public webpage URL and get clean Markdown for your workflow.' },
+  },
+  '/txt-to-markdown': {
+    zh: { title: 'TXT转Markdown｜Herdown', description: '把TXT文本整理成结构清晰的Markdown。', keywords: 'TXT转Markdown,文本转Markdown', heading: 'TXT转Markdown', intro: '导入TXT文本，快速整理为可继续编辑的Markdown。' },
+    en: { title: 'TXT to Markdown｜Herdown', description: 'Turn plain TXT files into clean, structured Markdown.', keywords: 'TXT to Markdown,text to Markdown', heading: 'TXT to Markdown', intro: 'Convert a plain TXT file into clean Markdown you can keep editing.' },
+  },
+  '/pdf-to-markdown': {
+    zh: { title: 'PDF转Markdown｜Herdown', description: '在本地将PDF资料整理成Markdown，不上传文件。', keywords: 'PDF转Markdown,PDF转换', heading: 'PDF转Markdown', intro: '使用本地工具整理PDF资料，文件不需要上传到Herdown。' },
+    en: { title: 'PDF to Markdown｜Herdown', description: 'Turn PDF materials into Markdown locally without uploading the file.', keywords: 'PDF to Markdown,PDF conversion', heading: 'PDF to Markdown', intro: 'Process PDF materials locally without uploading the file to Herdown.' },
+  },
+  '/ppt-to-markdown': {
+    zh: { title: 'PPT转Markdown｜Herdown', description: '在本地将PPT演示文稿整理成Markdown。', keywords: 'PPT转Markdown,演示文稿转换', heading: 'PPT转Markdown', intro: '将演示文稿整理成适合继续编辑和AI处理的Markdown。' },
+    en: { title: 'PPT to Markdown｜Herdown', description: 'Turn PowerPoint presentations into Markdown locally.', keywords: 'PPT to Markdown,presentation conversion', heading: 'PPT to Markdown', intro: 'Turn a presentation into Markdown for editing and AI workflows.' },
+  },
+  '/excel-to-markdown': {
+    zh: { title: 'Excel转Markdown｜Herdown', description: '在本地将Excel表格整理成结构清晰的Markdown。', keywords: 'Excel转Markdown,表格转换', heading: 'Excel to Markdown', intro: '将Excel表格整理成便于阅读、编辑和继续处理的Markdown。' },
+    en: { title: 'Excel to Markdown｜Herdown', description: 'Turn Excel spreadsheets into clean, readable Markdown locally.', keywords: 'Excel to Markdown,spreadsheet conversion', heading: 'Excel to Markdown', intro: 'Turn a spreadsheet into Markdown that is easy to read and reuse.' },
+  },
+  '/docs': {
+    zh: { title: '开发者文档｜Herdown', description: '查看Herdown的网页解析、REST API、MCP、CLI和本地工具使用说明。', keywords: 'Herdown文档,REST API,MCP,CLI,网页解析', heading: '为AI工作流准备干净资料', intro: '查看网页解析、REST API、MCP、CLI和本地工具的使用说明。' },
+    en: { title: 'Developer documentation｜Herdown', description: 'Learn how to use Herdown webpage parsing, REST API, MCP, CLI, and local tools.', keywords: 'Herdown docs,REST API,MCP,CLI,webpage parsing', heading: 'Clean materials for AI workflows', intro: 'Learn how to connect Herdown to your workflow with the REST API, MCP, CLI, and local tools.' },
+  },
+  '/help': {
+    zh: { title: '帮助中心｜Herdown', description: '查看Herdown的使用帮助、额度说明、账号和数据处理说明。', keywords: 'Herdown帮助,使用说明,额度,数据处理', heading: '帮助中心', intro: '查找使用Herdown、额度、账号和数据处理相关的说明。' },
+    en: { title: 'Help center｜Herdown', description: 'Find help about using Herdown, quotas, accounts, and data handling.', keywords: 'Herdown help,usage guide,quota,data handling', heading: 'Help center', intro: 'Find answers about using Herdown, quotas, accounts, and data handling.' },
+  },
+  '/faq': {
+    zh: { title: '常见问题｜Herdown', description: '查看Herdown关于网页解析、数据保存、额度和付费服务的常见问题。', keywords: 'Herdown常见问题,网页解析,额度,付费服务', heading: '常见问题', intro: '查看使用Herdown前最常见的问题和答案。' },
+    en: { title: 'FAQ｜Herdown', description: 'Answers about Herdown webpage parsing, data retention, quotas, and paid services.', keywords: 'Herdown FAQ,webpage parsing,quota,paid service', heading: 'Frequently asked questions', intro: 'Find answers to common questions before using Herdown.' },
+  },
+};
+
+const escapeHtml = (value: string): string => value
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const escapeJsonForHtml = (value: unknown): string => JSON.stringify(value).replace(/</g, '\\u003c');
+
+const normalizePublicPath = (pathname: string): string => {
+  if (pathname === '/index.html') return '/';
+  if (pathname.length > 1 && pathname.endsWith('/')) return pathname.slice(0, -1);
+  return pathname;
+};
+
+const getSeoLanguage = (request: Request): SeoLanguage => {
+  const requested = new URL(request.url).searchParams.get('lang');
+  if (requested === 'en') return 'en';
+  if (requested === 'zh' || requested === 'zh-CN') return 'zh';
+  return (request.headers.get('accept-language') || '').toLowerCase().startsWith('en') ? 'en' : 'zh';
+};
+
+const seoFallback = (path: string, language: SeoLanguage, page: SeoPage): string => {
+  const links = language === 'en'
+    ? [['/', 'Home'], ['/url-to-markdown', 'URL to Markdown'], ['/tools', 'Local materials'], ['/docs', 'Docs'], ['/faq', 'FAQ']]
+    : [['/', '首页'], ['/url-to-markdown', '网页转Markdown'], ['/tools', '本地资料'], ['/docs', '开发者文档'], ['/faq', '常见问题']];
+  const localized = (href: string) => language === 'en' ? `${href}${href.includes('?') ? '&' : '?'}lang=en` : href;
+  const nav = links.map(([href, label]) => `<a href="${localized(href)}">${label}</a>`).join(' · ');
+  return `<main class="seo-fallback"><p class="seo-brand"><a href="${localized('/')}">Herdown</a></p><h1>${escapeHtml(page.heading)}</h1><p>${escapeHtml(page.intro)}</p><nav>${nav}</nav><p class="seo-route">${escapeHtml(path)}</p></main>`;
+};
+
+const seoSchema = (path: string, language: SeoLanguage, page: SeoPage, canonicalUrl: string): string => {
+  if (path === '/') {
+    return escapeJsonForHtml({
+      '@context': 'https://schema.org',
+      '@type': 'WebApplication',
+      name: 'Herdown',
+      url: canonicalUrl,
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Web',
+      inLanguage: language === 'en' ? 'en' : 'zh-CN',
+      description: page.description,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      featureList: language === 'en' ? ['Webpage to Markdown', 'Document to Markdown', 'REST API', 'MCP', 'CLI'] : ['网页转Markdown', '文档转Markdown', 'REST API', 'MCP', 'CLI'],
+    });
+  }
+  return escapeJsonForHtml({
+    '@context': 'https://schema.org',
+    '@type': path === '/faq' ? 'FAQPage' : 'WebPage',
+    name: page.title,
+    url: canonicalUrl,
+    inLanguage: language === 'en' ? 'en' : 'zh-CN',
+    description: page.description,
+  });
+};
+
+const renderSeoShell = async (request: Request, env: Env, path: string): Promise<Response> => {
+  const language = getSeoLanguage(request);
+  const page = seoPages[path][language];
+  const url = new URL(request.url);
+  const canonicalUrl = `${url.origin}${path}${language === 'en' ? '?lang=en' : ''}`;
+  const asset = await env.ASSETS!.fetch(new Request(new URL('/index.html', request.url), request));
+  if (!asset.ok) return asset;
+  let html = await asset.text();
+  const replace = (pattern: RegExp, replacement: string) => { html = html.replace(pattern, replacement); };
+  replace(/<html lang="[^"]*">/i, `<html lang="${language === 'en' ? 'en' : 'zh-CN'}">`);
+  replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(page.title)}</title>`);
+  replace(/<meta name="description"[^>]*>/i, `<meta name="description" content="${escapeHtml(page.description)}" />`);
+  replace(/<meta name="keywords"[^>]*>/i, `<meta name="keywords" content="${escapeHtml(page.keywords)}" />`);
+  replace(/<meta property="og:title"[^>]*>/i, `<meta property="og:title" content="${escapeHtml(page.title)}" />`);
+  replace(/<meta property="og:description"[^>]*>/i, `<meta property="og:description" content="${escapeHtml(page.description)}" />`);
+  replace(/<meta property="og:url"[^>]*>/i, `<meta property="og:url" content="${escapeHtml(canonicalUrl)}" />`);
+  replace(/<link rel="canonical"[^>]*>/i, `<link rel="canonical" href="${escapeHtml(canonicalUrl)}" />`);
+  replace(/<link rel="alternate" hreflang="en"[^>]*>/i, `<link rel="alternate" hreflang="en" href="${escapeHtml(`${url.origin}${path}?lang=en`)}" />`);
+  replace(/<link rel="alternate" hreflang="zh-CN"[^>]*>/i, `<link rel="alternate" hreflang="zh-CN" href="${escapeHtml(`${url.origin}${path}`)}" />`);
+  replace(/<link rel="alternate" hreflang="x-default"[^>]*>/i, `<link rel="alternate" hreflang="x-default" href="${escapeHtml(`${url.origin}${path}`)}" />`);
+  replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/gi, `<script type="application/ld+json" data-herdown-schema>${seoSchema(path, language, page, canonicalUrl)}</script>`);
+  replace(/<div id="root"><\/div>/i, `<div id="root">${seoFallback(path, language, page)}</div>`);
+  const headers = new Headers(asset.headers);
+  headers.set('content-type', 'text/html; charset=utf-8');
+  headers.set('cache-control', 'public, max-age=0, must-revalidate');
+  headers.set('vary', 'Accept-Language');
+  return new Response(html, { status: asset.status, headers });
+};
+
 const legalPage = (
   title: string,
   description: string,
@@ -1708,24 +1858,9 @@ export default {
       });
     }
 
-    const toolPages = new Set([
-      '/tools',
-      '/url-to-markdown',
-      '/txt-to-markdown',
-      '/pdf-to-markdown',
-      '/ppt-to-markdown',
-      '/excel-to-markdown',
-      '/docs',
-      '/help',
-      '/faq',
-    ]);
-    if (toolPages.has(url.pathname) && env.ASSETS) {
-      return env.ASSETS.fetch(new Request(new URL('/', request.url), request));
-    }
-
-    if ((url.pathname === '/' || url.pathname === '/index.html') && env.ASSETS) {
-      const assetIndex = await env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
-      if (assetIndex.ok) return assetIndex;
+    const publicPath = normalizePublicPath(url.pathname);
+    if (seoPages[publicPath] && env.ASSETS) {
+      return renderSeoShell(request, env, publicPath);
     }
 
     if (url.pathname === '/' || url.pathname === '/index.html') {

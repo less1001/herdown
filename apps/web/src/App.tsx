@@ -163,6 +163,7 @@ const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: st
 
 const toolLabel = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enTitle : toolPageInfo[slug].title;
 const toolDescription = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enDescription : toolPageInfo[slug].description;
+const localizedHref = (path: string, language: Language) => language === 'en' ? `${path}${path.includes('?') ? '&' : '?'}lang=en` : path;
 
 function TextMarkdownTool({ language }: { language: Language }) {
   const ui = messages[language];
@@ -330,7 +331,7 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
             ))}
           </div>
         )}
-        {message && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm leading-6 text-emerald-200">{message}{guide && <a href={guide.href} className="ml-2 text-emerald-300 underline underline-offset-4 hover:text-emerald-200">{language === 'en' ? guide.en : guide.zh}</a>}</div>}
+        {message && <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm leading-6 text-emerald-200">{message}{guide && <a href={localizedHref(guide.href, language)} className="ml-2 text-emerald-300 underline underline-offset-4 hover:text-emerald-200">{language === 'en' ? guide.en : guide.zh}</a>}</div>}
       </div>
       {markdown && (
         <div className="p-6 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-4">
@@ -501,7 +502,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
                 </div>
               ))}
             </div>
-            <a href="/tools" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open unified tools' : '打开统一工具入口'}</a>
+            <a href={localizedHref('/tools', language)} className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open unified tools' : '打开统一工具入口'}</a>
           </section>
 
           <section className="space-y-5">
@@ -603,7 +604,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
                 ['/pdf-to-markdown', 'PDF', isEnglish ? 'Use local MarkItDown for electronic PDFs.' : '电子PDF使用本地MarkItDown。'],
                 ['/ppt-to-markdown', 'PPT', isEnglish ? 'Use local MarkItDown for presentations.' : '演示文稿使用本地MarkItDown。'],
                 ['/excel-to-markdown', 'Excel', isEnglish ? 'Use local MarkItDown for spreadsheets.' : '表格使用本地MarkItDown。'],
-              ].map(([href, title, body]) => <a key={href} href={href} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4 hover:border-emerald-500/40"><p className="font-semibold text-white">{title}</p><p className="mt-2 text-xs leading-6 text-slate-400">{body}</p></a>)}
+              ].map(([href, title, body]) => <a key={href} href={localizedHref(href, language)} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4 hover:border-emerald-500/40"><p className="font-semibold text-white">{title}</p><p className="mt-2 text-xs leading-6 text-slate-400">{body}</p></a>)}
             </div>
           </section>
 
@@ -616,7 +617,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
 
           <section className="space-y-5">
             {sectionTitle('faq', 'FAQ', isEnglish ? 'Answers about access, data handling, and usage limits.' : '关于访问、数据处理和使用限制的常见问题。')}
-            <a href="/faq" className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open full FAQ' : '打开完整FAQ'}</a>
+            <a href={localizedHref('/faq', language)} className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open full FAQ' : '打开完整FAQ'}</a>
           </section>
         </article>
 
@@ -719,12 +720,56 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
   useEffect(() => {
     window.localStorage.setItem('herdown_language', language);
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
-    const title = toolSlug ? toolLabel(toolSlug, language) : language === 'en' ? 'Herdown - Clean Markdown for AI agents' : 'Herdown - 给AIAgent用的干净Markdown入口';
+    const pagePath = window.location.pathname === '/index.html' ? '/' : window.location.pathname;
+    const title = toolSlug ? `${toolLabel(toolSlug, language)}｜Herdown` : language === 'en' ? 'Herdown｜Clean Markdown for AI agents' : 'Herdown｜给AIAgent用的干净Markdown入口';
     const description = toolSlug ? toolDescription(toolSlug, language) : language === 'en' ? 'Turn webpages, documents, and images into clean materials for AI workflows.' : '把网页、文档和图片整理成适合AI知识库使用的干净资料。';
+    const keywords = toolSlug === 'url-to-markdown'
+      ? language === 'en' ? 'URL to Markdown, webpage to Markdown, HTML to Markdown' : 'URL转Markdown,网页转Markdown,HTML转Markdown'
+      : toolSlug === 'tools'
+        ? language === 'en' ? 'document to Markdown, local document conversion' : '文档转Markdown,本地文档转换'
+        : language === 'en' ? 'clean Markdown for AI workflows, REST API, MCP, CLI' : '干净Markdown,AI工作流,RESTAPI,MCP,CLI';
+    const canonicalUrl = `${window.location.origin}${pagePath}${language === 'en' ? '?lang=en' : ''}`;
+    const setMeta = (selector: string, attribute: string, value: string) => {
+      const element = document.querySelector<HTMLMetaElement>(selector);
+      element?.setAttribute(attribute, value);
+    };
+    const setAlternate = (languageCode: string, href: string) => {
+      const element = document.querySelector<HTMLLinkElement>(`link[rel="alternate"][hreflang="${languageCode}"]`);
+      element?.setAttribute('href', href);
+    };
     document.title = title;
-    document.querySelector('meta[name="description"]')?.setAttribute('content', description);
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
-    document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
+    setMeta('meta[name="description"]', 'content', description);
+    setMeta('meta[name="keywords"]', 'content', keywords);
+    setMeta('meta[property="og:title"]', 'content', title);
+    setMeta('meta[property="og:description"]', 'content', description);
+    setMeta('meta[property="og:url"]', 'content', canonicalUrl);
+    document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', canonicalUrl);
+    setAlternate('en', `${window.location.origin}${pagePath}?lang=en`);
+    setAlternate('zh-CN', `${window.location.origin}${pagePath}`);
+    setAlternate('x-default', `${window.location.origin}${pagePath}`);
+    const schema = document.querySelector<HTMLScriptElement>('script[data-herdown-schema]');
+    if (schema) {
+      schema.textContent = JSON.stringify(toolSlug ? {
+        '@context': 'https://schema.org',
+        '@type': toolSlug === 'faq' ? 'FAQPage' : 'WebPage',
+        name: title,
+        description,
+        url: canonicalUrl,
+        inLanguage: language === 'en' ? 'en' : 'zh-CN',
+        isPartOf: { '@type': 'WebSite', name: 'Herdown', url: window.location.origin },
+      } : {
+        '@context': 'https://schema.org',
+        '@type': 'WebApplication',
+        name: 'Herdown',
+        url: canonicalUrl,
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Web',
+        inLanguage: language === 'en' ? 'en' : 'zh-CN',
+        description,
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        featureList: language === 'en' ? ['Webpage to Markdown', 'Document to Markdown', 'REST API', 'MCP', 'CLI'] : ['网页转Markdown', '文档转Markdown', 'REST API', 'MCP', 'CLI'],
+      });
+    }
     if (toolSlug) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [language, toolSlug]);
 
@@ -1031,7 +1076,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
       {/* Top Header */}
       <header className="sticky top-0 z-50 backdrop-blur-md bg-[#070a0e]/80 border-b border-[#1e293b]">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center gap-2">
-          <a href="/" className="flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
+          <a href={localizedHref('/', language)} className="flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0f6b4f] to-[#10b981] p-[1px] shadow-lg shadow-[#0f6b4f]/20">
               <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-base">
                 HD
@@ -1147,7 +1192,14 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               <span className="hidden sm:inline">{ui.upgrade}</span>
             </button>
             <button
-              onClick={() => setLanguage(current => current === 'zh' ? 'en' : 'zh')}
+              onClick={() => {
+                const nextLanguage: Language = language === 'zh' ? 'en' : 'zh';
+                const nextUrl = new URL(window.location.href);
+                if (nextLanguage === 'en') nextUrl.searchParams.set('lang', 'en');
+                else nextUrl.searchParams.delete('lang');
+                window.history.replaceState({}, '', `${nextUrl.pathname}${nextUrl.search}`);
+                setLanguage(nextLanguage);
+              }}
               className="px-2.5 py-1.5 rounded-xl bg-[#111823] border border-[#1e293b] text-slate-300 hover:text-white text-xs font-semibold transition"
               title={language === 'zh' ? 'Switch to English' : '切换到中文'}
             >
