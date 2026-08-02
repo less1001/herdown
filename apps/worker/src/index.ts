@@ -50,16 +50,16 @@ type SeoPage = {
 const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
   '/': {
     zh: {
-      title: 'Herdown｜给AIAgent用的干净Markdown入口',
+      title: '给AIAgent用的干净Markdown入口｜Herdown',
       description: '把网页、文档和图片整理成适合AI工作流使用的干净Markdown。',
       keywords: '网页转Markdown,文档转Markdown,图片转Markdown,AI工作流',
       heading: '给AIAgent用的干净Markdown入口',
       intro: '把网页、文档和图片整理成适合AI工作流使用的干净Markdown。',
     },
     en: {
-      title: 'Herdown｜Clean Markdown for AI agents',
-      description: 'Turn webpages, documents, and images into clean Markdown for AI workflows.',
-      keywords: 'webpage to Markdown,document to Markdown,image to Markdown,AI workflow',
+      title: 'Clean Markdown for AI agents｜Herdown',
+      description: 'Turn webpages, WeChat articles, documents, and images into clean Markdown for AI workflows.',
+      keywords: 'webpage to Markdown,WeChat article to Markdown,document to Markdown,image to Markdown,AI workflow',
       heading: 'Clean Markdown for AI workflows',
       intro: 'Turn webpages, documents, and images into clean Markdown for the AI workflow you already use.',
     },
@@ -87,6 +87,22 @@ const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
   '/excel-to-markdown': {
     zh: { title: 'Excel转Markdown｜Herdown', description: '在本地将Excel表格整理成结构清晰的Markdown。', keywords: 'Excel转Markdown,表格转换', heading: 'Excel to Markdown', intro: '将Excel表格整理成便于阅读、编辑和继续处理的Markdown。' },
     en: { title: 'Excel to Markdown｜Herdown', description: 'Turn Excel spreadsheets into clean, readable Markdown locally.', keywords: 'Excel to Markdown,spreadsheet conversion', heading: 'Excel to Markdown', intro: 'Turn a spreadsheet into Markdown that is easy to read and reuse.' },
+  },
+  '/word-to-markdown': {
+    zh: { title: 'Word转Markdown｜Herdown', description: '在本地将Word文档整理成结构化Markdown。', keywords: 'Word转Markdown,DOCX转换,文档转Markdown', heading: 'Word转Markdown', intro: '使用本地工具整理Word文档，文件不需要上传到Herdown。' },
+    en: { title: 'Word to Markdown｜Herdown', description: 'Turn Word documents into structured Markdown locally.', keywords: 'Word to Markdown,DOCX conversion,document to Markdown', heading: 'Word to Markdown', intro: 'Process Word documents locally without uploading the file to Herdown.' },
+  },
+  '/api': {
+    zh: { title: 'API控制台｜Herdown', description: '创建和管理HerdownAPI密钥，查看额度和使用情况。', keywords: 'Herdown API,API密钥,网页解析API', heading: 'API控制台', intro: '创建API密钥，把网页解析接入你的脚本和工作流。' },
+    en: { title: 'API console｜Herdown', description: 'Create and manage Herdown API keys and view usage.', keywords: 'Herdown API,API key,webpage parsing API', heading: 'API console', intro: 'Create an API key and connect webpage parsing to your scripts and workflows.' },
+  },
+  '/pricing': {
+    zh: { title: '价格和额度｜Herdown', description: '查看Herdown免费额度和一次性付费点数包。', keywords: 'Herdown价格,API额度,网页解析套餐', heading: '价格和额度', intro: '免费使用网页解析，也可以按需购买不过期的一次性点数。' },
+    en: { title: 'Pricing and credits｜Herdown', description: 'View Herdown free usage and one-time credit packages.', keywords: 'Herdown pricing,API credits,webpage parsing plans', heading: 'Pricing and credits', intro: 'Start with free webpage parsing or buy one-time credits when you need more.' },
+  },
+  '/browser-extension': {
+    zh: { title: '浏览器插件｜Herdown', description: '下载Herdown浏览器本地扩展，用当前页面快速整理资料。', keywords: 'Herdown浏览器插件,网页提取插件,Markdown插件', heading: '浏览器插件', intro: '下载本地扩展，在浏览器中整理当前页面并导出Markdown。' },
+    en: { title: 'Browser extension｜Herdown', description: 'Download the Herdown browser extension to prepare the current page locally.', keywords: 'Herdown browser extension,web clipping extension,Markdown extension', heading: 'Browser extension', intro: 'Download the local extension to prepare the current page and export Markdown.' },
   },
   '/docs': {
     zh: { title: '开发者文档｜Herdown', description: '查看Herdown的网页解析、REST API、MCP、CLI和本地工具使用说明。', keywords: 'Herdown文档,REST API,MCP,CLI,网页解析', heading: '为AI工作流准备干净资料', intro: '查看网页解析、REST API、MCP、CLI和本地工具的使用说明。' },

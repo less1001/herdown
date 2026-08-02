@@ -81,7 +81,7 @@ interface AdminOverview {
   };
 }
 
-type ToolSlug = 'tools' | 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | null;
+type ToolSlug = 'tools' | 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'word-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | 'api' | 'pricing' | 'browser-extension' | null;
 type ProductCode = 'starter' | 'standard' | 'bulk';
 
 declare global {
@@ -146,7 +146,7 @@ const pricingPackages: Array<{ code: ProductCode; price: string; credits: string
 
 const getToolSlug = (): ToolSlug => {
   const slug = window.location.pathname.replace(/^\//, '') as Exclude<ToolSlug, null>;
-  return ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq'].includes(slug) ? slug : null;
+  return ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'word-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq', 'api', 'pricing', 'browser-extension'].includes(slug) ? slug : null;
 };
 
 const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: string; description: string; enDescription: string; local?: boolean }> = {
@@ -154,11 +154,15 @@ const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: st
   'url-to-markdown': { title: 'URL转Markdown', enTitle: 'URL to Markdown', description: '粘贴网页链接，提取正文、标题、图片和来源信息，生成干净Markdown。', enDescription: 'Paste a webpage URL to extract the body, title, images, and source metadata into clean Markdown.' },
   'txt-to-markdown': { title: 'TXT转Markdown', enTitle: 'TXT to Markdown', description: '把纯文本整理成可直接保存和交给AI使用的Markdown文件。', enDescription: 'Turn plain text into a Markdown file ready to save or send to an AI tool.' },
   'pdf-to-markdown': { title: 'PDF转Markdown', enTitle: 'PDF to Markdown', description: '使用本地MarkItDown处理可提取文字的PDF，不上传文件，不增加服务器费用。', enDescription: 'Use local MarkItDown to process text-based PDFs without uploading files or adding server cost.', local: true },
+  'word-to-markdown': { title: 'Word转Markdown', enTitle: 'Word to Markdown', description: '使用本地MarkItDown把Word文档整理为结构化Markdown。', enDescription: 'Use local MarkItDown to turn Word documents into structured Markdown.', local: true },
   'ppt-to-markdown': { title: 'PPT转Markdown', enTitle: 'PPT to Markdown', description: '使用本地MarkItDown把PPT和PPTX整理为结构化Markdown。', enDescription: 'Use local MarkItDown to turn PPT and PPTX files into structured Markdown.', local: true },
   'excel-to-markdown': { title: 'Excel转Markdown', enTitle: 'Excel to Markdown', description: '使用本地MarkItDown把Excel表格整理成适合AI读取的Markdown。', enDescription: 'Use local MarkItDown to turn Excel spreadsheets into Markdown for AI tools.', local: true },
   docs: { title: 'Docs文档', enTitle: 'Docs', description: '查看网页转换、API、MCP、CLI、本地工具和工作流接入说明。', enDescription: 'Read guides for web conversion, API, MCP, CLI, local tools, and workflow integrations.' },
   help: { title: '帮助文档', enTitle: 'Help', description: '从网页转换、API密钥、MCP和本地文档工具开始使用Herdown。', enDescription: 'Start using Herdown with web conversion, API keys, MCP, and local document tools.' },
   faq: { title: '常见问题', enTitle: 'FAQ', description: '查看解析范围、数据保存、额度和本地文档处理的常见问题。', enDescription: 'Answers about parsing, data retention, quotas, and local document processing.' },
+  api: { title: 'API控制台', enTitle: 'API console', description: '创建和管理HerdownAPI密钥，查看额度和使用情况。', enDescription: 'Create and manage Herdown API keys and view usage.' },
+  pricing: { title: '价格和额度', enTitle: 'Pricing and credits', description: '查看Herdown免费额度和一次性付费点数包。', enDescription: 'View Herdown free usage and one-time credit packages.' },
+  'browser-extension': { title: '浏览器插件', enTitle: 'Browser extension', description: '下载Herdown浏览器本地扩展，用当前页面快速整理资料。', enDescription: 'Download the Herdown browser extension to prepare the current page locally.' },
 };
 
 const toolLabel = (slug: Exclude<ToolSlug, null>, language: Language) => language === 'en' ? toolPageInfo[slug].enTitle : toolPageInfo[slug].title;
@@ -221,10 +225,10 @@ function TextMarkdownTool({ language }: { language: Language }) {
   );
 }
 
-function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown'; language: Language }) {
+function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'word-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown'; language: Language }) {
   const ui = messages[language];
   const info = toolPageInfo[slug];
-  const extension = slug === 'ppt-to-markdown' ? 'pptx' : slug === 'excel-to-markdown' ? 'xlsx' : 'pdf';
+  const extension = slug === 'word-to-markdown' ? 'docx' : slug === 'ppt-to-markdown' ? 'pptx' : slug === 'excel-to-markdown' ? 'xlsx' : 'pdf';
   const sampleFileName = language === 'en' ? `your-file.${extension}` : `你的文件.${extension}`;
   const command = ['python -m pip install markitdown', `markitdown "${sampleFileName}" > output.md`].join('\n');
 
@@ -242,6 +246,30 @@ function LocalToolGuide({ slug, language }: { slug: 'pdf-to-markdown' | 'ppt-to-
         </div>
         <pre className="overflow-x-auto rounded-xl bg-[#090d12] border border-[#1e293b] p-4 text-xs leading-7 text-emerald-200">{command}</pre>
         <p className="text-xs text-slate-500 leading-6">{language === 'en' ? 'For scans or screenshots, use the local Unlimited-OCRSkill. It runs locally and needs no extra Herdown server.' : '复杂扫描件或截图请使用本地Unlimited-OCRSkill。它在本地运行，不需要Herdown额外服务器。'}</p>
+      </div>
+    </div>
+  );
+}
+
+function PricingPage({ language, onUpgrade }: { language: Language; onUpgrade: () => void }) {
+  const isEnglish = language === 'en';
+  return (
+    <div className="space-y-8 max-w-5xl mx-auto">
+      <div className="max-w-3xl">
+        <span className="text-xs font-semibold text-emerald-400">{isEnglish ? 'One-time credit packs' : '一次性点数包'}</span>
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">{isEnglish ? 'Choose the amount that fits your workflow' : '选择适合你的使用额度'}</h1>
+        <p className="text-sm text-slate-400 mt-3 leading-7">{isEnglish ? 'The free plan includes 1,000 webpage parses per user each month. Paid credits do not expire and do not auto-renew.' : '免费用户每月有1,000次网页解析额度。付费点数不过期，不自动续费。'}</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        {pricingPackages.map(item => (
+          <div key={item.code} className={`rounded-2xl border bg-[#0f1722] p-5 ${item.featured ? 'border-emerald-500 shadow-lg shadow-emerald-950/20' : 'border-[#1e293b]'}`}>
+            <p className="text-sm font-semibold text-emerald-300">{isEnglish ? (item.code === 'starter' ? 'Starter' : item.code === 'standard' ? 'Standard' : 'Bulk') : item.label}</p>
+            <p className="mt-4 text-3xl font-black text-white">US${item.price}</p>
+            <p className="mt-2 text-sm text-slate-300">{item.credits}{isEnglish ? ' parses' : '次解析额度'}</p>
+            <p className="mt-3 text-xs leading-6 text-slate-500">{isEnglish ? 'For webpage conversion, API, MCP, and CLI.' : '支持网页转换、API、MCP和CLI。'}</p>
+            <button onClick={onUpgrade} className="mt-5 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-xs font-bold text-white hover:bg-emerald-500">{isEnglish ? 'Upgrade now' : '立即升级'}</button>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -293,7 +321,7 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
 
   const fileName = file?.name.toLowerCase() || '';
   const guide = /\.docx$/.test(fileName)
-    ? { href: '/docs#local-tools', zh: '查看文档处理说明', en: 'View document processing guide' }
+    ? { href: '/word-to-markdown', zh: '打开Word转换', en: 'Open Word converter' }
     : /\.pdf$/.test(fileName)
       ? { href: '/pdf-to-markdown', zh: '打开PDF转换', en: 'Open PDF converter' }
       : /\.pptx$/.test(fileName)
@@ -314,7 +342,7 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
         <label onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); void handleFile(event.dataTransfer.files?.[0]); }} className="flex min-h-56 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-500/40 bg-[#090d12] px-5 text-center hover:border-emerald-400 transition">
           <Upload className="w-9 h-9 text-emerald-400 mb-3" />
           <span className="text-sm text-slate-200">{file?.name || (language === 'en' ? 'Drop or choose a local file' : '拖入或选择本地资料')}</span>
-          <span className="text-xs text-slate-500 mt-2">{language === 'en' ? 'TXT, Markdown, images, Word, PDF, PPT, and Excel' : 'TXT、Markdown、图片、Word、PDF、PPT和Excel'}</span>
+          <span className="text-xs leading-6 text-slate-500 mt-2">{language === 'en' ? 'TXT, Markdown, and images work here. Word, PDF, PPT, and Excel continue in their matching format guide.' : 'TXT、Markdown和图片可在这里整理；Word、PDF、PPT和Excel请进入对应格式页面。'}</span>
           <input type="file" accept=".txt,.md,.docx,.pdf,.pptx,.xlsx,image/*" className="hidden" onChange={event => void handleFile(event.target.files?.[0])} />
         </label>
         {!file && (
@@ -322,7 +350,7 @@ function UnifiedMaterialsTool({ language }: { language: Language }) {
             {[
               [language === 'en' ? 'TXT and Markdown' : 'TXT和Markdown', language === 'en' ? 'Prepare directly in the browser.' : '可直接整理。'],
               [language === 'en' ? 'Images' : '图片', language === 'en' ? 'Prepare as Markdown images.' : '整理为Markdown图片。'],
-              [language === 'en' ? 'Word, PDF, PPT, Excel' : 'Word、PDF、PPT、Excel', language === 'en' ? 'Continue with the matching tool.' : '进入对应工具继续处理。'],
+              [language === 'en' ? 'Word, PDF, PPT, Excel' : 'Word、PDF、PPT、Excel', language === 'en' ? 'Open the matching format guide for the next step.' : '进入对应格式页面继续处理。'],
             ].map(([title, description]) => (
               <div key={title} className="rounded-xl border border-[#1e293b] bg-[#090d12] p-4">
                 <p className="text-sm font-semibold text-slate-200">{title}</p>
@@ -507,6 +535,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
 
           <section className="space-y-5">
             {sectionTitle('authentication', isEnglish ? 'API key and authentication' : 'API密钥和身份验证', isEnglish ? 'Create a key from the API page. Keep it on your server or in a local environment variable.' : '在API页面创建密钥。密钥应保存在自己的服务器或本地环境变量中。')}
+            <a href={localizedHref('/api', language)} className="inline-flex rounded-lg border border-emerald-500/30 px-3 py-2 text-xs text-emerald-300 hover:bg-emerald-500/10">{isEnglish ? 'Open API console' : '打开API控制台'}</a>
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm leading-7 text-amber-100">
               {isEnglish ? 'Do not put a live API key in frontend code, a public repository, or a screenshot.' : '不要把正式API密钥放进前端代码、公开仓库或截图。'}
             </div>
@@ -516,7 +545,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
           <section className="space-y-5">
             {sectionTitle('quota', isEnglish ? 'Quota and billing' : '额度和计费', isEnglish ? 'Free usage is monthly. Paid packages are one-time credits and do not renew automatically.' : '免费额度按月计算。付费套餐是一次性点数，不会自动续费。')}
             <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
-              <table className="w-full text-left text-xs">
+              <table className="min-w-[560px] w-full text-left text-xs">
                 <thead className="bg-[#111a26] text-slate-300"><tr><th className="px-4 py-3">{isEnglish ? 'Access' : '类型'}</th><th className="px-4 py-3">{isEnglish ? 'Allowance' : '额度'}</th><th className="px-4 py-3">{isEnglish ? 'Crawl limit' : '全站抓取限制'}</th></tr></thead>
                 <tbody className="divide-y divide-[#1e293b] text-slate-400">
                   <tr><td className="px-4 py-3">{isEnglish ? 'Free' : '免费用户'}</td><td className="px-4 py-3">{isEnglish ? '1,000 parses per month' : '每月1000次解析'}</td><td className="px-4 py-3">{isEnglish ? 'Up to 5 pages per request' : '每次最多5页'}</td></tr>
@@ -540,22 +569,23 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             {sectionTitle('parse', 'POST /v1/parse', isEnglish ? 'Parse one public webpage or raw HTML into clean Markdown.' : '把一个公开网页或HTML源码解析成干净Markdown。')}
             {codeBlock('parse', 'Request', quickstartExample)}
             <div className="overflow-x-auto rounded-xl border border-[#1e293b]">
-              <table className="w-full text-left text-xs">
+              <table className="min-w-[560px] w-full text-left text-xs">
                 <thead className="bg-[#111a26] text-slate-300"><tr><th className="px-4 py-3">Field</th><th className="px-4 py-3">Type</th><th className="px-4 py-3">{isEnglish ? 'Description' : '说明'}</th></tr></thead>
                 <tbody className="divide-y divide-[#1e293b] text-slate-400">
                   <tr><td className="px-4 py-3 text-emerald-300">url</td><td className="px-4 py-3">string</td><td className="px-4 py-3">{isEnglish ? 'Public HTTP or HTTPS URL.' : '公开的HTTP或HTTPS网页链接。'}</td></tr>
                   <tr><td className="px-4 py-3 text-emerald-300">html</td><td className="px-4 py-3">string</td><td className="px-4 py-3">{isEnglish ? 'Optional raw HTML. Use url or html.' : '可选的HTML源码。url和html至少填写一个。'}</td></tr>
-                  <tr><td className="px-4 py-3 text-emerald-300">zhihuLimit</td><td className="px-4 py-3">number</td><td className="px-4 py-3">{isEnglish ? 'Optional answer limit for Zhihu pages.' : '知乎页面可选的回答数量限制。'}</td></tr>
                 </tbody>
               </table>
             </div>
             {codeBlock('response', 'Response', ['{', '  "success": true,', '  "title": "Example article",', '  "markdown": "# Clean Markdown...",', '  "images": [],', '  "elapsed_ms": 120,', '  "source_tokens": 18420,', '  "markdown_tokens": 2180,', '  "token_savings": 16240,', '  "token_savings_percent": 88.2', '}'].join('\n'))}
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'images is an array of image URL strings extracted from the source page. Markdown may also contain image references; the array is provided so clients can list or download them separately.' : 'images是从原网页提取出的图片URL字符串数组。Markdown中也可能包含图片引用，单独返回这个数组方便客户端列出或下载图片。'}</p>
           </section>
 
           <section className="space-y-5">
             {sectionTitle('crawl', 'POST /v1/crawl', isEnglish ? 'Discover and parse pages from a public website or sitemap.' : '从公开网站或Sitemap发现并解析网页。')}
             {codeBlock('crawl', 'Request', crawlExample)}
-            <p className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4 text-sm leading-7 text-slate-400">{isEnglish ? 'The response contains total_pages, results, title, markdown, and elapsed_ms. Free users are limited to 5 pages per request. Paid crawl can use up to 100 pages within the available balance.' : '返回内容包括total_pages、results、title、markdown和elapsed_ms。免费用户每次最多5页，付费用户每次最多100页，但不能超过剩余点数。'}</p>
+            {codeBlock('crawl-response', 'Response', ['{', '  "success": true,', '  "domain": "https://example.com",', '  "total_pages": 2,', '  "results": [', '    {', '      "url": "https://example.com/guide",', '      "title": "Guide",', '      "markdown": "# Guide...",', '      "elapsed_ms": 180', '    }', '  ],', '  "elapsed_ms": 420', '}'].join('\n'))}
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'Each results item contains url, title, markdown, and elapsed_ms. Free users are limited to 5 pages per request. Paid crawl can use up to 100 pages within the available balance.' : 'results中的每项包括url、title、markdown和elapsed_ms。免费用户每次最多5页，付费用户每次最多100页，但不能超过剩余点数。'}</p>
           </section>
 
           <section className="space-y-5">
@@ -577,12 +607,20 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
           <section className="space-y-5">
             {sectionTitle('mcp', isEnglish ? 'Remote MCP' : '远程MCP', isEnglish ? 'Connect an MCP client to discover and call Herdown tools.' : '让支持MCP的客户端发现并调用Herdown工具。')}
             {codeBlock('mcp', 'mcp.json', mcpExample)}
-            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'Available tools: parse_webpage, crawl_website, and health_check. If a client asks for authentication, provide your API key as a Bearer token.' : '可用工具：parse_webpage、crawl_website和health_check。如果客户端要求身份验证，把API密钥作为BearerToken提供。'}</p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                ['parse_webpage', isEnglish ? 'Parse one public webpage or HTML. Input: url or html. Returns title, markdown, images, and token estimates.' : '解析一个公开网页或HTML。输入url或html，返回标题、Markdown、图片和Token估算。'],
+                ['crawl_website', isEnglish ? 'Discover and parse public pages. Input: url and optional limit. Returns page results and elapsed time.' : '发现并解析公开页面。输入url和可选limit，返回页面结果和耗时。'],
+                ['health_check', isEnglish ? 'Check whether the API is reachable. No content input is required.' : '检查API是否可访问，不需要提交内容。'],
+              ].map(([name, description]) => <div key={name} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-mono text-sm text-emerald-300">{name}</p><p className="mt-2 text-xs leading-6 text-slate-400">{description}</p></div>)}
+            </div>
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'Add the API key as an Authorization Bearer token when the client requires authentication.' : '客户端要求身份验证时，把API密钥放在AuthorizationBearerToken请求头中。'}</p>
           </section>
 
           <section className="space-y-5">
             {sectionTitle('skill', 'Skill', isEnglish ? 'Instructions that help an AI agent choose and use Herdown correctly.' : '帮助AIAgent正确选择和使用Herdown的操作说明。')}
-            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'A Skill is not another server. It tells an agent when to use the browser, RESTAPI, MCP, or CLI, how to preserve useful metadata, and how to handle failures. Install the Herdown Skill in the agent environment, then give the agent a public URL or a document task.' : 'Skill不是另一个服务器，而是给AIAgent看的操作说明。它告诉Agent什么时候使用网页、RESTAPI、MCP或CLI，如何保留有用的元数据，以及失败时怎么处理。把HerdownSkill安装到Agent环境后，就可以让Agent处理公开网页或文档任务。'}</p>
+            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'A Skill is not another server. It tells an agent when to use the browser, RESTAPI, MCP, or CLI, how to preserve useful metadata, and how to handle failures.' : 'Skill不是另一个服务器，而是给AIAgent看的操作说明。它告诉Agent什么时候使用网页、RESTAPI、MCP或CLI，如何保留有用的元数据，以及失败时怎么处理。'}</p>
+            {codeBlock('skill-install', isEnglish ? 'Install' : '安装', isEnglish ? 'mkdir -p ~/.agents/skills/herdown\ncurl -L https://raw.githubusercontent.com/less1001/herdown/main/packages/cli/SKILL.md -o ~/.agents/skills/herdown/SKILL.md' : 'mkdir -p ~/.agents/skills/herdown\ncurl -L https://raw.githubusercontent.com/less1001/herdown/main/packages/cli/SKILL.md -o ~/.agents/skills/herdown/SKILL.md')}
             {codeBlock('skill', 'Skill behavior', skillExample)}
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Herdown Skill' : 'HerdownSkill'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'Web extraction, clean Markdown, API, MCP, and CLI routing.' : '网页提取、干净Markdown、API、MCP和CLI调用。'}</p></div>
@@ -593,7 +631,10 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
           <section className="space-y-5">
             {sectionTitle('cli', 'CLI', isEnglish ? 'Run Herdown from a terminal and save the result locally.' : '在终端运行Herdown，并把结果保存到本地。')}
             {codeBlock('cli', 'Terminal', cliExample)}
-            <p className="text-sm leading-7 text-slate-400">{isEnglish ? 'The -o option writes a Markdown file. The -k option selects an API key. Without -o, the Markdown is printed to the terminal.' : '-o参数把结果写入Markdown文件，-k参数指定API密钥。不使用-o时，Markdown会直接输出到终端。'}</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Install and help' : '安装和帮助'}</p><pre className="mt-2 overflow-x-auto text-xs leading-6 text-emerald-300">npx @herdown/cli --help\nnpx @herdown/cli --version</pre></div>
+              <div className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{isEnglish ? 'Options' : '参数'}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? '-o writes a Markdown file. -k provides an API key. Without -o, Markdown is printed to the terminal.' : '-o把结果写入Markdown文件，-k提供API密钥。不使用-o时，Markdown直接输出到终端。'}</p></div>
+            </div>
           </section>
 
           <section className="space-y-5">
@@ -601,6 +642,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 ['/txt-to-markdown', 'TXT / Markdown', isEnglish ? 'Runs in the browser and does not upload the file.' : '浏览器本地处理，不上传文件。'],
+                ['/word-to-markdown', 'Word', isEnglish ? 'Use local MarkItDown for DOCX files.' : 'Word文档使用本地MarkItDown。'],
                 ['/pdf-to-markdown', 'PDF', isEnglish ? 'Use local MarkItDown for electronic PDFs.' : '电子PDF使用本地MarkItDown。'],
                 ['/ppt-to-markdown', 'PPT', isEnglish ? 'Use local MarkItDown for presentations.' : '演示文稿使用本地MarkItDown。'],
                 ['/excel-to-markdown', 'Excel', isEnglish ? 'Use local MarkItDown for spreadsheets.' : '表格使用本地MarkItDown。'],
@@ -611,7 +653,12 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
           <section className="space-y-5">
             {sectionTitle('integrations', isEnglish ? 'Workflow integrations' : '工作流接入', isEnglish ? 'Use an HTTP request node, send the URL to /v1/parse, and pass the markdown field forward.' : '使用HTTP请求节点，把网址传给/v1/parse，再把返回的markdown字段交给后续节点。')}
             <div className="grid gap-3 sm:grid-cols-2">
-              {['Dify', 'Coze', 'FastGPT', 'n8n'].map(name => <div key={name} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{name}</p><p className="mt-2 text-xs leading-6 text-slate-400">{isEnglish ? 'HTTP POST tool → Authorization Bearer header → JSON body {url} → use response.markdown.' : 'HTTPPOST工具→AuthorizationBearer请求头→JSON请求体{url}→使用返回的markdown。'}</p></div>)}
+              {[
+                ['Dify', isEnglish ? 'Create a custom tool, choose HTTP, set POST /v1/parse, add the Bearer header, and map response.markdown to the next node.' : '创建自定义工具，选择HTTP，设置POST /v1/parse，添加Bearer请求头，再把response.markdown交给下一个节点。'],
+                ['Coze', isEnglish ? 'Add an HTTP request step, send {"url":"..."} as JSON, add Authorization, and use the markdown field in the following step.' : '添加HTTP请求步骤，以JSON发送{"url":"..."}，添加Authorization，再在后续步骤使用markdown字段。'],
+                ['FastGPT', isEnglish ? 'Add an external API tool, set the endpoint and Bearer token, then expose the markdown response to the workflow.' : '添加外部API工具，设置接口地址和BearerToken，再把markdown返回值交给工作流。'],
+                ['n8n', isEnglish ? 'Use an HTTP Request node with POST, JSON body, and Authorization header, then reference the markdown field in the next node.' : '使用HTTPRequest节点，配置POST、JSON请求体和Authorization请求头，再在下一个节点引用markdown字段。'],
+              ].map(([name, description]) => <div key={name} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4"><p className="font-semibold text-white">{name}</p><p className="mt-2 text-xs leading-6 text-slate-400">{description}</p></div>)}
             </div>
           </section>
 
@@ -639,8 +686,8 @@ function HelpPage({ language }: { language: Language }) {
 }
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>('converter');
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
+  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>(() => toolSlug === 'api' ? 'keys' : toolSlug === 'browser-extension' ? 'extension' : 'converter');
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const ui = messages[language];
   const tr = (english: string, chinese: string) => language === 'en' ? english : chinese;
@@ -660,8 +707,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
   const [inputUrl, setInputUrl] = useState(() => new URLSearchParams(window.location.search).get('url') || '');
   const [inputHtml, setInputHtml] = useState('');
   const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
-  const [zhihuLimit, setZhihuLimit] = useState<number>(5);
-  
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ParseResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -721,7 +766,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
     window.localStorage.setItem('herdown_language', language);
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
     const pagePath = window.location.pathname === '/index.html' ? '/' : window.location.pathname;
-    const title = toolSlug ? `${toolLabel(toolSlug, language)}｜Herdown` : language === 'en' ? 'Herdown｜Clean Markdown for AI agents' : 'Herdown｜给AIAgent用的干净Markdown入口';
+    const title = toolSlug ? `${toolLabel(toolSlug, language)}｜Herdown` : language === 'en' ? 'Clean Markdown for AI agents｜Herdown' : '给AIAgent用的干净Markdown入口｜Herdown';
     const description = toolSlug ? toolDescription(toolSlug, language) : language === 'en' ? 'Turn webpages, documents, and images into clean materials for AI workflows.' : '把网页、文档和图片整理成适合AI知识库使用的干净资料。';
     const keywords = toolSlug === 'url-to-markdown'
       ? language === 'en' ? 'URL to Markdown, webpage to Markdown, HTML to Markdown' : 'URL转Markdown,网页转Markdown,HTML转Markdown'
@@ -1258,7 +1303,8 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
           <>
             {toolSlug === 'tools' && <UnifiedMaterialsTool language={language} />}
             {toolSlug === 'txt-to-markdown' && <TextMarkdownTool language={language} />}
-            {(toolSlug === 'pdf-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} language={language} />}
+            {(toolSlug === 'pdf-to-markdown' || toolSlug === 'word-to-markdown' || toolSlug === 'ppt-to-markdown' || toolSlug === 'excel-to-markdown') && <LocalToolGuide slug={toolSlug} language={language} />}
+            {toolSlug === 'pricing' && <PricingPage language={language} onUpgrade={() => setShowUpgradeModal(true)} />}
             {(toolSlug === 'docs' || toolSlug === 'help') && <HelpPage language={language} />}
             {(!toolSlug || toolSlug === 'url-to-markdown') && <div className="space-y-8">
             {/* Hero Banner */}
@@ -1321,24 +1367,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                     {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-white" />}
                     {loading ? ui.parsing : ui.parse}
                   </button>
-                  {inputUrl.includes('zhihu.com/question/') && (
-                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 animate-fadeIn">
-                      <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
-                        <Layers className="w-3.5 h-3.5" /> 检测到知乎问答
-                      </span>
-                      <span className="text-slate-400">选择提取回答数：</span>
-                      <select
-                        value={zhihuLimit}
-                        onChange={(e) => setZhihuLimit(Number(e.target.value))}
-                        className="bg-[#090d12] border border-[#1e293b] text-emerald-300 font-medium rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500"
-                      >
-                        <option value={5}>默认精选 Top 5 高赞回答</option>
-                        <option value={10}>Top 10 高赞回答</option>
-                        <option value={20}>Top 20 高赞回答</option>
-                        <option value={50}>Top 50 详细回答</option>
-                      </select>
-                    </div>
-                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1937,18 +1965,6 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
 
               <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
                 <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
-                  <span className="text-xs font-bold text-white flex items-center gap-2">{tr('Q&A pages', '问答文章')} (Zhihu)</span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">{tr('Supported', '已支持')}</span>
-                </div>
-                <ul className="text-xs text-slate-400 space-y-2 list-disc list-inside">
-                  <li>{tr('Supports one answer, multiple answers, and long questions.', '支持单篇回答、多条回答及超长Question提取。')}</li>
-                  <li>{tr('Removes search, side rankings, and collapsed comments.', '自动剔除顶部搜索、侧边热榜、折叠评论区。')}</li>
-                  <li>{tr('Handles long IDs and desktop browser formatting.', '支持长ID和桌面浏览器格式。')}</li>
-                </ul>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-[#0f1722] border border-[#1e293b] space-y-3">
-                <div className="flex items-center justify-between border-b border-[#1e293b] pb-2">
                   <span className="text-xs font-bold text-white flex items-center gap-2">{tr('Social posts', '社交帖子')} (X / Twitter)</span>
                   <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] border border-emerald-500/20">{tr('Supported', '已支持')}</span>
                 </div>
@@ -1998,7 +2014,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <div className="grid grid-cols-1 gap-6 pt-2">
               <div className="p-6 rounded-2xl bg-[#0d131d] border border-[#1e293b] space-y-4">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
                   1
@@ -2020,21 +2036,6 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-[#0d131d] border border-[#1e293b] space-y-4">
-                <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-lg">
-                  2
-                </div>
-                <h3 className="text-lg font-bold text-white">{tr('Option 2: Install from the Chrome Web Store', '方式二：ChromeWebStore官方商店安装')}</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  {language === 'en' ? <>The official extension is under review. Once listed, click Add to Chrome and press <code className="text-teal-300">Alt + Shift + H</code> on any webpage to open the clipping panel.</> : <>官方扩展商店审核与发布中。上架后只需点击一次“添加至Chrome”，即可在全网任意网页通过快捷键<code className="text-teal-300">Alt + Shift + H</code>一秒唤起剪藏面板！</>}
-                </p>
-                <div className="pt-2">
-                  <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold border border-slate-700">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    {tr('Chrome Web Store review in progress...', 'ChromeWebStore上市审核中...')}
-                  </span>
-                </div>
-              </div>
             </div>
 
             <div className="p-6 rounded-2xl bg-[#0a0f16] border border-emerald-500/20 space-y-4">
@@ -2046,10 +2047,6 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
                   <strong className="text-emerald-400 block mb-1">{tr('Local Markdown export', '本地Markdown导出')}</strong>
                   {tr('No extra server is required. Export Markdown for local tools with one click.', '无需额外服务器，点击按钮即可导出适合本地工具继续处理的Markdown。')}
-                </div>
-                <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
-                  <strong className="text-emerald-400 block mb-1">{tr('Custom Q&A extraction', '问答定制化提取')}</strong>
-                  {language === 'en' ? <>Detect Q&A pages and choose <code className="text-slate-200">[Top N answers]</code> with <code className="text-slate-200">[Top/Newest]</code> sorting.</> : <>自动感应知乎问答，提供<code className="text-slate-200">[Top N回答数]</code>与<code className="text-slate-200">[高赞/最新排序]</code>自由选框。</>}
                 </div>
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
                   <strong className="text-emerald-400 block mb-1">{tr('Web element Inspector picker', '网页元素Inspector拾取器')}</strong>
@@ -2188,9 +2185,9 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <span className="text-lg font-normal text-emerald-400 transition group-open:rotate-45">+</span>
               </summary>
               <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
-                <a href="/tools" className="hover:text-emerald-300 transition">{language === 'en' ? 'All tools' : '全部工具'}</a>
-                {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
-                  <a key={slug} href={`/${slug}`} className="hover:text-emerald-300 transition">{toolLabel(slug, language)}</a>
+                <a href={localizedHref('/tools', language)} className="hover:text-emerald-300 transition">{language === 'en' ? 'All tools' : '工具入口'}</a>
+                {(['url-to-markdown', 'txt-to-markdown', 'word-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+                  <a key={slug} href={localizedHref(`/${slug}`, language)} className="hover:text-emerald-300 transition">{toolLabel(slug, language)}</a>
                 ))}
               </div>
             </details>
@@ -2200,7 +2197,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <span className="text-lg font-normal text-emerald-400 transition group-open:rotate-45">+</span>
               </summary>
               <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
-                <a href="/docs" className="hover:text-emerald-300 transition">{ui.docs}</a>
+                <a href={localizedHref('/docs', language)} className="hover:text-emerald-300 transition">{ui.docs}</a>
                 <button onClick={() => setActiveTab('keys')} className="text-left hover:text-emerald-300 transition">{ui.api}</button>
                 <button onClick={() => setActiveTab('mcp')} className="text-left hover:text-emerald-300 transition">{ui.mcp}</button>
                 <button onClick={() => setActiveTab('cli')} className="text-left hover:text-emerald-300 transition">{ui.cli}</button>
@@ -2214,9 +2211,9 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <span className="text-lg font-normal text-emerald-400 transition group-open:rotate-45">+</span>
               </summary>
               <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
-                <a href="/faq" className="hover:text-emerald-300 transition">{ui.faq}</a>
-                <a href="/terms" className="hover:text-emerald-300 transition">{ui.terms}</a>
-                <a href="/privacy" className="hover:text-emerald-300 transition">{ui.privacy}</a>
+                <a href={localizedHref('/faq', language)} className="hover:text-emerald-300 transition">{ui.faq}</a>
+                <a href={localizedHref('/terms', language)} className="hover:text-emerald-300 transition">{ui.terms}</a>
+                <a href={localizedHref('/privacy', language)} className="hover:text-emerald-300 transition">{ui.privacy}</a>
                 <a href="mailto:vkdefi@gmail.com" className="hover:text-emerald-300 transition">{ui.contact}</a>
                 <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">@vkdefi</a>
                 <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">GitHub Repo</a>
@@ -2227,16 +2224,16 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div>
               <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Tools' : '工具'}</h3>
               <div className="flex flex-col items-start gap-2 text-slate-500">
-                <a href="/tools" className="hover:text-emerald-300 transition">{language === 'en' ? 'All tools' : '全部工具'}</a>
-                {(['url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
-                  <a key={slug} href={`/${slug}`} className="hover:text-emerald-300 transition">{toolLabel(slug, language)}</a>
+                <a href={localizedHref('/tools', language)} className="hover:text-emerald-300 transition">{language === 'en' ? 'All tools' : '工具入口'}</a>
+                {(['url-to-markdown', 'txt-to-markdown', 'word-to-markdown', 'pdf-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'] as const).map(slug => (
+                  <a key={slug} href={localizedHref(`/${slug}`, language)} className="hover:text-emerald-300 transition">{toolLabel(slug, language)}</a>
                 ))}
               </div>
             </div>
             <div>
               <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Developers' : '开发者'}</h3>
               <div className="flex flex-col items-start gap-2 text-slate-500">
-                <a href="/docs" className="hover:text-emerald-300 transition">{ui.docs}</a>
+                <a href={localizedHref('/docs', language)} className="hover:text-emerald-300 transition">{ui.docs}</a>
                 <button onClick={() => setActiveTab('keys')} className="hover:text-emerald-300 transition">{ui.api}</button>
                 <button onClick={() => setActiveTab('mcp')} className="hover:text-emerald-300 transition">{ui.mcp}</button>
                 <button onClick={() => setActiveTab('cli')} className="hover:text-emerald-300 transition">{ui.cli}</button>
@@ -2247,9 +2244,9 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div>
               <h3 className="mb-3 font-semibold text-slate-200">{language === 'en' ? 'Help and legal' : '帮助与政策'}</h3>
               <div className="flex flex-col items-start gap-2 text-slate-500">
-                <a href="/faq" className="hover:text-emerald-300 transition">{ui.faq}</a>
-                <a href="/terms" className="hover:text-emerald-300 transition">{ui.terms}</a>
-                <a href="/privacy" className="hover:text-emerald-300 transition">{ui.privacy}</a>
+                <a href={localizedHref('/faq', language)} className="hover:text-emerald-300 transition">{ui.faq}</a>
+                <a href={localizedHref('/terms', language)} className="hover:text-emerald-300 transition">{ui.terms}</a>
+                <a href={localizedHref('/privacy', language)} className="hover:text-emerald-300 transition">{ui.privacy}</a>
                 <a href="mailto:vkdefi@gmail.com" className="hover:text-emerald-300 transition">{ui.contact}</a>
                 <a href="https://x.com/vkdefi" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">@vkdefi</a>
                 <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="hover:text-emerald-300 transition">GitHub Repo</a>

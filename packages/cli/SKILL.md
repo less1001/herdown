@@ -1,27 +1,24 @@
 ---
-name: mdforagents
-description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching web pages, extracting WeChat articles, Xiaohongshu notes, Zhihu answers with LaTeX formulas, crawling sitemaps, or preparing clean markdown for RAG indexing.
+name: herdown
+description: Complete Web-to-Markdown, Sitemap Crawling, Webpage Screenshotting, and RAG Vector Chunking Skill for AI Agents (Hermes, Claude Code, OpenClaw, QClaw, Antigravity). Activates when fetching public web pages, extracting articles, crawling sitemaps, or preparing clean Markdown for AI workflows.
 ---
 
 # MD for Agents — AI Agent Skill Reference
 
-`mdforagents` is an edge-accelerated, zero-overhead Web-to-Markdown parser and scraper toolchain specifically engineered for Autonomous AI Agents and RAG Pipelines.
+`herdown` is an edge-accelerated Web-to-Markdown parser and scraper toolchain for AI Agents and RAG Pipelines.
 
 ---
 
 ## 🚀 Quick Usage (CLI Mode)
 
-Agents can execute `mdforagents` via terminal/shell without prior global installation:
+Agents can execute `herdown` via terminal/shell without prior global installation:
 
 ```bash
 # 1. Parse any URL directly to terminal stdout
-npx mdforagents "https://mp.weixin.qq.com/s/kJqhegRPFIQpH0-yBGaWiA"
+npx @herdown/cli "https://mp.weixin.qq.com/s/kJqhegRPFIQpH0-yBGaWiA"
 
-# 2. Extract URL content and save to local Markdown file
-npx mdforagents "https://zhuanlan.zhihu.com/p/xxxxx" -o article.md
-
-# 3. Execute with custom API Key (Unlocks 2,000~50,000 daily requests)
-npx mdforagents "https://www.xiaohongshu.com/explore/xxxxx" -k "sk_live_pro_your_key" -o xhs.md
+# 2. Execute with custom API Key
+npx @herdown/cli "https://www.xiaohongshu.com/explore/xxxxx" -k "sk_live_pro_your_key" -o xhs.md
 ```
 
 ---
@@ -91,7 +88,6 @@ curl -X POST https://allto.agentok.top/v1/vectorize \
 ## 🎯 Platform-Specific Extraction Enhancements
 
 - **WeChat Official Accounts (`mp.weixin.qq.com`)**: 100% full-text extraction without truncation. Strips watermark info and extracts deduplicated photo gallery CDN links (`cdn_url`).
-- **Zhihu (`zhihu.com`)**: Preserves mathematical LaTeX formulas inline as `$ ... $` syntax.
 - **Xiaohongshu (`xiaohongshu.com`)**: Extracts note text description and deduplicated high-definition `xhscdn.com` images.
 - **Wikipedia & General Web**: Strips navigation menus, footer ads, and cookie banners automatically.
 
