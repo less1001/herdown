@@ -797,12 +797,12 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
     const pagePath = window.location.pathname === '/index.html' ? '/' : window.location.pathname;
     const title = toolSlug ? `${toolLabel(toolSlug, language)}｜Herdown` : language === 'en' ? 'Clean Markdown for AI agents｜Herdown' : '给AIAgent用的干净Markdown入口｜Herdown';
-    const description = toolSlug ? toolDescription(toolSlug, language) : language === 'en' ? 'Turn webpages, documents, and images into clean materials for AI workflows.' : '把网页、文档和图片整理成适合AI知识库使用的干净资料。';
+    const description = toolSlug ? toolDescription(toolSlug, language) : language === 'en' ? 'Turn webpages, documents, and images into AI-ready Markdown for AI agents.' : '把网页、文档和图片整理成AI Agent可以直接使用的AI-ready Markdown。';
     const keywords = toolSlug === 'url-to-markdown'
       ? language === 'en' ? 'URL to Markdown, webpage to Markdown, HTML to Markdown' : 'URL转Markdown,网页转Markdown,HTML转Markdown'
       : toolSlug === 'tools'
         ? language === 'en' ? 'document to Markdown, local document conversion' : '文档转Markdown,本地文档转换'
-        : language === 'en' ? 'clean Markdown for AI workflows, REST API, MCP, CLI' : '干净Markdown,AI工作流,RESTAPI,MCP,CLI';
+        : language === 'en' ? 'AI-ready Markdown,AI agents,REST API,MCP,CLI' : 'AI-ready Markdown,AIAgent,RESTAPI,MCP,CLI';
     const canonicalUrl = `${window.location.origin}${pagePath}${language === 'en' ? '?lang=en' : ''}`;
     const setMeta = (selector: string, attribute: string, value: string) => {
       const element = document.querySelector<HTMLMetaElement>(selector);
