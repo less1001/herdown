@@ -27,7 +27,8 @@ import {
   UserRound,
   LogIn,
   LogOut,
-  Upload
+  Upload,
+  Menu
 } from 'lucide-react';
 import { getInitialLanguage, Language, messages } from './i18n';
 
@@ -715,6 +716,7 @@ function HelpPage({ language }: { language: Language }) {
 
 export function App() {
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>(() => toolSlug === 'api' ? 'keys' : toolSlug === 'mcp' ? 'mcp' : toolSlug === 'cli' ? 'cli' : toolSlug === 'skill' ? 'skills' : toolSlug === 'browser-extension' ? 'extension' : 'converter');
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const ui = messages[language];
@@ -1305,13 +1307,48 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               href="https://github.com/less1001/herdown"
               target="_blank"
               rel="noreferrer"
-              className="p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="hidden sm:flex p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-400 hover:text-white hover:bg-slate-800 transition"
               title={ui.github}
             >
               <Code2 className="w-4 h-4" />
             </a>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(value => !value)}
+              className="flex sm:hidden items-center justify-center p-2 rounded-lg bg-[#111823] border border-[#1e293b] text-slate-300 hover:text-white transition"
+              aria-label={language === 'en' ? 'Open menu' : '打开菜单'}
+              aria-expanded={mobileMenuOpen}
+            >
+              <Menu className="w-4 h-4" />
+            </button>
           </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-[#1e293b] bg-[#090d12]/95 px-4 py-3 shadow-2xl">
+            <a
+              href={localizedHref('/', language)}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-lg bg-[#111823] px-3 py-2.5 text-sm font-medium text-white"
+            >
+              <Zap className="w-4 h-4 text-emerald-400" />
+              {ui.single}
+            </a>
+            <details className="mt-2 rounded-lg border border-[#1e293b] bg-[#0d131c]">
+              <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-medium text-slate-200">
+                {language === 'en' ? 'Developers' : '开发者'}
+              </summary>
+              <div className="grid gap-1 border-t border-[#1e293b] p-2">
+                <a href={localizedHref('/api', language)} onClick={() => setMobileMenuOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-[#111823] hover:text-white">{ui.api}</a>
+                <a href={localizedHref('/mcp', language)} onClick={() => setMobileMenuOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-[#111823] hover:text-white">{ui.mcp}</a>
+                <a href={localizedHref('/cli', language)} onClick={() => setMobileMenuOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-[#111823] hover:text-white">{ui.cli}</a>
+                <a href={localizedHref('/skill', language)} onClick={() => setMobileMenuOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-[#111823] hover:text-white">{ui.skill}</a>
+                <a href={localizedHref('/browser-extension', language)} onClick={() => setMobileMenuOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-[#111823] hover:text-white">{ui.extension}</a>
+                <a href="https://github.com/less1001/herdown" target="_blank" rel="noreferrer" className="rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-[#111823] hover:text-white">GitHub</a>
+                {sessionUser?.is_admin && <button type="button" onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="rounded-md px-3 py-2 text-left text-sm text-slate-400 hover:bg-[#111823] hover:text-white">{ui.admin}</button>}
+              </div>
+            </details>
+          </div>
+        )}
       </header>
 
       {/* Main Container */}
