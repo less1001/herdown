@@ -2,6 +2,9 @@ export type Language = 'zh' | 'en';
 
 export const getInitialLanguage = (): Language => {
   if (typeof window === 'undefined') return 'zh';
+  const requested = new URLSearchParams(window.location.search).get('lang');
+  if (requested === 'zh' || requested === 'zh-CN') return 'zh';
+  if (requested === 'en') return 'en';
   const saved = window.localStorage.getItem('herdown_language');
   if (saved === 'zh' || saved === 'en') return saved;
   return navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
