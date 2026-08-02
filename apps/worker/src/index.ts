@@ -193,7 +193,8 @@ const renderSeoShell = async (request: Request, env: Env, path: string): Promise
   replace(/<div id="root">[\s\S]*?<\/div>/i, `<div id="root">${seoFallback(path, language, page)}</div>`);
   const headers = new Headers(asset.headers);
   headers.set('content-type', 'text/html; charset=utf-8');
-  headers.set('cache-control', 'public, max-age=0, must-revalidate');
+  headers.set('cache-control', 'no-store');
+  headers.set('cdn-cache-control', 'no-store');
   headers.set('vary', 'Accept-Language');
   return new Response(html, { status: asset.status, headers });
 };
