@@ -190,7 +190,7 @@ const renderSeoShell = async (request: Request, env: Env, path: string): Promise
   replace(/<link rel="alternate" hreflang="zh-CN"[^>]*>/i, `<link rel="alternate" hreflang="zh-CN" href="${escapeHtml(`${url.origin}${path}`)}" />`);
   replace(/<link rel="alternate" hreflang="x-default"[^>]*>/i, `<link rel="alternate" hreflang="x-default" href="${escapeHtml(`${url.origin}${path}`)}" />`);
   replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/gi, `<script type="application/ld+json" data-herdown-schema>${seoSchema(path, language, page, canonicalUrl)}</script>`);
-  replace(/<div id="root"><\/div>/i, `<div id="root">${seoFallback(path, language, page)}</div>`);
+  replace(/<div id="root">[\s\S]*?<\/div>\s*(?=<script type="module")/i, `<div id="root">${seoFallback(path, language, page)}</div>`);
   const headers = new Headers(asset.headers);
   headers.set('content-type', 'text/html; charset=utf-8');
   headers.set('cache-control', 'public, max-age=0, must-revalidate');
