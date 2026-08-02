@@ -1172,7 +1172,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             <a
               href={localizedHref('/', language)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'converter' && !toolSlug
+                activeTab === 'converter' && (!toolSlug || ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'word-to-markdown', 'ppt-to-markdown', 'excel-to-markdown'].includes(toolSlug))
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
