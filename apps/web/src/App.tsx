@@ -706,7 +706,7 @@ description: 为AIAgent提供网页转Markdown、Sitemap抓取和干净资料整
 npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
   const [inputUrl, setInputUrl] = useState(() => new URLSearchParams(window.location.search).get('url') || '');
   const [inputHtml, setInputHtml] = useState('');
-  const [inputMode, setInputMode] = useState<'url' | 'html'>('url');
+  const [inputMode, setInputMode] = useState<'url' | 'html' | 'crawl'>('url');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ParseResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -1153,17 +1153,6 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               {ui.single}
             </button>
             <button
-              onClick={() => setActiveTab('crawl')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                activeTab === 'crawl'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              {ui.crawl}
-            </button>
-            <button
               onClick={() => setActiveTab('keys')}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 activeTab === 'keys'
@@ -1344,10 +1333,75 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                   >
                     {ui.htmlMode}
                   </button>
+                  <button
+                    onClick={() => setInputMode('crawl')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                      inputMode === 'crawl' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {ui.crawl}
+                  </button>
                 </div>
               </div>
 
-              {inputMode === 'url' ? (
+              {inputMode === 'crawl' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      value={crawlUrl}
+                      onChange={(e) => setCrawlUrl(e.target.value)}
+                      placeholder={tr('Target domain or sitemap.xml URL', '输入目标域名或sitemap.xml链接')}
+                      className="flex-1 px-4 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                    <label className="w-full sm:w-24 shrink-0 text-xs text-slate-400">
+                      {tr('Pages', '抓取页数')}
+                      <input
+                        type="number"
+                        min={1}
+                        max={hasPaidCredits ? 100 : 5}
+                        value={crawlPageLimit}
+                        onChange={(e) => setCrawlPageLimit(Math.max(1, Math.min(hasPaidCredits ? 100 : 5, Number(e.target.value) || 1)))}
+                        className="mt-1 w-full px-3 py-3 rounded-xl bg-[#090d12] border border-[#1e293b] text-sm text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </label>
+                    <button
+                      onClick={handleCrawl}
+                      disabled={crawlLoading || !crawlUrl.trim()}
+                      className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-sm font-semibold text-white flex items-center justify-center gap-2 transition"
+                    >
+                      {crawlLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+                      {crawlLoading ? tr('Crawling...', '递归抓取中...') : tr('Start crawl', '开始抓取')}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {hasPaidCredits ? tr('Paid credits are charged by actual pages, up to 100 pages per request.', '付费点数按实际抓取页数扣除，每次最多100页。') : tr('Free users can crawl up to 5 pages per request.', '免费用户每次最多抓取5页。')}
+                  </p>
+                  {crawlResult && (
+                    <div className="space-y-3 pt-3 border-t border-[#1e293b]">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-400">
+                        <span>{tr('Pages', '抓取页面')}: <strong className="text-emerald-400">{crawlResult.total_pages}</strong></span>
+                        <button
+                          onClick={handleDownloadZip}
+                          disabled={downloadingZip}
+                          className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold transition"
+                        >
+                          {downloadingZip ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                          {downloadingZip ? tr('Packaging...', '正在打包...') : tr('Download ZIP', '下载ZIP')}
+                        </button>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {crawlResult.results.map((item: any, idx: number) => (
+                          <div key={idx} className="p-3 rounded-xl bg-[#090d12] border border-[#1e293b]">
+                            <h4 className="text-xs font-bold text-white truncate">{item.title}</h4>
+                            <p className="text-[10px] text-slate-500 truncate mt-1">{item.url}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : inputMode === 'url' ? (
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
                     <Globe className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />

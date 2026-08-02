@@ -12,7 +12,7 @@ export const getInitialLanguage = (): Language => {
 
 export const messages = {
   zh: {
-    single: '单页转换', crawl: '全站爬取', api: 'API', admin: '管理', mcp: 'MCP', cli: 'CLI', extension: '浏览器插件', skill: 'Skill', upgrade: '升级', login: 'Google登录', logout: '退出登录',
+    single: '转换', crawl: '全站爬取', api: 'API', admin: '管理', mcp: 'MCP', cli: 'CLI', extension: '浏览器插件', skill: 'Skill', upgrade: '升级', login: 'Google登录', logout: '退出登录',
     tools: '工具入口', help: '帮助', docs: 'Docs', faq: 'FAQ',
     heroBadge: '支持网页、文档和图片整理成适合AI知识库使用的干净资料', heroTitle: '给AI Agent用的干净Markdown入口', heroDescription: '通用网页、公众号文章、PDF、Word、PPT、Excel、图片和截图。先把资料清干净，再交给你的AI工作流或知识库。', quickExample: '快速体验示例：', article: '网页文章', urlMode: '网页URL链接转换', htmlMode: '直接粘贴HTML源码', urlPlaceholder: '粘贴网页URL...', htmlPlaceholder: '在此粘贴包含HTML源码的文本...', parse: '转换为Markdown', parsing: '正在解析中...', parseHtml: '解析HTML源码',
     copied: '已复制', copyResult: '复制结果', download: '下载.md', preview: '渲染预览', source: 'Markdown源码', images: '提取图片', noImages: '本文未提取到独立图片', sourceTokens: '原网页HTML估算', markdownTokens: '清洗后Markdown估算', savedContext: '预计节省上下文', estimated: '仅为估算值，实际数量取决于模型',
@@ -22,7 +22,7 @@ export const messages = {
     language: 'EN', languageZh: '中文', languageEn: 'English', github: 'GitHub源码', terms: '服务条款', privacy: '隐私政策', contact: '联系邮箱', home: '首页',
   },
   en: {
-    single: 'Single page', crawl: 'Site crawl', api: 'API', admin: 'Admin', mcp: 'MCP', cli: 'CLI', extension: 'Browser extension', skill: 'Skill', upgrade: 'Upgrade', login: 'Sign in with Google', logout: 'Sign out',
+    single: 'Convert', crawl: 'Site crawl', api: 'API', admin: 'Admin', mcp: 'MCP', cli: 'CLI', extension: 'Browser extension', skill: 'Skill', upgrade: 'Upgrade', login: 'Sign in with Google', logout: 'Sign out',
     tools: 'Tools', help: 'Help', docs: 'Docs', faq: 'FAQ',
     heroBadge: 'Turn webpages, documents, and images into clean materials for AI knowledge workflows', heroTitle: 'A clean Markdown entry point for AI agents', heroDescription: 'Webpages, WeChat articles, PDF, Word, PPT, Excel, images, and screenshots. Clean the source first, then send it to your AI workflow or knowledge tool.', quickExample: 'Try an example:', article: 'Web article', urlMode: 'Web URL to Markdown', htmlMode: 'Paste HTML source', urlPlaceholder: 'Paste a webpage URL...', htmlPlaceholder: 'Paste HTML source here...', parse: 'Convert to Markdown', parsing: 'Parsing...', parseHtml: 'Parse HTML source',
     copied: 'Copied', copyResult: 'Copy result', download: 'Download.md', preview: 'Preview', source: 'Markdown source', images: 'Images', noImages: 'No standalone images were extracted', sourceTokens: 'Original HTML estimate', markdownTokens: 'Clean Markdown estimate', savedContext: 'Estimated context saved', estimated: 'Estimate only; actual tokens depend on the model',
