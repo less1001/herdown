@@ -130,7 +130,11 @@ const seoFallback = (path: string, language: SeoLanguage, page: SeoPage): string
     : [['/', '首页'], ['/url-to-markdown', '网页转Markdown'], ['/tools', '本地资料'], ['/docs', '开发者文档'], ['/faq', '常见问题']];
   const localized = (href: string) => language === 'en' ? `${href}${href.includes('?') ? '&' : '?'}lang=en` : href;
   const nav = links.map(([href, label]) => `<a href="${localized(href)}">${label}</a>`).join(' · ');
-  return `<main class="seo-fallback"><p class="seo-brand"><a href="${localized('/')}">Herdown</a></p><h1>${escapeHtml(page.heading)}</h1><p>${escapeHtml(page.intro)}</p><nav>${nav}</nav><p class="seo-route">${escapeHtml(path)}</p></main>`;
+  const faqItems = path === '/faq' ? (language === 'en'
+    ? [['What does Herdown do?', 'Herdown turns a webpage URL or HTML into clean Markdown for saving, reading, and AI workflows.'], ['Is my content stored long-term?', 'No. Herdown processes content in real time and does not host your content or run a knowledge base. Limited technical logs may be used for security and troubleshooting.'], ['Can I use it without coding?', 'Yes. Paste a URL and click Convert. Developers can also use the API, MCP, CLI, or browser extension.']]
+    : [['Herdown是做什么的？', '把网页链接或HTML整理成更干净的Markdown，方便保存、阅读、交给AI工作流或知识库继续使用。'], ['我提交的内容会被长期保存吗？', '不会。Herdown以实时处理为主，不提供内容托管或知识库服务。必要的短期技术日志仅用于安全防护、稳定性和故障排查。'], ['不会写代码也能用吗？', '可以。直接粘贴网页链接并点击转换即可。开发者也可以通过API、MCP、CLI或浏览器插件接入自己的工作流。']]) : [];
+  const faqHtml = faqItems.map(([question, answer]) => `<section><h2>${escapeHtml(question)}</h2><p>${escapeHtml(answer)}</p></section>`).join('');
+  return `<main class="seo-fallback"><p class="seo-brand"><a href="${localized('/')}">Herdown</a></p><h1>${escapeHtml(page.heading)}</h1><p>${escapeHtml(page.intro)}</p><nav>${nav}</nav>${faqHtml}<p class="seo-route">${escapeHtml(path)}</p></main>`;
 };
 
 const seoSchema = (path: string, language: SeoLanguage, page: SeoPage, canonicalUrl: string): string => {
@@ -148,14 +152,21 @@ const seoSchema = (path: string, language: SeoLanguage, page: SeoPage, canonical
       featureList: language === 'en' ? ['Webpage to Markdown', 'Document to Markdown', 'REST API', 'MCP', 'CLI'] : ['网页转Markdown', '文档转Markdown', 'REST API', 'MCP', 'CLI'],
     });
   }
-  return escapeJsonForHtml({
+  const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': path === '/faq' ? 'FAQPage' : 'WebPage',
     name: page.title,
     url: canonicalUrl,
     inLanguage: language === 'en' ? 'en' : 'zh-CN',
     description: page.description,
-  });
+  };
+  if (path === '/faq') {
+    const items = language === 'en'
+      ? [['What does Herdown do?', 'Herdown turns a webpage URL or HTML into clean Markdown for saving, reading, and AI workflows.'], ['Is my content stored long-term?', 'No. Herdown processes content in real time and does not host your content or run a knowledge base. Limited technical logs may be used for security and troubleshooting.'], ['Can I use it without coding?', 'Yes. Paste a URL and click Convert. Developers can also use the API, MCP, CLI, or browser extension.']]
+      : [['Herdown是做什么的？', '把网页链接或HTML整理成更干净的Markdown，方便保存、阅读、交给AI工作流或知识库继续使用。'], ['我提交的内容会被长期保存吗？', '不会。Herdown以实时处理为主，不提供内容托管或知识库服务。必要的短期技术日志仅用于安全防护、稳定性和故障排查。'], ['不会写代码也能用吗？', '可以。直接粘贴网页链接并点击转换即可。开发者也可以通过API、MCP、CLI或浏览器插件接入自己的工作流。']];
+    schema.mainEntity = items.map(([question, answer]) => ({ '@type': 'Question', name: question, acceptedAnswer: { '@type': 'Answer', text: answer } }));
+  }
+  return escapeJsonForHtml(schema);
 };
 
 const renderSeoShell = async (request: Request, env: Env, path: string): Promise<Response> => {
