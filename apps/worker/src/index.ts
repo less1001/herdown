@@ -96,6 +96,18 @@ const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
     zh: { title: 'API控制台｜Herdown', description: '创建和管理HerdownAPI密钥，查看额度和使用情况。', keywords: 'Herdown API,API密钥,网页解析API', heading: 'API控制台', intro: '创建API密钥，把网页解析接入你的脚本和工作流。' },
     en: { title: 'API console｜Herdown', description: 'Create and manage Herdown API keys and view usage.', keywords: 'Herdown API,API key,webpage parsing API', heading: 'API console', intro: 'Create an API key and connect webpage parsing to your scripts and workflows.' },
   },
+  '/mcp-guide': {
+    zh: { title: 'MCP接入｜Herdown', description: '配置Herdown远程MCP，让支持MCP的客户端调用网页解析和全站抓取。', keywords: 'Herdown MCP,MCP接入,远程MCP,网页解析', heading: 'MCP接入', intro: '把Herdown连接到支持MCP的客户端，调用网页解析和全站抓取能力。' },
+    en: { title: 'MCP integration｜Herdown', description: 'Connect Herdown remote MCP to clients that support webpage parsing and site crawling.', keywords: 'Herdown MCP,MCP integration,remote MCP,webpage parsing', heading: 'MCP integration', intro: 'Connect Herdown to an MCP client and call webpage parsing and site crawling tools.' },
+  },
+  '/cli': {
+    zh: { title: 'CLI命令行工具｜Herdown', description: '在终端调用Herdown，把公开网页整理成Markdown文件。', keywords: 'Herdown CLI,网页转Markdown,命令行工具', heading: 'CLI命令行工具', intro: '在终端运行Herdown，将公开网页转换并保存为Markdown。' },
+    en: { title: 'CLI tool｜Herdown', description: 'Run Herdown from a terminal and save public webpages as Markdown files.', keywords: 'Herdown CLI,webpage to Markdown,command line tool', heading: 'CLI tool', intro: 'Run Herdown from a terminal and save public webpages as Markdown.' },
+  },
+  '/skill': {
+    zh: { title: 'HerdownSkill｜Herdown', description: '把Herdown接入AIAgent，让Agent选择合适的网页和资料整理方式。', keywords: 'HerdownSkill,AIAgentSkill,网页转Markdown', heading: 'HerdownSkill', intro: '把这份操作说明交给AIAgent，让它按场景选择网页、API、MCP或CLI。' },
+    en: { title: 'Herdown Skill｜Herdown', description: 'Give an AI agent instructions for choosing the right Herdown material workflow.', keywords: 'Herdown Skill,AI agent skill,webpage to Markdown', heading: 'Herdown Skill', intro: 'Give an AI agent the instructions it needs to choose the right Herdown workflow.' },
+  },
   '/pricing': {
     zh: { title: '价格和额度｜Herdown', description: '查看Herdown免费额度和一次性付费点数包。', keywords: 'Herdown价格,API额度,网页解析套餐', heading: '价格和额度', intro: '免费使用网页解析，也可以按需购买不过期的一次性点数。' },
     en: { title: 'Pricing and credits｜Herdown', description: 'View Herdown free usage and one-time credit packages.', keywords: 'Herdown pricing,API credits,webpage parsing plans', heading: 'Pricing and credits', intro: 'Start with free webpage parsing or buy one-time credits when you need more.' },
