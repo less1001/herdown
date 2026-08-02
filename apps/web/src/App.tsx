@@ -157,7 +157,7 @@ const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: st
   'word-to-markdown': { title: 'Word转Markdown', enTitle: 'Word to Markdown', description: '使用本地MarkItDown把Word文档整理为结构化Markdown。', enDescription: 'Use local MarkItDown to turn Word documents into structured Markdown.', local: true },
   'ppt-to-markdown': { title: 'PPT转Markdown', enTitle: 'PPT to Markdown', description: '使用本地MarkItDown把PPT和PPTX整理为结构化Markdown。', enDescription: 'Use local MarkItDown to turn PPT and PPTX files into structured Markdown.', local: true },
   'excel-to-markdown': { title: 'Excel转Markdown', enTitle: 'Excel to Markdown', description: '使用本地MarkItDown把Excel表格整理成适合AI读取的Markdown。', enDescription: 'Use local MarkItDown to turn Excel spreadsheets into Markdown for AI tools.', local: true },
-  docs: { title: 'Docs文档', enTitle: 'Docs', description: '查看网页转换、API、MCP、CLI、本地工具和工作流接入说明。', enDescription: 'Read guides for web conversion, API, MCP, CLI, local tools, and workflow integrations.' },
+  docs: { title: 'Docs文档', enTitle: 'Docs', description: '查看网页转换、API、MCP、CLI、本地工具和AIAgent接入说明。', enDescription: 'Read guides for web conversion, API, MCP, CLI, local tools, and AI agent integrations.' },
   help: { title: '帮助文档', enTitle: 'Help', description: '从网页转换、API密钥、MCP和本地文档工具开始使用Herdown。', enDescription: 'Start using Herdown with web conversion, API keys, MCP, and local document tools.' },
   faq: { title: '常见问题', enTitle: 'FAQ', description: '查看解析范围、数据保存、额度和本地文档处理的常见问题。', enDescription: 'Answers about parsing, data retention, quotas, and local document processing.' },
   api: { title: 'API控制台', enTitle: 'API console', description: '创建和管理HerdownAPI密钥，查看额度和使用情况。', enDescription: 'Create and manage Herdown API keys and view usage.' },
@@ -530,8 +530,8 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
         <article className="min-w-0 space-y-12">
           <section id="overview" className="scroll-mt-8">
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-400">{isEnglish ? 'Developer documentation' : '开发者文档'}</p>
-            <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{isEnglish ? 'Clean materials for AI workflows' : '为AI工作流准备干净资料'}</h1>
-            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-400">{isEnglish ? 'Herdown turns public webpages, documents, and images into clean Markdown. Use the web interface for a quick result, or connect the API, MCP, Skill, CLI, and local tools to your own workflow.' : 'Herdown把公开网页、文档和图片整理成干净Markdown。想快速使用就打开网页入口，需要接入自己的流程就使用API、MCP、Skill、CLI和本地工具。'}</p>
+            <h1 className="max-w-4xl text-4xl font-extrabold tracking-tight text-white sm:text-5xl">{isEnglish ? 'Clean materials for AI agents' : '为AIAgent准备干净资料'}</h1>
+            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-400">{isEnglish ? 'Herdown turns public webpages, documents, and images into clean Markdown. Use the web interface for a quick result, or connect the API, MCP, Skill, CLI, and local tools to your AI agent.' : 'Herdown把公开网页、文档和图片整理成干净Markdown。想快速使用就打开网页入口，需要接入自己的AIAgent就使用API、MCP、Skill、CLI和本地工具。'}</p>
             <div className="mt-6 flex flex-wrap gap-2">
               <a href="#getting-started" className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-[#07110d] hover:bg-emerald-400">{isEnglish ? 'Start here' : '从这里开始'}</a>
               <a href="#rest-api" className="rounded-lg border border-[#2a3a4d] px-3 py-2 text-xs text-slate-300 hover:border-emerald-400 hover:text-emerald-300">RESTAPI</a>
@@ -541,7 +541,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
 
           <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-5">
             <p className="text-sm font-semibold text-emerald-300">{isEnglish ? 'One clear boundary' : '一个清晰边界'}</p>
-            <p className="mt-2 text-sm leading-7 text-slate-300">{isEnglish ? 'Herdown prepares clean source material. It does not provide a complete knowledge-base Q&A system. Send the Markdown to the platform you already use.' : 'Herdown负责准备干净资料，不负责搭建完整知识库问答系统。解析后的Markdown可以交给你已经在使用的知识库或工作流平台。'}</p>
+            <p className="mt-2 text-sm leading-7 text-slate-300">{isEnglish ? 'Herdown prepares clean source material. It does not provide a complete knowledge-base Q&A system. Give the Markdown to the AI agent or knowledge tool you already use.' : 'Herdown负责准备干净资料，不负责搭建完整知识库问答系统。解析后的Markdown可以交给你已经在使用的AIAgent或知识库工具。'}</p>
           </section>
 
           <section className="space-y-5">
@@ -550,7 +550,7 @@ function ProfessionalDocsPage({ language }: { language: Language }) {
               {[
                 [isEnglish ? 'Open' : '打开', isEnglish ? 'Open the homepage or the unified tools page.' : '打开首页或统一工具入口。'],
                 [isEnglish ? 'Convert' : '转换', isEnglish ? 'Paste a public URL and click Convert to Markdown.' : '粘贴公开网页链接，点击转换为Markdown。'],
-                [isEnglish ? 'Use' : '使用', isEnglish ? 'Copy or download the result, then send it to your AI workflow.' : '复制或下载结果，再交给你的AI工作流。'],
+                [isEnglish ? 'Use' : '使用', isEnglish ? 'Copy or download the result, then give it to your AI agent.' : '复制或下载结果，再交给你的AIAgent。'],
               ].map(([title, body]) => (
                 <div key={title} className="rounded-xl border border-[#1e293b] bg-[#0d131c] p-4">
                   <p className="text-sm font-bold text-white">{title}</p>

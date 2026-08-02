@@ -51,17 +51,17 @@ const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
   '/': {
     zh: {
       title: '给AIAgent用的干净Markdown入口｜Herdown',
-      description: '把网页、文档和图片整理成适合AI工作流使用的干净Markdown。',
-      keywords: '网页转Markdown,文档转Markdown,图片转Markdown,AI工作流',
+      description: '把网页、文档和图片整理成适合AIAgent使用的干净Markdown。',
+      keywords: '网页转Markdown,文档转Markdown,图片转Markdown,AIAgent资料',
       heading: '给AIAgent用的干净Markdown入口',
-      intro: '把网页、文档和图片整理成适合AI工作流使用的干净Markdown。',
+      intro: '把网页、文档和图片整理成适合AIAgent使用的干净Markdown。',
     },
     en: {
       title: 'Clean Markdown for AI agents｜Herdown',
-      description: 'Turn webpages, WeChat articles, documents, and images into clean Markdown for AI workflows.',
-      keywords: 'webpage to Markdown,WeChat article to Markdown,document to Markdown,image to Markdown,AI workflow',
-      heading: 'Clean Markdown for AI workflows',
-      intro: 'Turn webpages, documents, and images into clean Markdown for the AI workflow you already use.',
+      description: 'Turn webpages, WeChat articles, documents, and images into clean Markdown for AI agents.',
+      keywords: 'webpage to Markdown,WeChat article to Markdown,document to Markdown,image to Markdown,AI agents',
+      heading: 'Clean Markdown for AI agents',
+      intro: 'Turn webpages, documents, and images into clean Markdown for the AI agent you already use.',
     },
   },
   '/tools': {
@@ -117,8 +117,8 @@ const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
     en: { title: 'Browser extension｜Herdown', description: 'Download the Herdown browser extension to prepare the current page locally.', keywords: 'Herdown browser extension,web clipping extension,Markdown extension', heading: 'Browser extension', intro: 'Download the local extension to prepare the current page and export Markdown.' },
   },
   '/docs': {
-    zh: { title: '开发者文档｜Herdown', description: '查看Herdown的网页解析、REST API、MCP、CLI和本地工具使用说明。', keywords: 'Herdown文档,REST API,MCP,CLI,网页解析', heading: '为AI工作流准备干净资料', intro: '查看网页解析、REST API、MCP、CLI和本地工具的使用说明。' },
-    en: { title: 'Developer documentation｜Herdown', description: 'Learn how to use Herdown webpage parsing, REST API, MCP, CLI, and local tools.', keywords: 'Herdown docs,REST API,MCP,CLI,webpage parsing', heading: 'Clean materials for AI workflows', intro: 'Learn how to connect Herdown to your workflow with the REST API, MCP, CLI, and local tools.' },
+    zh: { title: '开发者文档｜Herdown', description: '查看Herdown的网页解析、REST API、MCP、CLI和本地工具使用说明。', keywords: 'Herdown文档,REST API,MCP,CLI,网页解析,AIAgent', heading: '为AIAgent准备干净资料', intro: '查看网页解析、REST API、MCP、CLI和本地工具的使用说明。' },
+    en: { title: 'Developer documentation｜Herdown', description: 'Learn how to use Herdown webpage parsing, REST API, MCP, CLI, and local tools.', keywords: 'Herdown docs,REST API,MCP,CLI,webpage parsing,AI agents', heading: 'Clean materials for AI agents', intro: 'Learn how to connect Herdown to your AI agent with the REST API, MCP, CLI, and local tools.' },
   },
   '/help': {
     zh: { title: '帮助中心｜Herdown', description: '查看Herdown的使用帮助、额度说明、账号和数据处理说明。', keywords: 'Herdown帮助,使用说明,额度,数据处理', heading: '帮助中心', intro: '查找使用Herdown、额度、账号和数据处理相关的说明。' },
