@@ -81,7 +81,7 @@ interface AdminOverview {
   };
 }
 
-type ToolSlug = 'tools' | 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'word-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | 'api' | 'mcp' | 'cli' | 'skill' | 'pricing' | 'browser-extension' | null;
+type ToolSlug = 'tools' | 'url-to-markdown' | 'txt-to-markdown' | 'pdf-to-markdown' | 'word-to-markdown' | 'ppt-to-markdown' | 'excel-to-markdown' | 'docs' | 'help' | 'faq' | 'api' | 'mcp-guide' | 'cli' | 'skill' | 'pricing' | 'browser-extension' | null;
 type ProductCode = 'starter' | 'standard' | 'bulk';
 
 declare global {
@@ -146,7 +146,7 @@ const pricingPackages: Array<{ code: ProductCode; price: string; credits: string
 
 const getToolSlug = (): ToolSlug => {
   const slug = window.location.pathname.replace(/^\//, '') as Exclude<ToolSlug, null>;
-  return ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'word-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq', 'api', 'mcp', 'cli', 'skill', 'pricing', 'browser-extension'].includes(slug) ? slug : null;
+  return ['tools', 'url-to-markdown', 'txt-to-markdown', 'pdf-to-markdown', 'word-to-markdown', 'ppt-to-markdown', 'excel-to-markdown', 'docs', 'help', 'faq', 'api', 'mcp-guide', 'cli', 'skill', 'pricing', 'browser-extension'].includes(slug) ? slug : null;
 };
 
 const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: string; description: string; enDescription: string; local?: boolean }> = {
@@ -161,7 +161,7 @@ const toolPageInfo: Record<Exclude<ToolSlug, null>, { title: string; enTitle: st
   help: { title: '帮助文档', enTitle: 'Help', description: '从网页转换、API密钥、MCP和本地文档工具开始使用Herdown。', enDescription: 'Start using Herdown with web conversion, API keys, MCP, and local document tools.' },
   faq: { title: '常见问题', enTitle: 'FAQ', description: '查看解析范围、数据保存、额度和本地文档处理的常见问题。', enDescription: 'Answers about parsing, data retention, quotas, and local document processing.' },
   api: { title: 'API控制台', enTitle: 'API console', description: '创建和管理HerdownAPI密钥，查看额度和使用情况。', enDescription: 'Create and manage Herdown API keys and view usage.' },
-  mcp: { title: 'MCP接入', enTitle: 'MCP integration', description: '配置远程MCP，连接Herdown网页解析和全站抓取能力。', enDescription: 'Connect a remote MCP client to Herdown webpage parsing and site crawling.' },
+  'mcp-guide': { title: 'MCP接入', enTitle: 'MCP integration', description: '配置远程MCP，连接Herdown网页解析和全站抓取能力。', enDescription: 'Connect a remote MCP client to Herdown webpage parsing and site crawling.' },
   cli: { title: 'CLI命令行工具', enTitle: 'CLI tool', description: '在终端调用Herdown，把网页整理成Markdown文件。', enDescription: 'Run Herdown from a terminal and save webpages as Markdown.' },
   skill: { title: 'HerdownSkill', enTitle: 'Herdown Skill', description: '把Herdown配置到AI Agent，让Agent自动选择合适的资料整理方式。', enDescription: 'Configure Herdown for an AI agent so it can choose the right material workflow.' },
   pricing: { title: '价格和额度', enTitle: 'Pricing and credits', description: '查看Herdown免费额度和一次性付费点数包。', enDescription: 'View Herdown free usage and one-time credit packages.' },
@@ -715,7 +715,7 @@ function HelpPage({ language }: { language: Language }) {
 
 export function App() {
   const [toolSlug] = useState<ToolSlug>(() => getToolSlug());
-  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>(() => toolSlug === 'api' ? 'keys' : toolSlug === 'mcp' ? 'mcp' : toolSlug === 'cli' ? 'cli' : toolSlug === 'skill' ? 'skills' : toolSlug === 'browser-extension' ? 'extension' : 'converter');
+  const [activeTab, setActiveTab] = useState<'converter' | 'crawl' | 'keys' | 'account' | 'admin' | 'mcp' | 'cli' | 'extension' | 'skills'>(() => toolSlug === 'api' ? 'keys' : toolSlug === 'mcp-guide' ? 'mcp' : toolSlug === 'cli' ? 'cli' : toolSlug === 'skill' ? 'skills' : toolSlug === 'browser-extension' ? 'extension' : 'converter');
   const [language, setLanguage] = useState<Language>(() => getInitialLanguage());
   const ui = messages[language];
   const tr = (english: string, chinese: string) => language === 'en' ? english : chinese;
@@ -1205,9 +1205,9 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
               </button>
             )}
             <a
-              href={localizedHref('/mcp', language)}
+              href={localizedHref('/mcp-guide', language)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                toolSlug === 'mcp'
+                toolSlug === 'mcp-guide'
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
               }`}
@@ -2273,7 +2273,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               <div className="flex flex-col gap-3 px-4 pb-4 text-slate-400">
                 <a href={localizedHref('/docs', language)} className="hover:text-emerald-300 transition">{ui.docs}</a>
                 <a href={localizedHref('/api', language)} className="hover:text-emerald-300 transition">{ui.api}</a>
-                <a href={localizedHref('/mcp', language)} className="hover:text-emerald-300 transition">{ui.mcp}</a>
+                <a href={localizedHref('/mcp-guide', language)} className="hover:text-emerald-300 transition">{ui.mcp}</a>
                 <a href={localizedHref('/cli', language)} className="hover:text-emerald-300 transition">{ui.cli}</a>
                 <a href={localizedHref('/skill', language)} className="hover:text-emerald-300 transition">{ui.skill}</a>
                 <a href={localizedHref('/browser-extension', language)} className="hover:text-emerald-300 transition">{ui.extension}</a>
@@ -2309,7 +2309,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
               <div className="flex flex-col items-start gap-2 text-slate-500">
                 <a href={localizedHref('/docs', language)} className="hover:text-emerald-300 transition">{ui.docs}</a>
                 <a href={localizedHref('/api', language)} className="hover:text-emerald-300 transition">{ui.api}</a>
-                <a href={localizedHref('/mcp', language)} className="hover:text-emerald-300 transition">{ui.mcp}</a>
+                <a href={localizedHref('/mcp-guide', language)} className="hover:text-emerald-300 transition">{ui.mcp}</a>
                 <a href={localizedHref('/cli', language)} className="hover:text-emerald-300 transition">{ui.cli}</a>
                 <a href={localizedHref('/skill', language)} className="hover:text-emerald-300 transition">{ui.skill}</a>
                 <a href={localizedHref('/browser-extension', language)} className="hover:text-emerald-300 transition">{ui.extension}</a>
