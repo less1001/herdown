@@ -749,7 +749,10 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
     setAlternate('x-default', `${window.location.origin}${pagePath}`);
     const schema = document.querySelector<HTMLScriptElement>('script[data-herdown-schema]');
     if (schema) {
-      schema.textContent = JSON.stringify(toolSlug ? {
+      const faqItems = language === 'en'
+        ? [['What does Herdown do?', 'Herdown turns webpages or HTML into clean Markdown for saving, reading, AI workflows, and knowledge tools.'], ['Is my content stored long-term?', 'No. Herdown processes content in real time and does not host your content or run a knowledge base. Limited technical logs may be used for security and troubleshooting.'], ['Can I use it without coding?', 'Yes. Paste a URL and click Convert. Developers can also use the API, MCP, CLI, or browser extension.']]
+        : [['Herdown是做什么的？', '把网页链接或HTML整理成更干净的Markdown，方便保存、阅读、交给AI工作流或知识库继续使用。'], ['我提交的内容会被长期保存吗？', '不会。Herdown以实时处理为主，不提供内容托管或知识库服务。必要的短期技术日志仅用于安全防护、稳定性和故障排查。'], ['不会写代码也能用吗？', '可以。直接粘贴网页链接并点击转换即可。开发者也可以通过API、MCP、CLI或浏览器插件接入自己的工作流。']];
+      const pageSchema: Record<string, unknown> = toolSlug ? {
         '@context': 'https://schema.org',
         '@type': toolSlug === 'faq' ? 'FAQPage' : 'WebPage',
         name: title,
@@ -768,7 +771,9 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
         description,
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
         featureList: language === 'en' ? ['Webpage to Markdown', 'Document to Markdown', 'REST API', 'MCP', 'CLI'] : ['网页转Markdown', '文档转Markdown', 'REST API', 'MCP', 'CLI'],
-      });
+      };
+      if (toolSlug === 'faq') pageSchema.mainEntity = faqItems.map(([name, text]) => ({ '@type': 'Question', name, acceptedAnswer: { '@type': 'Answer', text } }));
+      schema.textContent = JSON.stringify(pageSchema);
     }
     if (toolSlug) window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [language, toolSlug]);
