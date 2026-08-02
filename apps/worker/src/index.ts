@@ -96,7 +96,7 @@ const seoPages: Record<string, Record<SeoLanguage, SeoPage>> = {
     zh: { title: 'API控制台｜Herdown', description: '创建和管理HerdownAPI密钥，查看额度和使用情况。', keywords: 'Herdown API,API密钥,网页解析API', heading: 'API控制台', intro: '创建API密钥，把网页解析接入你的脚本和工作流。' },
     en: { title: 'API console｜Herdown', description: 'Create and manage Herdown API keys and view usage.', keywords: 'Herdown API,API key,webpage parsing API', heading: 'API console', intro: 'Create an API key and connect webpage parsing to your scripts and workflows.' },
   },
-  '/mcp-guide': {
+  '/mcp': {
     zh: { title: 'MCP接入｜Herdown', description: '配置Herdown远程MCP，让支持MCP的客户端调用网页解析和全站抓取。', keywords: 'Herdown MCP,MCP接入,远程MCP,网页解析', heading: 'MCP接入', intro: '把Herdown连接到支持MCP的客户端，调用网页解析和全站抓取能力。' },
     en: { title: 'MCP integration｜Herdown', description: 'Connect Herdown remote MCP to clients that support webpage parsing and site crawling.', keywords: 'Herdown MCP,MCP integration,remote MCP,webpage parsing', heading: 'MCP integration', intro: 'Connect Herdown to an MCP client and call webpage parsing and site crawling tools.' },
   },
@@ -1723,7 +1723,8 @@ export default {
     }
 
     // MCP Remote Endpoint (MCP 2026-07-28 Stateless Protocol Standard)
-    if (url.pathname === '/mcp') {
+    const isMcpApiHost = url.hostname === 'api.herdown.com' || url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    if (url.pathname === '/mcp' && isMcpApiHost) {
       if (request.method === 'GET') {
         const sessionId = Math.random().toString(36).substring(2, 15);
         
