@@ -1366,15 +1366,13 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
             <div className="text-center space-y-4 max-w-3xl mx-auto pt-4 pb-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                {ui.heroBadge}
+                {language === 'en' ? 'AI-ready Markdown for AI agents' : '为AI Agent准备AI-ready Markdown'}
               </div>
               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-normal">
-                {language === 'en' ? <>A clean <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">Markdown</span> entry point for AI agents</> : <>给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 用的干净 <span className="inline-block">Markdown入口</span></>}
+                {language === 'en' ? <>A high-quality material input for <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI agents</span></> : <>给 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">AI Agent</span> 的高质量资料入口</>}
               </h1>
               <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-                {language === 'en' ? 'Webpages, articles, PDF, Word, PPT, Excel, images, and screenshots.' : '通用网页、公众号文章、PDF、Word、PPT、Excel、图片和截图。'}
-                <br className="hidden sm:block" />
-                {language === 'en' ? 'Clean the source first, then send it to your AI workflow or knowledge tool.' : '先把资料清干净，再交给你的AI工作流或知识库。'}
+                {language === 'en' ? 'Turn webpages, documents, and images into AI-ready Markdown, so AI agents can understand, retrieve, and use your materials more accurately.' : '把网页、文档、图片转换为AI-ready Markdown，让AI Agent更准确地理解、检索和使用你的资料。'}
               </p>
               
             </div>
@@ -1485,7 +1483,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                     className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm text-white shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition"
                   >
                     {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4 fill-white" />}
-                    {loading ? ui.parsing : ui.parse}
+                      {loading ? ui.parsing : language === 'en' ? 'Generate AI-ready Markdown' : '生成AI Markdown'}
                   </button>
                 </div>
               ) : (
@@ -1522,6 +1520,25 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
                 </p>
               )}
             </div>
+
+            <section className="space-y-4 pt-2">
+              <div className="text-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white">{language === 'en' ? 'Why AI agents need clean context' : '为什么AI Agent需要Clean Context？'}</h2>
+                <p className="mt-2 text-sm text-slate-500">{language === 'en' ? 'Less noise in, better material for the agent.' : '减少无效信息，给Agent更高质量的资料。'}</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  [language === 'en' ? 'Reduce Context Waste' : '减少无效上下文', language === 'en' ? 'Remove HTML noise, ads, navigation, and recommendations. Reduce unnecessary context by up to 80%.' : '清理HTML、广告、导航和推荐内容，最多减少80%的无效上下文。'],
+                  [language === 'en' ? 'Better Agent Understanding' : '提高Agent理解能力', language === 'en' ? 'Structured Markdown gives agents cleaner material for retrieval, reasoning, and answering.' : '结构化Markdown让Agent获得更干净的资料，更好地检索、推理和回答。'],
+                  [language === 'en' ? 'Lower Cost, Faster Responses' : '降低成本，加快响应', language === 'en' ? 'Less unnecessary context means lower input costs, faster responses, and more useful context space.' : '减少无效上下文，带来更低的输入成本、更快的响应和更多有效上下文空间。'],
+                ].map(([title, body]) => (
+                  <div key={title} className="rounded-2xl border border-[#1e293b] bg-[#0f1722] p-5">
+                    <h3 className="text-sm font-bold text-white">{title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-slate-400">{body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
 
             {/* Result Area */}
             {result && (
