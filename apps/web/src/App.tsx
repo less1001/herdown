@@ -2113,11 +2113,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
         {activeTab === 'converter' && (!toolSlug || toolSlug === 'url-to-markdown' || toolSlug === 'faq') && (
           <section id="faq" className="max-w-4xl mx-auto mt-14 scroll-mt-8">
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-                {ui.faq}
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-3">{ui.faqTitle}</h2>
-              <p className="text-sm text-slate-400 mt-2">{ui.faqHint}</p>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white">{language === 'en' ? 'FAQ' : '常见问题'}</h2>
             </div>
 
             <div className="rounded-2xl border border-[#1e293b] bg-[#0d131d] divide-y divide-[#1e293b] overflow-hidden">
