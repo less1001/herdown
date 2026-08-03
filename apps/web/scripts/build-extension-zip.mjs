@@ -7,7 +7,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(scriptDir, '..');
 const repoRoot = path.resolve(scriptDir, '../../..');
 const extensionRoot = path.join(repoRoot, 'apps/extension');
-const outputPath = path.join(webRoot, 'public/downloads/herdown-extension.zip');
+const outputPath = path.join(webRoot, 'public/downloads/herdown-extension-v1.0.1.zip');
 async function walkFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = [];

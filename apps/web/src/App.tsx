@@ -2098,7 +2098,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </p>
                 <div className="pt-2">
                   <a
-                    href="/downloads/herdown-extension.zip"
+                    href="/downloads/herdown-extension-v1.0.1.zip"
                     download
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
                   >
