@@ -37,6 +37,16 @@ const json = (data: unknown, init: ResponseInit = {}) => {
   });
 };
 
+const googleAnalyticsScript = `
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HD28MKHXD2"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-HD28MKHXD2');
+    </script>`;
+
 type SeoLanguage = 'zh' | 'en';
 
 type SeoPage = {
@@ -250,6 +260,7 @@ const legalPage = (
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="${description}" />
     <title>${title} | Herdown</title>
+    ${googleAnalyticsScript}
     <style>
       :root { color-scheme: dark; }
       body { margin: 0; background: #070a0e; color: #d8e1e8; font: 16px/1.75 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -1912,6 +1923,7 @@ export default {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Herdown - 给 AI Agent 用的干净 Markdown 入口</title>
     <meta name="description" content="专为 AI Agent、开发者与自动化工作流打造的网页转 Markdown 工具链、REST API 与远程 MCP 平台。" />
+    ${googleAnalyticsScript}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
