@@ -8,8 +8,6 @@ const webRoot = path.resolve(scriptDir, '..');
 const repoRoot = path.resolve(scriptDir, '../../..');
 const extensionRoot = path.join(repoRoot, 'apps/extension');
 const outputPath = path.join(webRoot, 'public/downloads/herdown-extension.zip');
-const zipRootFolder = 'herdown-extension';
-
 async function walkFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = [];
@@ -36,7 +34,7 @@ async function main() {
   for (const absolutePath of files) {
     const relativePath = path.relative(extensionRoot, absolutePath).split(path.sep).join('/');
     const content = await fs.readFile(absolutePath);
-    zip.file(`${zipRootFolder}/${relativePath}`, content);
+    zip.file(relativePath, content);
   }
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true });

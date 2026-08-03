@@ -86,40 +86,6 @@
       color: #10b981;
       background-color: rgba(16, 185, 129, 0.08);
     }
-    .zhihu-panel {
-      background: #0d131d;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 12px;
-      display: none;
-    }
-    .zhihu-panel.show {
-      display: block;
-    }
-    .zhihu-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: #34d399;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .control-row {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    select, input[type="number"] {
-      background: #070a0e;
-      border: 1px solid #1e293b;
-      color: #e2e8f0;
-      font-size: 11px;
-      padding: 5px 8px;
-      border-radius: 6px;
-      flex: 1;
-    }
     .preview-box {
       background-color: #090d13;
       border: 1px solid #1e293b;
@@ -195,47 +161,34 @@
       <div class="logo-badge">HD</div>
       <span class="brand-name">Herdown</span>
     </div>
-    <div id="stats-info" style="font-size: 10px; color: #64748b;">本地 0 成本内核</div>
+    <div id="stats-info" style="font-size: 10px; color: #64748b;">本地处理</div>
   </div>
 
   <div class="section">
     <div class="label">
-      <span>剪藏范围</span>
-      <span id="char-info">准备中...</span>
+      <span id="scope-label">提取范围</span>
+      <span id="char-info">准备中</span>
     </div>
     <div class="mode-grid">
       <button class="btn-mode active" id="btn-full">完整网页</button>
       <button class="btn-mode" id="btn-selection">划选片段</button>
-      <button class="btn-mode" id="btn-picker">🎯 元素拾取</button>
+      <button class="btn-mode" id="btn-picker">元素拾取</button>
     </div>
   </div>
 
-  <!-- Zhihu Special Options Panel -->
-  <div class="zhihu-panel" id="zhihu-panel">
-    <div class="zhihu-title">💡 知乎问答定制化提取</div>
-    <div class="control-row">
-      <span style="font-size: 10px; color: #94a3b8;">提取回答数:</span>
-      <input type="number" id="zhihu-limit" value="5" min="1" max="100" style="width: 50px;" />
-      <span style="font-size: 10px; color: #94a3b8;">排序:</span>
-      <select id="zhihu-sort">
-        <option value="votes">默认高赞排序</option>
-        <option value="date">最新时间排序</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="preview-box" id="preview-box">正在读取网页元素并转换为干净 Markdown...</div>
+  <div class="preview-box" id="preview-box">正在读取网页并整理为干净Markdown...</div>
 
   <div class="action-group">
     <button class="btn-primary" id="btn-obsidian">
-      一键存入 Obsidian
+      存入Obsidian
     </button>
     <div class="btn-sub-row">
-      <button class="btn-secondary" id="btn-copy">📋 复制 Markdown</button>
-      <button class="btn-secondary" id="btn-download">💾 下载 .md 文件</button>
+      <button class="btn-secondary" id="btn-copy">复制Markdown</button>
+      <button class="btn-secondary" id="btn-download">下载.md文件</button>
     </div>
   </div>
 
+  <div id="privacy-note" style="margin-top: 10px; font-size: 10px; line-height: 1.5; color: #64748b; text-align: center;">内容只在当前浏览器处理，不上传页面内容</div>
   <div class="status-bar" id="status-bar"></div>
 
   <script src="lib/readability.js"></script>

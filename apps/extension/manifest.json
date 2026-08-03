@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Herdown - 网页转 Markdown 剪藏 (Obsidian 专属)",
-  "version": "1.0.0",
-  "description": "一键将微信公众号、知乎、小红书、36氪及全网网页一键转换为洁净 Markdown，支持 Obsidian 动态标签直连与防爬免封下载。",
+  "name": "Herdown网页转Markdown",
+  "version": "1.0.1",
+  "description": "在浏览器本地将网页内容整理为干净Markdown，支持复制、下载和发送到Obsidian。",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -28,7 +28,6 @@
   ],
   "permissions": [
     "activeTab",
-    "scripting",
     "storage",
     "downloads",
     "contextMenus"

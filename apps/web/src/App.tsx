@@ -2081,13 +2081,13 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div className="text-center space-y-4 pt-4">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                {tr('Herdown browser extension V1.0', 'Herdown浏览器扩展V1.0')}
+                {tr('Herdown browser extension V1.0.1', 'Herdown浏览器扩展V1.0.1')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
                 {language === 'en' ? <>A <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">zero-cost extraction extension</span> running locally in your browser</> : <>直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span></>}
               </h1>
               <p className="text-slate-400 text-sm max-w-2xl mx-auto">
-                {tr('Avoid cloud processing costs. Herdown uses the browser DOM and your signed-in cookies to turn the current page into clean material.', '免除一切云端服务器转算成本！通过浏览器原生DOM渲染，利用您已登录的Cookie，直接把页面整理成干净资料。')}
+                {tr('Process the current page locally in your browser and turn its rendered content into clean material.', '直接在浏览器本地读取当前页面内容，整理成干净资料。')}
               </p>
             </div>
 
