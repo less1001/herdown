@@ -11,7 +11,7 @@
 ### 1. 核心技术与产品突破
 - **标准 Agent Skill (SKILL.md) 全量发布**：
   - 在 `packages/cli/SKILL.md` 编写了符合 Hermes Agent、Claude Code、OpenClaw、QClaw、Antigravity 标准的技能定义文件。
-  - 在前端 Web UI (`allto.agentok.top`) 增加了 `⚡ Agent Skill` 专属选项卡，提供一键复制 SKILL.md 面板，降低用户集成门槛。
+  - 在前端Web UI增加了`Agent Skill`专属选项卡，提供一键复制SKILL.md面板，降低用户集成门槛。
 - **RAG 向量切分接口 (`/v1/vectorize`) 商业定位澄清**：
   - 明确了 RAG 架构的三步走流程（清洗切块 ➔ Embedding ➔ 向量检索）。
   - MD for Agents 切入的是 RAG 流程中最脏、最累、也最决定检索质量的“前端网页清洗与语义 Chunking 切块”基建层。

@@ -31,7 +31,7 @@ When shell execution is restricted, agents can perform standard HTTP POST reques
 Extracts clean Markdown, title, and deduplicated image URLs from any public URL.
 
 ```bash
-curl -X POST https://allto.agentok.top/v1/parse \
+curl -X POST https://api.herdown.com/v1/parse \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"url": "https://mp.weixin.qq.com/s/kJqhegRPFIQpH0-yBGaWiA"}'
@@ -55,7 +55,7 @@ curl -X POST https://allto.agentok.top/v1/parse \
 Recursively discovers and parses all subpages under a domain or sitemap XML.
 
 ```bash
-curl -X POST https://allto.agentok.top/v1/crawl \
+curl -X POST https://api.herdown.com/v1/crawl \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{"url": "https://example.com", "limit": 10}'
@@ -67,7 +67,7 @@ curl -X POST https://allto.agentok.top/v1/crawl \
 Generates a high-definition 1200x800 PNG viewport screenshot of any target URL.
 
 ```bash
-curl -X POST https://allto.agentok.top/v1/screenshot \
+curl -X POST https://api.herdown.com/v1/screenshot \
   -H "Content-Type: application/json" \
   -d '{"url": "https://news.ycombinator.com"}'
 ```
@@ -78,7 +78,7 @@ curl -X POST https://allto.agentok.top/v1/screenshot \
 Splits extracted Markdown into semantic vector chunks ready for RAG embeddings (Milvus / Qdrant / Pinecone).
 
 ```bash
-curl -X POST https://allto.agentok.top/v1/vectorize \
+curl -X POST https://api.herdown.com/v1/vectorize \
   -H "Content-Type: application/json" \
   -d '{"url": "https://wikipedia.org", "chunk_size": 400}'
 ```
