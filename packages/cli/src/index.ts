@@ -39,7 +39,7 @@ async function main() {
 
   if (args.length === 0 || args.includes('-h') || args.includes('--help')) {
     console.log(`
-Herdown CLI (v0.2.2)
+ Herdown CLI (v0.2.7)
 Usage: npx @herdown/cli <url> [-o output.md] [--limit 5] [--key <api_key>]
    or: herdown <url> [-o output.md]
 

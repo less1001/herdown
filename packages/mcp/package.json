@@ -1,6 +1,6 @@
 {
   "name": "@herdown/mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "type": "module",
   "description": "MCP stdio adapter for the Herdown webpage parsing service",
