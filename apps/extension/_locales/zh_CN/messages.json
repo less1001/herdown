@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Herdown网页转Markdown"
+  },
+  "extensionDescription": {
+    "message": "在浏览器本地将当前网页整理为干净Markdown，支持复制、下载和发送到Obsidian。"
+  },
+  "actionTitle": {
+    "message": "打开Herdown剪藏"
+  },
+  "contextMenuTitle": {
+    "message": "使用Herdown提取"
+  }
+}

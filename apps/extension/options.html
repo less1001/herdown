@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Herdown设置</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: #070a0e;
+      color: #e2e8f0;
+      font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(760px, calc(100% - 32px)); margin: 40px auto; }
+    header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .logo { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, #0f6b4f, #10b981); color: #fff; font-weight: 800; }
+    h1 { margin: 0; color: #fff; font-size: 25px; }
+    .subtle { margin: 3px 0 0; color: #94a3b8; }
+    section { margin-bottom: 16px; padding: 20px; border: 1px solid #1e293b; border-radius: 16px; background: #0d131d; }
+    h2 { margin: 0 0 14px; color: #fff; font-size: 16px; }
+    label { display: block; margin: 14px 0 6px; color: #cbd5e1; font-size: 13px; }
+    input, select, textarea { width: 100%; border: 1px solid #263445; border-radius: 9px; background: #090d13; color: #e2e8f0; padding: 10px 12px; font: inherit; }
+    textarea { min-height: 190px; resize: vertical; font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .hint { margin: 6px 0 0; color: #64748b; font-size: 12px; }
+    .actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+    button { border: 0; border-radius: 9px; background: linear-gradient(135deg, #0f6b4f, #10b981); color: #fff; padding: 10px 18px; font-weight: 700; cursor: pointer; }
+    #status { color: #34d399; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="logo">HD</div>
+      <div>
+        <h1 id="title">Herdown设置</h1>
+        <p class="subtle" id="subtitle">设置网页剪藏和Obsidian保存方式</p>
+      </div>
+    </header>
+
+    <section>
+      <h2 id="general-title">基本设置</h2>
+      <label for="language" id="language-label">界面语言</label>
+      <select id="language">
+        <option value="auto">跟随浏览器</option>
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select>
+      <label for="download-folder" id="download-folder-label">下载文件夹</label>
+      <input id="download-folder" value="Clippings" placeholder="Clippings">
+      <p class="hint" id="download-folder-hint">下载的Markdown文件会保存在这个文件夹下。</p>
+    </section>
+
+    <section>
+      <h2 id="obsidian-title">Obsidian保存</h2>
+      <label for="vault" id="vault-label">Vault名称，可选</label>
+      <input id="vault" placeholder="例如：My Vault">
+      <label for="folder" id="folder-label">默认文件夹，可选</label>
+      <input id="folder" placeholder="例如：Clippings">
+      <p class="hint" id="obsidian-hint">填写后，发送到Obsidian时会使用指定Vault和文件夹。</p>
+    </section>
+
+    <section>
+      <h2 id="template-title">Markdown模板</h2>
+      <label for="template" id="template-label">Frontmatter模板</label>
+      <textarea id="template"></textarea>
+      <p class="hint" id="template-hint">可用变量：{{title}}、{{url}}、{{domain}}、{{date}}。留空则使用Herdown默认格式。</p>
+    </section>
+
+    <div class="actions">
+      <button id="save">保存设置</button>
+      <span id="status"></span>
+    </div>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

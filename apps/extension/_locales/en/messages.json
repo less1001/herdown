@@ -1,0 +1,14 @@
+{
+  "extensionName": {
+    "message": "Herdown Web Clipper"
+  },
+  "extensionDescription": {
+    "message": "Turn the current webpage into clean Markdown locally, then copy, download, or send it to Obsidian."
+  },
+  "actionTitle": {
+    "message": "Open Herdown Clipper"
+  },
+  "contextMenuTitle": {
+    "message": "Extract with Herdown"
+  }
+}

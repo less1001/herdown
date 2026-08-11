@@ -8,6 +8,12 @@ let currentMarkdown = '';
 let currentTitle = '';
 let activeTabId = null;
 let statusTimer = null;
+let settings = {
+  downloadFolder: 'Clippings',
+  obsidianVault: '',
+  obsidianFolder: '',
+  template: `---\ntitle: "{{title}}"\nsource_url: "{{url}}"\ndomain: "{{domain}}"\ntags: [herdown, clippings]\n---`
+};
 
 const isEnglish = navigator.language.toLowerCase().startsWith('en');
 const copy = isEnglish ? {
@@ -33,6 +39,7 @@ const copy = isEnglish ? {
 document.addEventListener('DOMContentLoaded', async () => {
   applyLocale();
   bindActions();
+  settings = await chrome.storage.sync.get(settings);
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   activeTabId = tab?.id || null;
@@ -54,19 +61,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  setPreview(copy.loading);
-  chrome.tabs.sendMessage(activeTabId, { action: 'GET_PAGE_DATA' }, (res) => {
-    if (chrome.runtime.lastError) {
-      setPreview(copy.invalidPage);
-      return;
-    }
-    if (!res || !res.html) {
-      setPreview(copy.noData);
-      return;
-    }
-    pageData = res;
-    initView();
-  });
+  await readActivePage();
 });
 
 function applyLocale() {
@@ -81,7 +76,9 @@ function applyLocale() {
     'btn-obsidian': isEnglish ? 'Send to Obsidian' : '存入Obsidian',
     'btn-copy': isEnglish ? 'Copy Markdown' : '复制Markdown',
     'btn-download': isEnglish ? 'Download.md' : '下载.md文件',
-    'privacy-note': isEnglish ? 'Page content is processed in this browser and is not uploaded.' : '内容只在当前浏览器处理，不上传页面内容'
+    'privacy-note': isEnglish ? 'Page content is processed in this browser and is not uploaded.' : '内容只在当前浏览器处理，不上传页面内容',
+    'btn-retry': isEnglish ? 'Read page again' : '重新读取网页',
+    'btn-options': isEnglish ? 'Settings' : '设置'
   };
   Object.entries(text).forEach(([id, value]) => {
     const element = document.getElementById(id);
@@ -90,6 +87,14 @@ function applyLocale() {
 }
 
 function bindActions() {
+  document.getElementById('btn-retry').addEventListener('click', () => {
+    void readActivePage();
+  });
+
+  document.getElementById('btn-options').addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+
   document.getElementById('btn-full').addEventListener('click', () => {
     if (!ensurePageData()) return;
     setActiveMode('btn-full');
@@ -111,13 +116,19 @@ function bindActions() {
       showStatus(copy.pickerFailed);
       return;
     }
-    chrome.tabs.sendMessage(activeTabId, { action: 'START_ELEMENT_PICKER' }, (pickedRes) => {
+    void ensureContentScript(activeTabId).then((ready) => {
+      if (!ready) {
+        showStatus(copy.pickerFailed, 'error');
+        return;
+      }
+      chrome.tabs.sendMessage(activeTabId, { action: 'START_ELEMENT_PICKER' }, (pickedRes) => {
       if (chrome.runtime.lastError || !pickedRes?.ok) {
-        showStatus(copy.pickerFailed);
+        showStatus(copy.pickerFailed, 'error');
         return;
       }
       showStatus(copy.pickerStarted);
       window.close();
+      });
     });
   });
 
@@ -128,7 +139,14 @@ function bindActions() {
       return;
     }
     const cleanFileName = makeFileName(currentTitle || 'Herdown Article', 'Herdown Article');
-    const obsidianUri = `obsidian://new?name=${encodeURIComponent(cleanFileName)}&content=${encodeURIComponent(currentMarkdown)}`;
+    const filePath = settings.obsidianFolder
+      ? `${settings.obsidianFolder.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}/${cleanFileName}`
+      : cleanFileName;
+    const params = new URLSearchParams();
+    if (settings.obsidianVault) params.set('vault', settings.obsidianVault);
+    params.set('file', filePath);
+    params.set('content', currentMarkdown);
+    const obsidianUri = `obsidian://new?${params.toString()}`;
     window.open(obsidianUri, '_blank');
     showStatus(copy.obsidianTried);
   });
@@ -150,7 +168,7 @@ function bindActions() {
     const url = URL.createObjectURL(blob);
     chrome.downloads.download({
       url,
-      filename: `Clippings/${cleanTitle}.md`,
+      filename: `${settings.downloadFolder || 'Clippings'}/${cleanTitle}.md`,
       saveAs: false
     }, () => {
       const error = chrome.runtime.lastError;
@@ -162,6 +180,55 @@ function bindActions() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
   });
+}
+
+async function readActivePage() {
+  if (!activeTabId) {
+    setPreview(copy.noTab);
+    return;
+  }
+  setPreview(copy.loading);
+  const ready = await ensureContentScript(activeTabId);
+  if (!ready) {
+    setPreview(copy.invalidPage);
+    showStatus(copy.invalidPage, 'error');
+    return;
+  }
+  chrome.tabs.sendMessage(activeTabId, { action: 'GET_PAGE_DATA' }, (res) => {
+    if (chrome.runtime.lastError) {
+      setPreview(copy.invalidPage);
+      showStatus(copy.refresh, 'error');
+      return;
+    }
+    if (res?.error === 'PAGE_TOO_LARGE') {
+      setPreview(copy.tooLarge);
+      showStatus(copy.tooLarge, 'error');
+      return;
+    }
+    if (!res || !res.html) {
+      setPreview(copy.noData);
+      showStatus(copy.noData, 'error');
+      return;
+    }
+    pageData = res;
+    initView();
+  });
+}
+
+async function ensureContentScript(tabId) {
+  try {
+    const [{ result: isReady }] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => globalThis.__HERDOWN_CONTENT_SCRIPT_READY__ === true
+    });
+    if (!isReady) {
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+    }
+    return true;
+  } catch (error) {
+    console.warn('[Herdown] Could not access the current page:', error);
+    return false;
+  }
 }
 
 function ensurePageData() {
@@ -264,13 +331,30 @@ function renderMarkdown(rawHtml) {
   }
 
   currentTitle = result.title || pageData.title;
+  if (settings.template?.trim()) {
+    result.frontmatter = renderTemplate(settings.template, currentTitle, pageData.url);
+  }
   currentMarkdown = `${result.frontmatter}\n\n# ${currentTitle}\n\n${result.markdown}`;
   const wordCount = result.markdown.length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 350));
   document.getElementById('char-info').innerText = isEnglish
     ? `${wordCount}${copy.wordCount}${readingTime}${copy.minutes}`
     : `${wordCount}${copy.wordCount}${readingTime}${copy.minutes}`;
-  setPreview(`${currentMarkdown.slice(0, 600)}\n\n${copy.more}`);
+  const preview = document.getElementById('preview-box');
+  if (preview) preview.readOnly = false;
+  setPreview(currentMarkdown);
+}
+
+function renderTemplate(template, title, url) {
+  let domain = '';
+  try { domain = new URL(url).hostname; } catch {}
+  const values = {
+    title,
+    url,
+    domain,
+    date: new Date().toISOString().slice(0, 10)
+  };
+  return template.replace(/\{\{\s*(title|url|domain|date)\s*\}\}/g, (_, key) => escapeYaml(values[key]));
 }
 
 function makeFileName(value, fallback) {
@@ -284,16 +368,22 @@ function escapeYaml(value) {
 
 function setPreview(text) {
   const preview = document.getElementById('preview-box');
-  if (preview) preview.innerText = text;
+  if (!preview) return;
+  if ('value' in preview) preview.value = text;
+  else preview.innerText = text;
 }
 
-function showStatus(text) {
+function showStatus(text, tone = 'success') {
   const statusBar = document.getElementById('status-bar');
   if (!statusBar) return;
   if (statusTimer) clearTimeout(statusTimer);
   statusBar.innerText = text;
-  statusBar.style.color = '#34d399';
+  statusBar.style.color = tone === 'error' ? '#f87171' : '#34d399';
   statusTimer = setTimeout(() => {
     statusBar.innerText = '';
   }, 4000);
 }
+
+document.getElementById('preview-box')?.addEventListener('input', (event) => {
+  currentMarkdown = event.target.value;
+});

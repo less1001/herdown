@@ -7,13 +7,14 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(scriptDir, '..');
 const repoRoot = path.resolve(scriptDir, '../../..');
 const extensionRoot = path.join(repoRoot, 'apps/extension');
-const outputPath = path.join(webRoot, 'public/downloads/herdown-extension-v1.0.1.zip');
+const manifest = JSON.parse(await fs.readFile(path.join(extensionRoot, 'manifest.json'), 'utf8'));
+const outputPath = path.join(webRoot, `public/downloads/herdown-extension-v${manifest.version}.zip`);
 async function walkFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = [];
 
   for (const entry of entries) {
-    if (entry.name === '.DS_Store') continue;
+    if (entry.name === '.DS_Store' || entry.name.endsWith('.map')) continue;
     const absolutePath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       files.push(...await walkFiles(absolutePath));

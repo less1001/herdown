@@ -2886,7 +2886,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div className="text-center space-y-4 pt-4">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                {tr('Herdown browser extension V1.0.1', 'Herdown浏览器扩展V1.0.1')}
+                {tr('Herdown browser extension V1.1.0', 'Herdown浏览器扩展V1.1.0')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
                 {language === 'en' ? <>A <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">zero-cost extraction extension</span> running locally in your browser</> : <>直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span></>}
@@ -2903,7 +2903,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </p>
                 <div className="pt-2">
                   <a
-                    href="/downloads/herdown-extension-v1.0.1.zip"
+                    href="/downloads/herdown-extension-v1.1.0.zip"
                     download
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
                   >
@@ -2932,6 +2932,10 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
                   <strong className="text-emerald-400 block mb-1">{tr('Word count and reading time', '自动化字数与阅读时长统计')}</strong>
                   {language === 'en' ? <>Clean invisible characters, estimate <code className="text-slate-200">word_count</code> and <code className="text-slate-200">reading_time</code>, and add <code className="text-slate-200">tags: [herdown, clippings]</code>.</> : <>全自动清洗不可见字符，智能预估<code className="text-slate-200">word_count</code>与<code className="text-slate-200">reading_time</code>并自动打上<code className="text-slate-200">tags: [herdown, clippings]</code>。</>}
+                </div>
+                <div className="p-3 rounded-xl bg-[#0f1722] border border-[#1e293b]">
+                  <strong className="text-emerald-400 block mb-1">{tr('Templates and output settings', '模板与输出设置')}</strong>
+                  {tr('Choose a filename, folder, Obsidian vault, and frontmatter template without uploading page content.', '可设置文件名、文件夹、Obsidian Vault和Frontmatter模板，网页内容不上传。')}
                 </div>
               </div>
             </div>

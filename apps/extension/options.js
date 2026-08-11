@@ -1,0 +1,72 @@
+const DEFAULT_TEMPLATE = `---
+title: "{{title}}"
+source_url: "{{url}}"
+domain: "{{domain}}"
+tags: [herdown, clippings]
+---`;
+
+const elements = {
+  language: document.getElementById('language'),
+  downloadFolder: document.getElementById('download-folder'),
+  vault: document.getElementById('vault'),
+  folder: document.getElementById('folder'),
+  template: document.getElementById('template'),
+  status: document.getElementById('status')
+};
+
+const zh = {
+  title: 'Herdown设置', subtitle: '设置网页剪藏和Obsidian保存方式', general: '基本设置', language: '界面语言', follow: '跟随浏览器', chinese: '中文', english: 'English', downloadFolder: '下载文件夹', downloadHint: '下载的Markdown文件会保存在这个文件夹下。', obsidian: 'Obsidian保存', vault: 'Vault名称，可选', folder: '默认文件夹，可选', obsidianHint: '填写后，发送到Obsidian时会使用指定Vault和文件夹。', template: 'Markdown模板', templateLabel: 'Frontmatter模板', templateHint: '可用变量：{{title}}、{{url}}、{{domain}}、{{date}}。留空则使用Herdown默认格式。', save: '保存设置', saved: '设置已保存。'
+};
+const en = {
+  title: 'Herdown settings', subtitle: 'Configure clipping and Obsidian output', general: 'General', language: 'Interface language', follow: 'Follow browser', chinese: '中文', english: 'English', downloadFolder: 'Download folder', downloadHint: 'Markdown files are saved under this folder.', obsidian: 'Obsidian output', vault: 'Vault name, optional', folder: 'Default folder, optional', obsidianHint: 'When set, Send to Obsidian uses this vault and folder.', template: 'Markdown template', templateLabel: 'Frontmatter template', templateHint: 'Variables: {{title}}, {{url}}, {{domain}}, {{date}}. Leave blank to use the Herdown default.', save: 'Save settings', saved: 'Settings saved.'
+};
+
+function getLanguage(value) {
+  if (value === 'en' || (value === 'auto' && navigator.language.toLowerCase().startsWith('en'))) return 'en';
+  return 'zh';
+}
+
+function applyLocale() {
+  const copy = getLanguage(elements.language.value) === 'en' ? en : zh;
+  document.documentElement.lang = copy === en ? 'en' : 'zh-CN';
+  const textMap = {
+    title: copy.title, subtitle: copy.subtitle, 'general-title': copy.general, 'language-label': copy.language,
+    'download-folder-label': copy.downloadFolder, 'download-folder-hint': copy.downloadHint, 'obsidian-title': copy.obsidian,
+    'vault-label': copy.vault, 'folder-label': copy.folder, 'obsidian-hint': copy.obsidianHint, 'template-title': copy.template,
+    'template-label': copy.templateLabel, 'template-hint': copy.templateHint, save: copy.save
+  };
+  for (const [id, value] of Object.entries(textMap)) document.getElementById(id).textContent = value;
+  const languageOptions = elements.language.options;
+  languageOptions[0].textContent = copy.follow;
+  languageOptions[1].textContent = copy.chinese;
+  languageOptions[2].textContent = copy.english;
+}
+
+async function load() {
+  const settings = await chrome.storage.sync.get({
+    language: 'auto', downloadFolder: 'Clippings', obsidianVault: '', obsidianFolder: '', template: DEFAULT_TEMPLATE
+  });
+  elements.language.value = settings.language;
+  elements.downloadFolder.value = settings.downloadFolder;
+  elements.vault.value = settings.obsidianVault;
+  elements.folder.value = settings.obsidianFolder;
+  elements.template.value = settings.template;
+  applyLocale();
+}
+
+elements.language.addEventListener('change', applyLocale);
+document.getElementById('save').addEventListener('click', async () => {
+  await chrome.storage.sync.set({
+    language: elements.language.value,
+    downloadFolder: elements.downloadFolder.value.trim() || 'Clippings',
+    obsidianVault: elements.vault.value.trim(),
+    obsidianFolder: elements.folder.value.trim(),
+    template: elements.template.value.trim()
+  });
+  const copy = getLanguage(elements.language.value) === 'en' ? en : zh;
+  elements.status.textContent = copy.saved;
+  setTimeout(() => { elements.status.textContent = ''; }, 3000);
+});
+
+elements.template.value = DEFAULT_TEMPLATE;
+void load();

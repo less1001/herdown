@@ -1,11 +1,13 @@
 // Herdown Chrome Extension Content Script
-console.log('[Herdown Extension] Content script loaded.');
+// The script is injected only after an explicit user action.
 
 const MAX_PAGE_HTML = 8_000_000;
 let isInspectorActive = false;
 let hoverElement = null;
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+if (!globalThis.__HERDOWN_CONTENT_SCRIPT_READY__) {
+  globalThis.__HERDOWN_CONTENT_SCRIPT_READY__ = true;
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'GET_PAGE_DATA') {
     const selection = window.getSelection() ? window.getSelection().toString().trim() : '';
 
@@ -141,9 +143,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ ok: true });
     return false;
   }
-});
+  });
+}
 
-function waitForPageReady(maxWait = 1600) {
+function waitForPageReady(maxWait = 4000) {
   return new Promise((resolve) => {
     const startedAt = Date.now();
     let previousLength = -1;
