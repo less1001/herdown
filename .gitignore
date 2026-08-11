@@ -6,14 +6,5 @@ apps/web/public/downloads
 .env
 .env.*
 
-# Private Strategy Files
-冷启动.md
+# Local-only strategy notes use a generic suffix so private filenames stay private.
 *.internal.md
-
-# Local-only notes, test captures, and agent instructions
-AGENTS.md
-build_in_public_journal.md
-extracted_wechat_article.md
-jike_test.md
-商用上线验收与推广准备.md
-待优化事项.md
