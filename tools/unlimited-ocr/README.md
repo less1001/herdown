@@ -2,17 +2,17 @@
 
 Herdown不在Cloudflare服务器运行OCR。截图、扫描件、发票和扫描PDF使用现有的本地Unlimited-OCRSkill处理。
 
-当前Skill位置：
+将Skill放在本机任意目录，例如：
 
 ```text
-/Volumes/Samsung T7/antigravity/unlimited-ocr-skill
+/path/to/unlimited-ocr-skill
 ```
 
 使用方式：
 
 ```bash
-/Volumes/Samsung\ T7/antigravity/unlimited-ocr-skill/venv/bin/python3 \
-  /Volumes/Samsung\ T7/antigravity/unlimited-ocr-skill/ocr_runner.py \
+<path-to-unlimited-ocr-skill>/venv/bin/python3 \
+  <path-to-unlimited-ocr-skill>/ocr_runner.py \
   -i screenshot.png -o screenshot.md --mode local
 ```
 
