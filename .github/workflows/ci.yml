@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared parser types
+        run: pnpm --filter @herdown/core build
+
       - name: Type check
         run: pnpm check
 
