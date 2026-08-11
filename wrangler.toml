@@ -4,6 +4,7 @@ compatibility_date = "2026-07-26"
 
 routes = [
   { pattern = "api.herdown.com", custom_domain = true },
+  { pattern = "www.herdown.com/*", zone_name = "herdown.com" },
   { pattern = "herdown.com", custom_domain = true }
 ]
 
@@ -13,6 +14,7 @@ APP_NAME = "herdown"
 [assets]
 directory = "apps/web/dist"
 binding = "ASSETS"
+run_worker_first = ["/", "/index.html", "/sitemap.xml", "/robots.txt", "/llms.txt", "/llms-full.txt"]
 
 [build]
 command = "pnpm build"

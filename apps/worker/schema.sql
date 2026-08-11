@@ -24,7 +24,3 @@ CREATE TABLE IF NOT EXISTS usage_logs (
     count INTEGER DEFAULT 1,
     UNIQUE(key_or_ip, parse_date)
 );
-
--- Insert default admin / demo user & initial key if not present
-INSERT OR IGNORE INTO users (id, email, plan) VALUES ('usr_default', 'user@mdforagents.com', 'pro');
-INSERT OR IGNORE INTO api_keys (key, user_id, name, status) VALUES ('sk_live_REDACTED', 'usr_default', 'Default Key', 'active');

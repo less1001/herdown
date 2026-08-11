@@ -2,6 +2,18 @@
   "name": "@herdown/core",
   "private": false,
   "type": "module",
+  "description": "Shared HTML parsing and Markdown normalization code for Herdown",
+  "license": "MIT",
+  "homepage": "https://herdown.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/less1001/herdown.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/less1001/herdown/issues"
+  },
+  "keywords": ["markdown", "html-parser", "web-extraction", "ai-agents"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

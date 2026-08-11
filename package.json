@@ -10,6 +10,7 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "check": "pnpm -r check",
+    "audit:public": "node apps/web/scripts/audit-public-pages.mjs",
     "lint": "pnpm -r lint",
     "format": "pnpm -r format"
   },

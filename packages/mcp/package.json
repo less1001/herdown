@@ -1,7 +1,26 @@
 {
   "name": "@herdown/mcp",
+  "version": "0.1.2",
   "private": false,
   "type": "module",
+  "description": "MCP stdio adapter for the Herdown webpage parsing service",
+  "license": "MIT",
+  "homepage": "https://herdown.com/mcp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/less1001/herdown.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": {
+    "url": "https://github.com/less1001/herdown/issues"
+  },
+  "keywords": ["mcp", "model-context-protocol", "markdown", "web-extraction", "ai-agents"],
+  "bin": {
+    "herdown-mcp": "dist/stdio.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc -p tsconfig.json"

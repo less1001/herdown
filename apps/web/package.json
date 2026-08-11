@@ -11,10 +11,18 @@
   },
   "dependencies": {
     "@tanstack/react-router": "^1.134.10",
+    "docx": "^9.7.1",
+    "docx-merger": "^1.2.2",
+    "dompurify": "^3.4.13",
     "jszip": "^3.10.1",
     "lucide-react": "^1.27.0",
+    "mammoth": "^1.12.1",
+    "marked": "^18.0.9",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.2.108",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
