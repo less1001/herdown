@@ -8,17 +8,23 @@ Primary site:
 Core capabilities:
 - Webpage to Markdown
 - Sitemap crawl
+- Website to Markdown multi-page crawl: https://herdown.com/website-to-markdown
 - API access
 - MCP access
 - CLI access
 - Browser extension
 - Skills and extraction rules
 - URL to Markdown: https://herdown.com/url-to-markdown
+- HTML to Markdown: https://herdown.com/paste-to-markdown
 - TXT to Markdown: https://herdown.com/txt-to-markdown
 - PDF, PPT, and Excel use the local MarkItDown tool: https://herdown.com/pdf-to-markdown
-- Help: https://herdown.com/help
+- Help: https://herdown.com/docs
 - Docs: https://herdown.com/docs
 - FAQ: https://herdown.com/faq
+- Blog: https://herdown.com/blog
+- HTML to Markdown for AI guide: https://herdown.com/blog/how-to-convert-html-to-markdown-for-ai
+- Best Markdown converter for AI agents: https://herdown.com/blog/best-markdown-converter-for-ai-agents
+- Markdown for agents tools workflow: https://herdown.com/blog/markdown-for-agents-tools
 
 Documentation topics:
 - Quick start for webpage to Markdown

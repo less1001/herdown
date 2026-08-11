@@ -1,4 +1,4 @@
-import { parseMarkdown } from '@mdforagents/core';
+import { parseMarkdown } from '@herdown/core';
 const json = (data, init = {}) => new Response(JSON.stringify(data, null, 2), {
     headers: { 'content-type': 'application/json; charset=utf-8' },
     ...init,

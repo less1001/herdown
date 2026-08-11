@@ -20,7 +20,14 @@ Recommended downstream tools:
 
 Documentation:
 - https://herdown.com/docs
+- Website to Markdown: https://herdown.com/website-to-markdown
+- HTML to Markdown: https://herdown.com/paste-to-markdown
+- Blog: https://herdown.com/blog
+- HTML to Markdown for AI guide: https://herdown.com/blog/how-to-convert-html-to-markdown-for-ai
+- Best Markdown converter for AI agents: https://herdown.com/blog/best-markdown-converter-for-ai-agents
+- Markdown for agents tools workflow: https://herdown.com/blog/markdown-for-agents-tools
 - Quick start: paste a webpage URL on the homepage and convert it to Markdown.
+- Single-page URL conversion is available at /url-to-markdown; multi-page domain, starting URL, and sitemap crawling is available at /website-to-markdown.
 - REST API: create an API key and send it as a Bearer token to /v1/parse.
 - MCP and CLI: use the API, MCP, CLI, or browser extension for AI workflow automation.
 - Local files: use MarkItDown for text-based PDF, Word, PPT, and Excel files.

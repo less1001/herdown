@@ -477,7 +477,7 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
       if (!url.startsWith('http') || url.includes('qrcode') || url.includes('avatar')) return '';
       const captionText = captionMatch?.[1] ? stripTags(captionMatch[1]).trim() : '';
       const altText = captionText || '图片';
-      
+
       let out = `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="${altText}" />\n\n`;
       if (captionText) {
         out += `\n*${captionText}*\n\n`;
@@ -490,19 +490,19 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   // 2. Defuddle Rule: Process Callout / Alert elements
   clean = clean.replace(/<div[^>]*class=["'][^"']*markdown-alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
     const calloutType = type.toLowerCase() === 'warning' ? 'warning' : type.toLowerCase() === 'important' ? 'important' : 'note';
-    const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
-    return `\n\n> [!${calloutType}]\n> ${text}\n\n`;
+    const text = toQuotedLines(body);
+    return '\n\n> [' + '!' + calloutType + ']\n' + (text ? text + '\n' : '') + '\n';
   });
 
   clean = clean.replace(/<div[^>]*data-callout=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
-    const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
-    return `\n\n> [!${type.toLowerCase()}]\n> ${text}\n\n`;
+    const text = toQuotedLines(body);
+    return '\n\n> [' + '!' + type.toLowerCase() + ']\n' + (text ? text + '\n' : '') + '\n';
   });
 
   clean = clean.replace(/<div[^>]*class=["'][^"']*alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
     const calloutType = type.includes('danger') ? 'warning' : type.includes('success') ? 'tip' : 'info';
-    const text = stripTags(body).split('\n').filter(l => l.trim()).join('\n> ');
-    return `\n\n> [!${calloutType}]\n> ${text}\n\n`;
+    const text = toQuotedLines(body);
+    return '\n\n> [' + '!' + calloutType + ']\n' + (text ? text + '\n' : '') + '\n';
   });
 
   // 3. Standalone <img> tags with referrerpolicy="no-referrer"
@@ -529,8 +529,8 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
   // 1. Defuddle Rule: Convert Accordion / Details / Summary to Obsidian Callout
   clean = clean.replace(/<details[^>]*>[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, (_, summary, body) => {
     const title = stripTags(summary).trim() || 'Details';
-    const content = stripTags(body).split('\n').map(l => l.trim()).filter(Boolean).join('\n> ');
-    return `\n\n> [!note]- ${title}\n> ${content}\n\n`;
+    const content = toQuotedLines(body);
+    return '\n\n> [!note]- ' + title + '\n' + (content ? content + '\n' : '') + '\n';
   });
 
   // 2. Defuddle Rule: Convert Checkbox / Task Lists
@@ -721,6 +721,28 @@ const stripTags = (html: string): string => {
     .trim();
 };
 
+const stripTagsPreserveLines = (html: string): string => {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/(?:div|section|li|h[1-6])>/gi, '\n')
+    .replace(/<(?!img\b|br\b)[^>]+>/g, '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+const toQuotedLines = (html: string): string => {
+  const text = stripTagsPreserveLines(html);
+  return text
+    .split('\n')
+    .map(line => line.trim() ? '> ' + line.trim() : '>')
+    .join('\n');
+};
+
 export type ParseResult = {
   success: boolean;
   title: string;
@@ -872,7 +894,10 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   // If no images were inserted in-place, fallback to append
   if (images.length > 0 && !markdown.includes('<img')) {
     const imageMarkdown = images.map((url, idx) => {
-      if (platform === 'wechat' || platform === 'xiaohongshu' || platform === 'sspai' || url.includes('qpic.cn') || url.includes('xhscdn.com') || url.includes('sspai.com')) {
+      const needNoReferrer = platform === 'wechat' || platform === 'xiaohongshu' || platform === 'sspai' || platform === 'zhihu' || platform === 'twitter' ||
+        url.includes('qpic.cn') || url.includes('xhscdn.com') || url.includes('sspai.com') || url.includes('zhimg.com') || url.includes('twimg.com');
+
+      if (needNoReferrer) {
         return `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`;
       }
       return `![图片 ${idx + 1}](${url})`;
@@ -883,7 +908,13 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
 
   if (!markdown.trim()) {
     markdown = `> 无可转换的纯文本内容。提取到的图片列表：\n\n` +
-      images.map((url, idx) => `![图片 ${idx + 1}](${url})`).join('\n\n');
+      images.map((url, idx) => {
+        const needNoReferrer = platform === 'wechat' || platform === 'xiaohongshu' || platform === 'sspai' || platform === 'zhihu' || platform === 'twitter' ||
+          url.includes('qpic.cn') || url.includes('xhscdn.com') || url.includes('sspai.com') || url.includes('zhimg.com') || url.includes('twimg.com');
+        return needNoReferrer
+          ? `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`
+          : `![图片 ${idx + 1}](${url})`;
+      }).join('\n\n');
   }
 
   // Hardcore Quality Assertion Purifier (0 &nbsp;, 0 unclosed **, 0 replacement chars)

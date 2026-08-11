@@ -2,6 +2,17 @@ import { parseMarkdown, detectPlatform } from '../../core/src/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
+const API_BASE_URL = (process.env.HERDOWN_API_URL || 'https://api.herdown.com').replace(/\/$/, '');
+
+type ParseOutput = {
+  title: string;
+  markdown: string;
+  frontmatter?: string;
+  images?: string[];
+  platform?: string;
+  elapsed_ms?: number;
+};
+
 // Platforms that require their own Referer to serve images (hotlink protection)
 const REFERER_MAP: Record<string, string> = {
   wechat:      'https://mp.weixin.qq.com/',
@@ -46,7 +57,7 @@ Usage: npx @herdown/cli <url> [-o output.md] [--limit 5] [--key <api_key>]
 Options:
   -o, --output <file>    Save Markdown result to specified file (images auto-downloaded for protected platforms)
   -l, --limit <number>   Max answers to extract for Q&A sites like Zhihu (default: 5)
-  -k, --key <api_key>    Use custom API Key for request
+  -k, --key <api_key>    Use the remote API with this API key
   -h, --help             Show help message
     `);
     process.exit(0);
@@ -55,7 +66,7 @@ Options:
   const urlArg = args[0];
   let outputFile = '';
   let maxAnswers = 5;
-  let apiKey = 'sk_live_demo88888888';
+  let apiKey = '';
 
   for (let i = 1; i < args.length; i++) {
     if ((args[i] === '-o' || args[i] === '--output') && args[i + 1]) {
@@ -77,26 +88,38 @@ Options:
 
   console.log(`[Herdown] Fetching & parsing URL: ${urlArg}`);
 
-  const platform = detectPlatform(urlArg);
-  const pageReferer = REFERER_MAP[platform] || 'https://www.google.com/';
+  let platform = detectPlatform(urlArg);
+  let result: ParseOutput;
 
   try {
-    const res = await fetch(urlArg, {
-      headers: {
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'referer': pageReferer,
-      },
-    });
+    if (apiKey) {
+      const res = await fetch(`${API_BASE_URL}/v1/parse`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ url: urlArg, zhihuLimit: maxAnswers }),
+      });
+      const payload = await res.json().catch(() => ({})) as ParseOutput & { success?: boolean; message?: string };
+      if (!res.ok || !payload.success) throw new Error(payload.message || `Remote API returned status ${res.status}`);
+      result = payload;
+      platform = payload.platform || platform;
+      console.log(`[Herdown] Remote API parsed the page in ${payload.elapsed_ms || 0}ms`);
+    } else {
+      const pageReferer = REFERER_MAP[platform] || 'https://www.google.com/';
+      const res = await fetch(urlArg, {
+        headers: {
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          referer: pageReferer,
+        },
+      });
 
-    if (!res.ok) {
-      console.error(`[Error] Target page returned status ${res.status}`);
-      process.exit(1);
+      if (!res.ok) throw new Error(`Target page returned status ${res.status}`);
+      const html = await res.text();
+      result = parseMarkdown(html, urlArg);
+      console.log(`[Herdown] Successfully parsed article "${result.title}" in ${result.elapsed_ms || 0}ms`);
     }
-
-    const html = await res.text();
-    const result = parseMarkdown(html, urlArg);
-
-    console.log(`[Herdown] Successfully parsed article "${result.title}" in ${result.elapsed_ms}ms`);
 
     if (outputFile) {
       let targetPath = outputFile;
