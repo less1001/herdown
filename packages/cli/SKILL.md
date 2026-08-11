@@ -18,7 +18,7 @@ Agents can execute `herdown` via terminal/shell without prior global installatio
 npx @herdown/cli "https://mp.weixin.qq.com/s/kJqhegRPFIQpH0-yBGaWiA"
 
 # 2. Execute with custom API Key
-npx @herdown/cli "https://www.xiaohongshu.com/explore/xxxxx" -k "sk_live_pro_your_key" -o xhs.md
+npx @herdown/cli "https://www.xiaohongshu.com/explore/xxxxx" -k "YOUR_API_KEY" -o xhs.md
 ```
 
 ---
