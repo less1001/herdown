@@ -8,6 +8,7 @@ All notable changes to the open-source repository are recorded here.
 - Documented the local and hosted CLI modes.
 - Documented the hosted MCP endpoint and custom endpoint configuration.
 - Added contribution, security, conduct, and license files.
+- Prepared `@herdown/cli` 0.2.7 and `@herdown/mcp` 0.1.2 with executable package entrypoints.
 
 ## 2026-08-11
 
