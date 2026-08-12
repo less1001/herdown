@@ -1,3 +1,4 @@
+const DEFAULT_DOWNLOAD_FOLDER = 'Herdown Clippings';
 const DEFAULT_TEMPLATE = `---
 title: "{{title}}"
 source_url: "{{url}}"
@@ -44,8 +45,12 @@ function applyLocale() {
 
 async function load() {
   const settings = await chrome.storage.sync.get({
-    language: 'auto', downloadFolder: 'Clippings', obsidianVault: '', obsidianFolder: '', template: DEFAULT_TEMPLATE
+    language: 'auto', downloadFolder: DEFAULT_DOWNLOAD_FOLDER, obsidianVault: '', obsidianFolder: '', template: DEFAULT_TEMPLATE
   });
+  if (settings.downloadFolder === 'Clippings') {
+    settings.downloadFolder = DEFAULT_DOWNLOAD_FOLDER;
+    await chrome.storage.sync.set({ downloadFolder: DEFAULT_DOWNLOAD_FOLDER });
+  }
   elements.language.value = settings.language;
   elements.downloadFolder.value = settings.downloadFolder;
   elements.vault.value = settings.obsidianVault;
@@ -58,7 +63,7 @@ elements.language.addEventListener('change', applyLocale);
 document.getElementById('save').addEventListener('click', async () => {
   await chrome.storage.sync.set({
     language: elements.language.value,
-    downloadFolder: elements.downloadFolder.value.trim() || 'Clippings',
+    downloadFolder: elements.downloadFolder.value.trim() || DEFAULT_DOWNLOAD_FOLDER,
     obsidianVault: elements.vault.value.trim(),
     obsidianFolder: elements.folder.value.trim(),
     template: elements.template.value.trim()

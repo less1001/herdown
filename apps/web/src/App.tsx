@@ -2886,7 +2886,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
             <div className="text-center space-y-4 pt-4">
               <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
                 <Layers className="w-4 h-4 text-emerald-400" />
-                {tr('Herdown browser extension V1.1.0', 'Herdown浏览器扩展V1.1.0')}
+                {tr('Herdown browser extension V1.1.1', 'Herdown浏览器扩展V1.1.1')}
               </div>
               <h1 className="text-3xl sm:text-4xl font-extrabold text-white">
                 {language === 'en' ? <>A <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">zero-cost extraction extension</span> running locally in your browser</> : <>直接运行在您浏览器本地的 <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">零成本提取插件</span></>}
@@ -2903,7 +2903,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </p>
                 <div className="pt-2">
                   <a
-                    href="/downloads/herdown-extension-v1.1.0.zip"
+                    href="/downloads/herdown-extension-v1.1.1.zip"
                     download
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
                   >

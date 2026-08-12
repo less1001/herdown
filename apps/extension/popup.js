@@ -2,6 +2,7 @@
 
 const MAX_SOURCE_HTML = 5_000_000;
 const MAX_OBSIDIAN_URI = 200_000;
+const DEFAULT_DOWNLOAD_FOLDER = 'Herdown Clippings';
 
 let pageData = null;
 let currentMarkdown = '';
@@ -9,7 +10,7 @@ let currentTitle = '';
 let activeTabId = null;
 let statusTimer = null;
 let settings = {
-  downloadFolder: 'Clippings',
+  downloadFolder: DEFAULT_DOWNLOAD_FOLDER,
   obsidianVault: '',
   obsidianFolder: '',
   template: `---\ntitle: "{{title}}"\nsource_url: "{{url}}"\ndomain: "{{domain}}"\ntags: [herdown, clippings]\n---`
@@ -40,6 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyLocale();
   bindActions();
   settings = await chrome.storage.sync.get(settings);
+  if (settings.downloadFolder === 'Clippings') {
+    settings.downloadFolder = DEFAULT_DOWNLOAD_FOLDER;
+    await chrome.storage.sync.set({ downloadFolder: DEFAULT_DOWNLOAD_FOLDER });
+  }
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   activeTabId = tab?.id || null;
@@ -168,7 +173,7 @@ function bindActions() {
     const url = URL.createObjectURL(blob);
     chrome.downloads.download({
       url,
-      filename: `${settings.downloadFolder || 'Clippings'}/${cleanTitle}.md`,
+      filename: `${settings.downloadFolder || DEFAULT_DOWNLOAD_FOLDER}/${cleanTitle}.md`,
       saveAs: false
     }, () => {
       const error = chrome.runtime.lastError;
