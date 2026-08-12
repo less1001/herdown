@@ -346,6 +346,10 @@ function renderMarkdown(rawHtml) {
     }
   }
 
+  if (isWeChat) {
+    result.title = normalizeWeChatText(result.title || pageData.title);
+    result.markdown = normalizeWeChatMarkdown(result.markdown);
+  }
   currentTitle = result.title || pageData.title;
   const metadata = {
     author: result.author || result.account || '',
@@ -406,10 +410,30 @@ function repairFrontmatter(frontmatter) {
       inTags = false;
     }
     if (/^\s*tags:\s*$/i.test(line)) inTags = true;
-    if (/^(\s*[A-Za-z0-9_-]+):\+/.test(line)) return line.replace(/^(\s*[A-Za-z0-9_-]+):\+/, '$1: ');
+    line = line.replace(/^(\s*[A-Za-z0-9_-]+):\+/, '$1: ');
     if (inTags && /^\s*\+{2,}/.test(line)) return `  - ${line.replace(/^\s*\+{2,}-?\s*/, '')}`;
+    const field = /^(\s*[A-Za-z0-9_-]+:\s*)(.*)$/.exec(line);
+    if (field && !/^source(?:_url)?$/i.test(field[1].trim().slice(0, -1))) {
+      return `${field[1]}${normalizeWeChatText(field[2])}`;
+    }
     return line;
   }).join('\n');
+}
+
+function normalizeWeChatText(value) {
+  return String(value)
+    .replace(/([\p{L}\p{N}\u4e00-\u9fff])\+(?=[\p{L}\p{N}\u4e00-\u9fff])/gu, '$1 ')
+    .replace(/([\p{L}\p{N}\u4e00-\u9fff])\+(?=[(（【\[])/gu, '$1 ')
+    .replace(/([，。！？；：、,.!?;:])\+(?=[\p{L}\p{N}\u4e00-\u9fff])/gu, '$1 ');
+}
+
+function normalizeWeChatMarkdown(markdown) {
+  const destinations = [];
+  const protectedMarkdown = String(markdown || '').replace(/\]\(([^)\n]+)\)/g, (_, destination) => {
+    const index = destinations.push(destination) - 1;
+    return `](__HERDOWN_LINK_${index}__)`;
+  });
+  return normalizeWeChatText(protectedMarkdown).replace(/__HERDOWN_LINK_(\d+)__/g, (_, index) => destinations[Number(index)] || '');
 }
 
 function extractDescription(markdown) {
