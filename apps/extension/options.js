@@ -61,9 +61,10 @@ async function load() {
     settings.downloadFolder = DEFAULT_DOWNLOAD_FOLDER;
     await chrome.storage.sync.set({ downloadFolder: DEFAULT_DOWNLOAD_FOLDER });
   }
-  if (settings.template?.trim() === LEGACY_DEFAULT_TEMPLATE.trim()) {
-    settings.template = DEFAULT_TEMPLATE;
-    await chrome.storage.sync.set({ template: DEFAULT_TEMPLATE });
+  const repairedTemplate = normalizeStoredTemplate(settings.template);
+  if (repairedTemplate !== settings.template) {
+    settings.template = repairedTemplate;
+    await chrome.storage.sync.set({ template: repairedTemplate });
   }
   elements.language.value = settings.language;
   elements.downloadFolder.value = settings.downloadFolder;
@@ -89,3 +90,44 @@ document.getElementById('save').addEventListener('click', async () => {
 
 elements.template.value = DEFAULT_TEMPLATE;
 void load();
+
+function repairFrontmatterTemplate(template) {
+  if (!template) return template;
+  return String(template)
+    .replace(/\r\n?/g, '\n')
+    .replace(/^(\s*[A-Za-z0-9_-]+):\+/gm, '$1: ')
+    .replace(/^(\s*)\+{2,}-?\s*/gm, '$1  - ');
+}
+
+function normalizeStoredTemplate(template) {
+  const repaired = repairFrontmatterTemplate(template);
+  if (!repaired) return repaired;
+
+  const original = String(template);
+  const normalized = repaired.trim();
+  const hasLegacySyntax = /(?:^|\n)\s*(?:[A-Za-z0-9_-]+):\+|(?:^|\n)\s*\+{2,}/m.test(original);
+  const hasDefaultFields = [
+    'title: "{{title}}"',
+    'source: "{{url}}"',
+    'author: "{{author}}"',
+    'published: "{{published}}"',
+    'created: "{{date}}"',
+    'description: "{{description}}"',
+    'tags:',
+    '  - clippings'
+  ].every((field) => normalized.includes(field));
+  const hasLegacyFields = [
+    'title: "{{title}}"',
+    'source_url: "{{url}}"',
+    'domain: "{{domain}}"',
+    'tags: [herdown, clippings]'
+  ].every((field) => normalized.includes(field));
+  const hasGeneratedValues = [
+    /(?:^|\n)\s*title:\s*"(?!\{\{title\}\})/,
+    /(?:^|\n)\s*source(?:_url)?:\s*"(?!\{\{url\}\})/,
+    /(?:^|\n)\s*(?:author|published|created|description):\s*"/
+  ].every((pattern) => pattern.test(normalized));
+
+  if (hasDefaultFields || hasLegacyFields || (hasLegacySyntax && hasGeneratedValues)) return DEFAULT_TEMPLATE;
+  return repaired;
+}
