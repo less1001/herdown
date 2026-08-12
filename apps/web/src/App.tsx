@@ -1933,11 +1933,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
       <header className="herdown-site-header sticky top-0 z-50 backdrop-blur-md bg-[#070a0e]/80 border-b border-[#1e293b]">
         <div className="relative max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center gap-2">
           <a href={localizedHref('/', language)} className="flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0f6b4f] to-[#10b981] p-[1px] shadow-lg shadow-[#0f6b4f]/20">
-              <div className="w-full h-full bg-[#090d12] rounded-[11px] flex items-center justify-center font-bold text-emerald-400 font-mono text-base">
-                HD
-              </div>
-            </div>
+            <img src="/favicon.svg" alt="Herdown" className="h-9 w-9 rounded-xl shadow-lg shadow-[#0f6b4f]/20" />
             <div>
               <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white font-sans">
                 Herdown
@@ -2903,7 +2899,7 @@ npx @herdown/cli "https://mp.weixin.qq.com/s/xxxxxx" -o output.md`}
                 </p>
                 <div className="pt-2">
                   <a
-                    href="/downloads/herdown-extension-v1.2.1.zip"
+                    href="/downloads/herdown-extension-v1.2.2.zip"
                     download
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition shadow-lg shadow-emerald-600/20"
                   >

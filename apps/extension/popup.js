@@ -190,11 +190,6 @@ function renderCurrent() {
     return;
   }
   currentMarkdown = `${buildFrontmatter(pageData)}\n\n${markdown}`;
-  document.getElementById('title-label').textContent = pageData.title || text.title;
-  document.getElementById('title-label').title = pageData.title || text.title;
-  const sourceLabel = document.getElementById('source-label');
-  sourceLabel.textContent = `${text.source}: ${pageData.url || ''}`;
-  sourceLabel.title = pageData.url || '';
   renderMarkdown(currentMarkdown);
   updateCount();
 }
