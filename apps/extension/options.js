@@ -1,6 +1,16 @@
 const DEFAULT_DOWNLOAD_FOLDER = 'Herdown Clippings';
 const DEFAULT_TEMPLATE = `---
 title: "{{title}}"
+source: "{{url}}"
+author: "{{author}}"
+published: "{{published}}"
+created: "{{date}}"
+description: "{{description}}"
+tags:
+  - clippings
+---`;
+const LEGACY_DEFAULT_TEMPLATE = `---
+title: "{{title}}"
 source_url: "{{url}}"
 domain: "{{domain}}"
 tags: [herdown, clippings]
@@ -16,10 +26,10 @@ const elements = {
 };
 
 const zh = {
-  title: 'Herdown设置', subtitle: '设置网页剪藏和Obsidian保存方式', general: '基本设置', language: '界面语言', follow: '跟随浏览器', chinese: '中文', english: 'English', downloadFolder: '下载文件夹', downloadHint: '下载的Markdown文件会保存在这个文件夹下。', obsidian: 'Obsidian保存', vault: 'Vault名称，可选', folder: '默认文件夹，可选', obsidianHint: '填写后，发送到Obsidian时会使用指定Vault和文件夹。', template: 'Markdown模板', templateLabel: 'Frontmatter模板', templateHint: '可用变量：{{title}}、{{url}}、{{domain}}、{{date}}。留空则使用Herdown默认格式。', save: '保存设置', saved: '设置已保存。'
+  title: 'Herdown设置', subtitle: '设置网页剪藏和Obsidian保存方式', general: '基本设置', language: '界面语言', follow: '跟随浏览器', chinese: '中文', english: 'English', downloadFolder: '下载文件夹', downloadHint: '下载的Markdown文件会保存在这个文件夹下。', obsidian: 'Obsidian保存', vault: 'Vault名称，可选', folder: '默认文件夹，可选', obsidianHint: '填写后，发送到Obsidian时会使用指定Vault和文件夹。', template: 'Markdown模板', templateLabel: 'Frontmatter模板', templateHint: '可用变量：{{title}}、{{url}}、{{domain}}、{{date}}、{{author}}、{{published}}、{{description}}。保留默认模板即可获得完整剪藏属性。', save: '保存设置', saved: '设置已保存。'
 };
 const en = {
-  title: 'Herdown settings', subtitle: 'Configure clipping and Obsidian output', general: 'General', language: 'Interface language', follow: 'Follow browser', chinese: '中文', english: 'English', downloadFolder: 'Download folder', downloadHint: 'Markdown files are saved under this folder.', obsidian: 'Obsidian output', vault: 'Vault name, optional', folder: 'Default folder, optional', obsidianHint: 'When set, Send to Obsidian uses this vault and folder.', template: 'Markdown template', templateLabel: 'Frontmatter template', templateHint: 'Variables: {{title}}, {{url}}, {{domain}}, {{date}}. Leave blank to use the Herdown default.', save: 'Save settings', saved: 'Settings saved.'
+  title: 'Herdown settings', subtitle: 'Configure clipping and Obsidian output', general: 'General', language: 'Interface language', follow: 'Follow browser', chinese: '中文', english: 'English', downloadFolder: 'Download folder', downloadHint: 'Markdown files are saved under this folder.', obsidian: 'Obsidian output', vault: 'Vault name, optional', folder: 'Default folder, optional', obsidianHint: 'When set, Send to Obsidian uses this vault and folder.', template: 'Markdown template', templateLabel: 'Frontmatter template', templateHint: 'Variables: {{title}}, {{url}}, {{domain}}, {{date}}, {{author}}, {{published}}, {{description}}. Keep the default template for complete clipping properties.', save: 'Save settings', saved: 'Settings saved.'
 };
 
 function getLanguage(value) {
@@ -50,6 +60,10 @@ async function load() {
   if (settings.downloadFolder === 'Clippings') {
     settings.downloadFolder = DEFAULT_DOWNLOAD_FOLDER;
     await chrome.storage.sync.set({ downloadFolder: DEFAULT_DOWNLOAD_FOLDER });
+  }
+  if (settings.template?.trim() === LEGACY_DEFAULT_TEMPLATE.trim()) {
+    settings.template = DEFAULT_TEMPLATE;
+    await chrome.storage.sync.set({ template: DEFAULT_TEMPLATE });
   }
   elements.language.value = settings.language;
   elements.downloadFolder.value = settings.downloadFolder;

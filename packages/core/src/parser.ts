@@ -478,7 +478,7 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
       const captionText = captionMatch?.[1] ? stripTags(captionMatch[1]).trim() : '';
       const altText = captionText || '图片';
 
-      let out = `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="${altText}" />\n\n`;
+      let out = `\n\n![${altText}](${url})\n\n`;
       if (captionText) {
         out += `\n*${captionText}*\n\n`;
       }
@@ -505,11 +505,11 @@ const htmlToMarkdownFast = (html: string, platform: PlatformType, generateRefere
     return '\n\n> [' + '!' + calloutType + ']\n' + (text ? text + '\n' : '') + '\n';
   });
 
-  // 3. Standalone <img> tags with referrerpolicy="no-referrer"
+  // 3. Standalone images become standard Markdown so Obsidian and other readers render them.
   clean = clean.replace(/<img[^>]+(?:data-src|data-actualsrc|src)=["']([^"']+)["'][^>]*>/gi, (_, src) => {
     const url = src.replace(/&amp;/g, '&');
     if (!url.startsWith('http') || url.includes('qrcode') || url.includes('avatar')) return '';
-    return `\n\n<img src="${url}" referrerpolicy="no-referrer" alt="图片" />\n\n`;
+    return `\n\n![图片](${url})\n\n`;
   });
 
   // 0. Paragraph & Container Double Linebreaks Protection
@@ -780,6 +780,13 @@ const extractMetadata = (html: string, platform: PlatformType): { account?: stri
       } else {
         publish_date = decodeEntities(stripTags(val)).trim();
       }
+    } else {
+      const publishTimeMatch = /var\s+publish_time\s*=\s*["']([^"']*)["']/i.exec(html);
+      const rawPublishTime = publishTimeMatch?.[1] ? decodeEntities(publishTimeMatch[1]).trim() : '';
+      const dateParts = rawPublishTime.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+      publish_date = dateParts
+        ? `${dateParts[1]}-${String(dateParts[2]).padStart(2, '0')}-${String(dateParts[3]).padStart(2, '0')}`
+        : rawPublishTime || undefined;
     }
   } else {
     const authorMeta = /<meta\s+name=["']author["']\s+content=["']([^"']+)["']/i.exec(html);
@@ -892,14 +899,9 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   }
 
   // If no images were inserted in-place, fallback to append
-  if (images.length > 0 && !markdown.includes('<img')) {
+  const hasExtractedImage = images.some((url) => markdown.includes(url));
+  if (images.length > 0 && !hasExtractedImage) {
     const imageMarkdown = images.map((url, idx) => {
-      const needNoReferrer = platform === 'wechat' || platform === 'xiaohongshu' || platform === 'sspai' || platform === 'zhihu' || platform === 'twitter' ||
-        url.includes('qpic.cn') || url.includes('xhscdn.com') || url.includes('sspai.com') || url.includes('zhimg.com') || url.includes('twimg.com');
-
-      if (needNoReferrer) {
-        return `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`;
-      }
       return `![图片 ${idx + 1}](${url})`;
     }).join('\n\n');
 
@@ -909,11 +911,7 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   if (!markdown.trim()) {
     markdown = `> 无可转换的纯文本内容。提取到的图片列表：\n\n` +
       images.map((url, idx) => {
-        const needNoReferrer = platform === 'wechat' || platform === 'xiaohongshu' || platform === 'sspai' || platform === 'zhihu' || platform === 'twitter' ||
-          url.includes('qpic.cn') || url.includes('xhscdn.com') || url.includes('sspai.com') || url.includes('zhimg.com') || url.includes('twimg.com');
-        return needNoReferrer
-          ? `<img src="${url}" referrerpolicy="no-referrer" alt="图片 ${idx + 1}" />`
-          : `![图片 ${idx + 1}](${url})`;
+        return `![图片 ${idx + 1}](${url})`;
       }).join('\n\n');
   }
 

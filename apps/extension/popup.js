@@ -3,6 +3,8 @@
 const MAX_SOURCE_HTML = 5_000_000;
 const MAX_OBSIDIAN_URI = 200_000;
 const DEFAULT_DOWNLOAD_FOLDER = 'Herdown Clippings';
+const DEFAULT_TEMPLATE = `---\ntitle: "{{title}}"\nsource: "{{url}}"\nauthor: "{{author}}"\npublished: "{{published}}"\ncreated: "{{date}}"\ndescription: "{{description}}"\ntags:\n  - clippings\n---`;
+const LEGACY_DEFAULT_TEMPLATE = `---\ntitle: "{{title}}"\nsource_url: "{{url}}"\ndomain: "{{domain}}"\ntags: [herdown, clippings]\n---`;
 
 let pageData = null;
 let currentMarkdown = '';
@@ -13,7 +15,7 @@ let settings = {
   downloadFolder: DEFAULT_DOWNLOAD_FOLDER,
   obsidianVault: '',
   obsidianFolder: '',
-  template: `---\ntitle: "{{title}}"\nsource_url: "{{url}}"\ndomain: "{{domain}}"\ntags: [herdown, clippings]\n---`
+  template: DEFAULT_TEMPLATE
 };
 
 const isEnglish = navigator.language.toLowerCase().startsWith('en');
@@ -44,6 +46,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (settings.downloadFolder === 'Clippings') {
     settings.downloadFolder = DEFAULT_DOWNLOAD_FOLDER;
     await chrome.storage.sync.set({ downloadFolder: DEFAULT_DOWNLOAD_FOLDER });
+  }
+  if (settings.template?.trim() === LEGACY_DEFAULT_TEMPLATE.trim()) {
+    settings.template = DEFAULT_TEMPLATE;
+    await chrome.storage.sync.set({ template: DEFAULT_TEMPLATE });
   }
 
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -336,10 +342,19 @@ function renderMarkdown(rawHtml) {
   }
 
   currentTitle = result.title || pageData.title;
-  if (settings.template?.trim()) {
-    result.frontmatter = renderTemplate(settings.template, currentTitle, pageData.url);
+  const metadata = {
+    author: result.author || result.account || '',
+    published: result.publish_date || '',
+    description: extractDescription(result.markdown)
+  };
+  const isDefaultTemplate = [DEFAULT_TEMPLATE, LEGACY_DEFAULT_TEMPLATE]
+    .some((template) => settings.template?.trim() === template.trim());
+  if (isDefaultTemplate) {
+    result.frontmatter = buildDefaultFrontmatter(currentTitle, pageData.url, metadata);
+  } else if (settings.template?.trim()) {
+    result.frontmatter = renderTemplate(settings.template, currentTitle, pageData.url, metadata, result.markdown);
   }
-  currentMarkdown = `${result.frontmatter}\n\n# ${currentTitle}\n\n${result.markdown}`;
+  currentMarkdown = `${result.frontmatter}\n\n${result.markdown}`;
   const wordCount = result.markdown.length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 350));
   document.getElementById('char-info').innerText = isEnglish
@@ -350,16 +365,50 @@ function renderMarkdown(rawHtml) {
   setPreview(currentMarkdown);
 }
 
-function renderTemplate(template, title, url) {
+function buildDefaultFrontmatter(title, url, metadata) {
+  const created = new Date().toISOString().slice(0, 10);
+  const lines = [
+    '---',
+    `title: "${escapeYaml(title)}"`,
+    `source: "${escapeYaml(url)}"`,
+    metadata.author ? `author: "${escapeYaml(metadata.author)}"` : null,
+    metadata.published ? `published: "${escapeYaml(metadata.published)}"` : null,
+    `created: "${created}"`,
+    metadata.description ? `description: "${escapeYaml(metadata.description)}"` : null,
+    'tags:',
+    '  - clippings',
+    '---'
+  ];
+  return lines.filter(Boolean).join('\n');
+}
+
+function extractDescription(markdown) {
+  const lines = String(markdown || '').split('\n');
+  for (const line of lines) {
+    const text = line
+      .replace(/^#{1,6}\s+/, '')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/[>*_`]/g, '')
+      .trim();
+    if (text.length >= 20) return text.slice(0, 160);
+  }
+  return '';
+}
+
+function renderTemplate(template, title, url, metadata = {}, markdown = '') {
   let domain = '';
   try { domain = new URL(url).hostname; } catch {}
   const values = {
     title,
     url,
     domain,
-    date: new Date().toISOString().slice(0, 10)
+    date: new Date().toISOString().slice(0, 10),
+    author: metadata.author || '',
+    published: metadata.published || '',
+    description: metadata.description || extractDescription(markdown)
   };
-  return template.replace(/\{\{\s*(title|url|domain|date)\s*\}\}/g, (_, key) => escapeYaml(values[key]));
+  return template.replace(/\{\{\s*(title|url|domain|date|author|published|description)\s*\}\}/g, (_, key) => escapeYaml(values[key]));
 }
 
 function makeFileName(value, fallback) {

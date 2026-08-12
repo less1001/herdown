@@ -100,17 +100,21 @@ if (!globalThis.__HERDOWN_CONTENT_SCRIPT_READY__) {
       if (window.location.href.includes('mp.weixin.qq.com')) {
         const wechatContent = document.getElementById('js_content') || document.querySelector('.rich_media_content');
         if (wechatContent) {
-          const metaArea = document.querySelector('.rich_media_meta_list');
           const nickname = document.querySelector('.rich_media_meta_nickname')?.innerText?.trim() || '';
           const author = document.querySelector('.rich_media_meta_text')?.innerText?.trim() || '';
+          const publishTime = document.querySelector('#publish_time')?.innerText?.trim()
+            || document.querySelector('.rich_media_meta_list .publish_time')?.innerText?.trim()
+            || '';
+          const publishTimestamp = document.querySelector('#publish_time')?.getAttribute('data-time') || '';
           targetHtml = `
             <html><head><title>${escapeHtml(document.title)}</title>
               <script>
                 var nickname = ${safeScriptJson(nickname)};
                 var msg_author = ${safeScriptJson(author)};
-                var ct = ${safeScriptJson(String(Math.floor(Date.now() / 1000)))};
+                var publish_time = ${safeScriptJson(publishTime)};
+                var ct = ${safeScriptJson(publishTimestamp)};
               </script>
-            </head><body>${metaArea ? metaArea.outerHTML : ''}<div id="js_content">${wechatContent.innerHTML}</div></body></html>`;
+            </head><body><div id="js_content">${wechatContent.innerHTML}</div></body></html>`;
         }
       }
 

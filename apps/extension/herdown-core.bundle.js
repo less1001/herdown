@@ -67,6 +67,55 @@ var HerdownCore = (() => {
     }
     return fallbackUrl || "Untitled Page";
   };
+  var extractEmbeddedJsonContent = (html) => {
+    const candidates = [
+      /<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1],
+      /<script[^>]+id=["']__NUXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1],
+      /(?:window\.)?(?:__INITIAL_STATE__|__NUXT__|__APOLLO_STATE__)\s*=\s*([\s\S]*?)(?:;\s*<\/script>|<\/script>)/i.exec(html)?.[1]
+    ].filter((value) => Boolean(value));
+    let state;
+    for (const candidate of candidates) {
+      try {
+        state = JSON.parse(candidate.trim().replace(/;\s*$/, ""));
+        break;
+      } catch {
+      }
+    }
+    if (!state) return null;
+    const contentCandidates = [];
+    const titleCandidates = [];
+    const images = /* @__PURE__ */ new Set();
+    const contentKeys = /^(content|body|html|articlebody|article_content|正文|text|description)$/i;
+    const titleKeys = /^(title|headline|name|article_title|page_title)$/i;
+    const imageKeys = /(?:image|images|thumbnail|cover|src|url)/i;
+    const walk = (value, key = "", depth = 0) => {
+      if (depth > 12 || value === null || value === void 0) return;
+      if (typeof value === "string") {
+        const text = value.replace(/\\u002F/gi, "/").replace(/\\\//g, "/").trim();
+        if (titleKeys.test(key) && text.length > 2 && text.length < 300) titleCandidates.push(text);
+        if (contentKeys.test(key) && text.length >= 20) {
+          const htmlScore = /<\/?(?:p|article|section|div|h[1-6]|img|br)[\s>]/i.test(text) ? 3 : 1;
+          contentCandidates.push({ value: text, score: text.length * htmlScore });
+        }
+        if (imageKeys.test(key)) {
+          (text.match(/https?:\/\/[^\s"'<>]+/g) || []).forEach((url) => images.add(url.replace(/[),;]+$/, "")));
+        }
+        return;
+      }
+      if (Array.isArray(value)) {
+        value.slice(0, 200).forEach((item) => walk(item, key, depth + 1));
+        return;
+      }
+      if (typeof value === "object") {
+        Object.entries(value).slice(0, 300).forEach(([childKey, childValue]) => walk(childValue, childKey, depth + 1));
+      }
+    };
+    walk(state);
+    const best = contentCandidates.sort((a, b) => b.score - a.score)[0];
+    if (!best) return null;
+    const content = /<\/?[a-z][\s>]/i.test(best.value) ? best.value : `<p>${best.value}</p>`;
+    return { content, title: titleCandidates[0], images: Array.from(images).slice(0, 100) };
+  };
   var extractWeChatPhotoGalleryImages = (html) => {
     const images = [];
     const listMatch = /picture_page_info_list\s*=\s*(\[[\s\S]*?\])\s*;/i.exec(html) || /picture_page_info_list\s*:\s*(\[[\s\S]*?\])\s*,/i.exec(html);
@@ -295,7 +344,7 @@ var HerdownCore = (() => {
         const altText = captionText || "\u56FE\u7247";
         let out = `
 
-<img src="${url}" referrerpolicy="no-referrer" alt="${altText}" />
+![${altText}](${url})
 
 `;
         if (captionText) {
@@ -310,39 +359,24 @@ var HerdownCore = (() => {
     });
     clean = clean.replace(/<div[^>]*class=["'][^"']*markdown-alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
       const calloutType = type.toLowerCase() === "warning" ? "warning" : type.toLowerCase() === "important" ? "important" : "note";
-      const text = stripTags(body).split("\n").filter((l) => l.trim()).join("\n> ");
-      return `
-
-> [!${calloutType}]
-> ${text}
-
-`;
+      const text = toQuotedLines(body);
+      return "\n\n> [!" + calloutType + "]\n" + (text ? text + "\n" : "") + "\n";
     });
     clean = clean.replace(/<div[^>]*data-callout=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
-      const text = stripTags(body).split("\n").filter((l) => l.trim()).join("\n> ");
-      return `
-
-> [!${type.toLowerCase()}]
-> ${text}
-
-`;
+      const text = toQuotedLines(body);
+      return "\n\n> [!" + type.toLowerCase() + "]\n" + (text ? text + "\n" : "") + "\n";
     });
     clean = clean.replace(/<div[^>]*class=["'][^"']*alert-([a-zA-Z0-9_-]+)[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi, (_, type, body) => {
       const calloutType = type.includes("danger") ? "warning" : type.includes("success") ? "tip" : "info";
-      const text = stripTags(body).split("\n").filter((l) => l.trim()).join("\n> ");
-      return `
-
-> [!${calloutType}]
-> ${text}
-
-`;
+      const text = toQuotedLines(body);
+      return "\n\n> [!" + calloutType + "]\n" + (text ? text + "\n" : "") + "\n";
     });
     clean = clean.replace(/<img[^>]+(?:data-src|data-actualsrc|src)=["']([^"']+)["'][^>]*>/gi, (_, src) => {
       const url = src.replace(/&amp;/g, "&");
       if (!url.startsWith("http") || url.includes("qrcode") || url.includes("avatar")) return "";
       return `
 
-<img src="${url}" referrerpolicy="no-referrer" alt="\u56FE\u7247" />
+![\u56FE\u7247](${url})
 
 `;
     });
@@ -356,13 +390,8 @@ ${text}
     clean = clean.replace(/Close\s*1?人喜欢[\s\S]*?赞赏/gi, "").replace(/Like the Author[\s\S]*?赞赏/gi, "").replace(/赞赏后展示我的头像[\s\S]*?100%/gi, "").replace(/Close\s*更多[\s\S]*?100%/gi, "");
     clean = clean.replace(/<details[^>]*>[\s\S]*?<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi, (_, summary, body) => {
       const title = stripTags(summary).trim() || "Details";
-      const content = stripTags(body).split("\n").map((l) => l.trim()).filter(Boolean).join("\n> ");
-      return `
-
-> [!note]- ${title}
-> ${content}
-
-`;
+      const content = toQuotedLines(body);
+      return "\n\n> [!note]- " + title + "\n" + (content ? content + "\n" : "") + "\n";
     });
     clean = clean.replace(/<input[^>]+type=["']checkbox["'][^>]*>/gi, (tag) => {
       return /checked/i.test(tag) ? "- [x] " : "- [ ] ";
@@ -555,6 +584,13 @@ ${stripTags(text)}
   var stripTags = (html) => {
     return html.replace(/<\/(?:td|th|div|span|p|section|li|h[1-6])>/gi, " ").replace(/<(?!img\b|br\b)[^>]+>/g, "").replace(/\s+/g, " ").trim();
   };
+  var stripTagsPreserveLines = (html) => {
+    return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n\n").replace(/<\/(?:div|section|li|h[1-6])>/gi, "\n").replace(/<(?!img\b|br\b)[^>]+>/g, "").replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  };
+  var toQuotedLines = (html) => {
+    const text = stripTagsPreserveLines(html);
+    return text.split("\n").map((line) => line.trim() ? "> " + line.trim() : ">").join("\n");
+  };
   var extractMetadata = (html, platform) => {
     let account;
     let author;
@@ -573,6 +609,11 @@ ${stripTags(text)}
         } else {
           publish_date = decodeEntities(stripTags(val)).trim();
         }
+      } else {
+        const publishTimeMatch = /var\s+publish_time\s*=\s*["']([^"']*)["']/i.exec(html);
+        const rawPublishTime = publishTimeMatch?.[1] ? decodeEntities(publishTimeMatch[1]).trim() : "";
+        const dateParts = rawPublishTime.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+        publish_date = dateParts ? `${dateParts[1]}-${String(dateParts[2]).padStart(2, "0")}-${String(dateParts[3]).padStart(2, "0")}` : rawPublishTime || void 0;
       }
     } else {
       const authorMeta = /<meta\s+name=["']author["']\s+content=["']([^"']+)["']/i.exec(html);
@@ -613,12 +654,15 @@ ${stripTags(text)}
       } catch {
       }
     }
-    const title = jsonTitle || extractTitle(rawHtml, targetUrl);
-    const meta = extractMetadata(rawHtml, platform);
+    const originalHtml = rawHtml;
+    const embeddedJson = platform === "general" ? extractEmbeddedJsonContent(originalHtml) : null;
+    if (!jsonTitle && embeddedJson?.title) jsonTitle = embeddedJson.title;
+    const title = jsonTitle || extractTitle(originalHtml, targetUrl);
+    const meta = extractMetadata(originalHtml, platform);
     if (jsonAuthor) meta.author = jsonAuthor;
     if (jsonDate) meta.publish_date = jsonDate;
-    let extractedContent = rawHtml;
-    let images = [];
+    let extractedContent = embeddedJson?.content || rawHtml;
+    let images = embeddedJson?.images || [];
     if (platform === "wechat") {
       const res = extractWeChatBody(html);
       extractedContent = res.content;
@@ -660,11 +704,9 @@ ${stripTags(text)}
       }).join("\n");
       markdown = markdown.replace(/\n{3,}/g, "\n\n").trim();
     }
-    if (images.length > 0 && !markdown.includes("<img")) {
+    const hasExtractedImage = images.some((url) => markdown.includes(url));
+    if (images.length > 0 && !hasExtractedImage) {
       const imageMarkdown = images.map((url, idx) => {
-        if (platform === "wechat" || platform === "xiaohongshu" || platform === "sspai" || url.includes("qpic.cn") || url.includes("xhscdn.com") || url.includes("sspai.com")) {
-          return `<img src="${url}" referrerpolicy="no-referrer" alt="\u56FE\u7247 ${idx + 1}" />`;
-        }
         return `![\u56FE\u7247 ${idx + 1}](${url})`;
       }).join("\n\n");
       markdown = markdown ? `${markdown}
@@ -674,7 +716,9 @@ ${imageMarkdown}` : imageMarkdown;
     if (!markdown.trim()) {
       markdown = `> \u65E0\u53EF\u8F6C\u6362\u7684\u7EAF\u6587\u672C\u5185\u5BB9\u3002\u63D0\u53D6\u5230\u7684\u56FE\u7247\u5217\u8868\uFF1A
 
-` + images.map((url, idx) => `![\u56FE\u7247 ${idx + 1}](${url})`).join("\n\n");
+` + images.map((url, idx) => {
+        return `![\u56FE\u7247 ${idx + 1}](${url})`;
+      }).join("\n\n");
     }
     markdown = markdown.replace(/&nbsp;/gi, " ").replace(/\u00a0/g, " ").replace(/\u200b/g, "").replace(/\ufeff/g, "").replace(/\ufffd/g, "");
     markdown = markdown.split("\n").map((line) => {

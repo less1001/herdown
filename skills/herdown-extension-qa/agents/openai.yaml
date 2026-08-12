@@ -1,0 +1,6 @@
+interface:
+  display_name: "Herdown插件验收"
+  short_description: "持续优化并实测Herdown浏览器插件的剪藏质量"
+  default_prompt: "使用$herdown-extension-qa优化并验收Herdown浏览器插件剪藏结果。"
+policy:
+  allow_implicit_invocation: true
