@@ -47,6 +47,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     settings.downloadFolder = DEFAULT_DOWNLOAD_FOLDER;
     await chrome.storage.sync.set({ downloadFolder: DEFAULT_DOWNLOAD_FOLDER });
   }
+  const repairedTemplate = repairFrontmatterTemplate(settings.template);
+  if (repairedTemplate !== settings.template) {
+    settings.template = repairedTemplate;
+    await chrome.storage.sync.set({ template: repairedTemplate });
+  }
   if (settings.template?.trim() === LEGACY_DEFAULT_TEMPLATE.trim()) {
     settings.template = DEFAULT_TEMPLATE;
     await chrome.storage.sync.set({ template: DEFAULT_TEMPLATE });
@@ -354,7 +359,7 @@ function renderMarkdown(rawHtml) {
   } else if (settings.template?.trim()) {
     result.frontmatter = renderTemplate(settings.template, currentTitle, pageData.url, metadata, result.markdown);
   }
-  currentMarkdown = `${result.frontmatter}\n\n${result.markdown}`;
+  currentMarkdown = `${repairFrontmatter(result.frontmatter)}\n\n${result.markdown}`;
   const wordCount = result.markdown.length;
   const readingTime = Math.max(1, Math.ceil(wordCount / 350));
   document.getElementById('char-info').innerText = isEnglish
@@ -380,6 +385,31 @@ function buildDefaultFrontmatter(title, url, metadata) {
     '---'
   ];
   return lines.filter(Boolean).join('\n');
+}
+
+function repairFrontmatterTemplate(template) {
+  if (!template) return template;
+  return String(template)
+    .replace(/^(\s*[A-Za-z0-9_-]+):\+/gm, '$1: ')
+    .replace(/^(\s*)\+{2,}-?\s*/gm, '$1  - ');
+}
+
+function repairFrontmatter(frontmatter) {
+  const value = String(frontmatter || '');
+  if (!value.trimStart().startsWith('---')) return value;
+  const lines = value.replace(/\r\n?/g, '\n').split('\n');
+  let inTags = false;
+  let frontmatterEndSeen = false;
+  return lines.map((line) => {
+    if (line.trim() === '---' && frontmatterEndSeen === false && inTags) {
+      frontmatterEndSeen = true;
+      inTags = false;
+    }
+    if (/^\s*tags:\s*$/i.test(line)) inTags = true;
+    if (/^(\s*[A-Za-z0-9_-]+):\+/.test(line)) return line.replace(/^(\s*[A-Za-z0-9_-]+):\+/, '$1: ');
+    if (inTags && /^\s*\+{2,}/.test(line)) return `  - ${line.replace(/^\s*\+{2,}-?\s*/, '')}`;
+    return line;
+  }).join('\n');
 }
 
 function extractDescription(markdown) {

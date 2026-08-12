@@ -33,6 +33,20 @@ const decodeEntities = (value: string): string =>
     .replace(/&#x2F;/gi, '/')
     .replace(/&nbsp;/gi, ' ');
 
+// WeChat sometimes sends form-encoded text where spaces become plus signs.
+// Only convert plus runs between word characters so real C++ and URL values survive.
+const normalizeWeChatFormEncodedText = (value: string): string =>
+  value
+    .replace(/([\p{L}\p{N}\u4e00-\u9fff])\+(?=[\p{L}\p{N}\u4e00-\u9fff])/gu, '$1 ')
+    .replace(/([\p{L}\p{N}\u4e00-\u9fff])\+(?=[(（【\[])/gu, '$1 ')
+    .replace(/([，。！？；：、,.!?;:])\+(?=[\p{L}\p{N}\u4e00-\u9fff])/gu, '$1 ');
+
+const normalizeWeChatFormEncodedMarkup = (value: string): string =>
+  value
+    .split(/(<[^>]*>)/g)
+    .map((part) => part.startsWith('<') ? part : normalizeWeChatFormEncodedText(part))
+    .join('');
+
 export const detectPlatform = (url: string, html = ''): PlatformType => {
   if (url.includes('mp.weixin.qq.com')) return 'wechat';
   if (url.includes('xiaohongshu.com') || url.includes('xhslink.com') || url.includes('xhslink.cn')) return 'xiaohongshu';
@@ -218,6 +232,8 @@ const extractWeChatBody = (html: string): { content: string; images: string[] } 
         .replace(/\\/g, '');
     }
   }
+
+  bodyHtml = normalizeWeChatFormEncodedMarkup(bodyHtml);
 
   const allImages: string[] = [...galleryImages];
   const imgRegex = /<img[^>]+(?:data-src|src)=["']([^"']+)["']/gi;
@@ -764,11 +780,11 @@ const extractMetadata = (html: string, platform: PlatformType): { account?: stri
   if (platform === 'wechat') {
     const nickMatch = /var\s+nickname\s*=\s*["']([^"']+)["']/i.exec(html) ||
       /class=["'][^"']*rich_media_meta_nickname[^"']*["'][^>]*>([\s\S]*?)<\/a>/i.exec(html);
-    if (nickMatch?.[1]) account = decodeEntities(stripTags(nickMatch[1])).trim();
+    if (nickMatch?.[1]) account = normalizeWeChatFormEncodedText(decodeEntities(stripTags(nickMatch[1])).trim());
 
     const authorMatch = /var\s+(?:author|msg_author)\s*=\s*["']([^"']+)["']/i.exec(html) ||
       /class=["'][^"']*rich_media_meta_text[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(html);
-    if (authorMatch?.[1]) author = decodeEntities(stripTags(authorMatch[1])).trim();
+    if (authorMatch?.[1]) author = normalizeWeChatFormEncodedText(decodeEntities(stripTags(authorMatch[1])).trim());
 
     const ctMatch = /var\s+ct\s*=\s*["']?(\d{10})["']?/i.exec(html) ||
       /id=["']publish_time["'][^>]*>([\s\S]*?)<\/em>/i.exec(html);
@@ -840,7 +856,9 @@ export function parseMarkdown(html: string, targetUrl = ''): ParseResult {
   const embeddedJson = platform === 'general' ? extractEmbeddedJsonContent(originalHtml) : null;
   if (!jsonTitle && embeddedJson?.title) jsonTitle = embeddedJson.title;
 
-  const title = jsonTitle || extractTitle(originalHtml, targetUrl);
+  const title = platform === 'wechat'
+    ? normalizeWeChatFormEncodedText(jsonTitle || extractTitle(originalHtml, targetUrl))
+    : jsonTitle || extractTitle(originalHtml, targetUrl);
   const meta = extractMetadata(originalHtml, platform);
   if (jsonAuthor) meta.author = jsonAuthor;
   if (jsonDate) meta.publish_date = jsonDate;

@@ -30,6 +30,8 @@ var HerdownCore = (() => {
   // ../core/src/parser.ts
   var normalizeSpaces = (value) => value.replace(/[\t\r]+/g, " ").replace(/&nbsp;/gi, " ").replace(/\u00a0/g, " ").replace(/\u200b/g, "").replace(/\ufeff/g, "").replace(/\ufffd/g, "");
   var decodeEntities = (value) => value.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&#x2F;/gi, "/").replace(/&nbsp;/gi, " ");
+  var normalizeWeChatFormEncodedText = (value) => value.replace(/([\p{L}\p{N}\u4e00-\u9fff])\+(?=[\p{L}\p{N}\u4e00-\u9fff])/gu, "$1 ").replace(/([\p{L}\p{N}\u4e00-\u9fff])\+(?=[(（【\[])/gu, "$1 ").replace(/([，。！？；：、,.!?;:])\+(?=[\p{L}\p{N}\u4e00-\u9fff])/gu, "$1 ");
+  var normalizeWeChatFormEncodedMarkup = (value) => value.split(/(<[^>]*>)/g).map((part) => part.startsWith("<") ? part : normalizeWeChatFormEncodedText(part)).join("");
   var detectPlatform = (url, html = "") => {
     if (url.includes("mp.weixin.qq.com")) return "wechat";
     if (url.includes("xiaohongshu.com") || url.includes("xhslink.com") || url.includes("xhslink.cn")) return "xiaohongshu";
@@ -171,6 +173,7 @@ var HerdownCore = (() => {
         bodyHtml = fallback[2].replace(/\\x3c/gi, "<").replace(/\\x3e/gi, ">").replace(/\\x22/gi, '"').replace(/\\x27/gi, "'").replace(/\\/g, "");
       }
     }
+    bodyHtml = normalizeWeChatFormEncodedMarkup(bodyHtml);
     const allImages = [...galleryImages];
     const imgRegex = /<img[^>]+(?:data-src|src)=["']([^"']+)["']/gi;
     let imgMatch;
@@ -597,9 +600,9 @@ ${stripTags(text)}
     let publish_date;
     if (platform === "wechat") {
       const nickMatch = /var\s+nickname\s*=\s*["']([^"']+)["']/i.exec(html) || /class=["'][^"']*rich_media_meta_nickname[^"']*["'][^>]*>([\s\S]*?)<\/a>/i.exec(html);
-      if (nickMatch?.[1]) account = decodeEntities(stripTags(nickMatch[1])).trim();
+      if (nickMatch?.[1]) account = normalizeWeChatFormEncodedText(decodeEntities(stripTags(nickMatch[1])).trim());
       const authorMatch = /var\s+(?:author|msg_author)\s*=\s*["']([^"']+)["']/i.exec(html) || /class=["'][^"']*rich_media_meta_text[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(html);
-      if (authorMatch?.[1]) author = decodeEntities(stripTags(authorMatch[1])).trim();
+      if (authorMatch?.[1]) author = normalizeWeChatFormEncodedText(decodeEntities(stripTags(authorMatch[1])).trim());
       const ctMatch = /var\s+ct\s*=\s*["']?(\d{10})["']?/i.exec(html) || /id=["']publish_time["'][^>]*>([\s\S]*?)<\/em>/i.exec(html);
       if (ctMatch?.[1]) {
         const val = ctMatch[1].trim();
@@ -657,7 +660,7 @@ ${stripTags(text)}
     const originalHtml = rawHtml;
     const embeddedJson = platform === "general" ? extractEmbeddedJsonContent(originalHtml) : null;
     if (!jsonTitle && embeddedJson?.title) jsonTitle = embeddedJson.title;
-    const title = jsonTitle || extractTitle(originalHtml, targetUrl);
+    const title = platform === "wechat" ? normalizeWeChatFormEncodedText(jsonTitle || extractTitle(originalHtml, targetUrl)) : jsonTitle || extractTitle(originalHtml, targetUrl);
     const meta = extractMetadata(originalHtml, platform);
     if (jsonAuthor) meta.author = jsonAuthor;
     if (jsonDate) meta.publish_date = jsonDate;
