@@ -2,223 +2,88 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Herdown Clipper</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Herdown剪藏</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      width: 420px;
-      background-color: #070a0e;
-      color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 16px;
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #1e293b;
-    }
-    .logo-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .logo-badge {
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(135deg, #0f6b4f, #10b981);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      font-size: 13px;
-      color: #fff;
-    }
-    .brand-name {
-      font-size: 16px;
-      font-weight: 800;
-      color: #fff;
-    }
-    .version-tag {
-      font-size: 10px;
-      background: rgba(16, 185, 129, 0.15);
-      color: #34d399;
-      padding: 2px 6px;
-      border-radius: 99px;
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-    .section {
-      margin-bottom: 12px;
-    }
-    .label {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-bottom: 6px;
-      display: flex;
-      justify-content: space-between;
-    }
-    .mode-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
-    }
-    .btn-mode {
-      background-color: #0d131d;
-      border: 1px solid #1e293b;
-      color: #cbd5e1;
-      padding: 8px 4px;
-      font-size: 11px;
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: all 0.2s;
-    }
-    .btn-mode.active, .btn-mode:hover {
-      border-color: #10b981;
-      color: #10b981;
-      background-color: rgba(16, 185, 129, 0.08);
-    }
-    .preview-box {
-      background-color: #090d13;
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 10px;
-      max-height: 140px;
-      min-height: 150px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 10px;
-      color: #94a3b8;
-      white-space: pre-wrap;
-      word-break: break-all;
-      margin-bottom: 14px;
-      resize: vertical;
-      width: 100%;
-      line-height: 1.5;
-    }
-    .preview-box[readonly] { cursor: default; }
-    .action-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #0f6b4f, #10b981);
-      border: none;
-      color: #fff;
-      padding: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      border-radius: 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-      transition: opacity 0.2s;
-    }
-    .btn-primary:hover {
-      opacity: 0.9;
-    }
-    .btn-sub-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-    .btn-secondary {
-      background: #111823;
-      border: 1px solid #1e293b;
-      color: #cbd5e1;
-      padding: 8px;
-      font-size: 11px;
-
-      font-weight: 600;
-      border-radius: 8px;
-      cursor: pointer;
-      text-align: center;
-      transition: background 0.2s;
-    }
-    .btn-secondary:hover {
-      background: #1e293b;
-      color: #fff;
-    }
-    .status-bar {
-      margin-top: 10px;
-      font-size: 10px;
-      color: #64748b;
-      text-align: center;
-    }
-    .utility-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .text-button {
-      border: 0;
-      padding: 0;
-      background: transparent;
-      color: #60a5fa;
-      font-size: 11px;
-      cursor: pointer;
-    }
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { width: 380px; margin: 0; padding: 12px; background: #070a0e; color: #e2e8f0; font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; padding-bottom: 9px; border-bottom: 1px solid #1e293b; }
+    .brand { display: flex; align-items: center; gap: 10px; color: #fff; font-size: 16px; font-weight: 800; }
+    .mark { display: block; width: 30px; height: 30px; flex: 0 0 auto; border-radius: 8px; }
+    .header-actions { display: flex; align-items: center; gap: 6px; }
+    .site-link { padding: 4px 7px; border: 1px solid #263445; border-radius: 7px; color: #94a3b8; font-size: 11px; text-decoration: none; white-space: nowrap; }
+    .site-link:hover { border-color: #10b981; color: #5eead4; }
+    .icon-button { width: 28px; height: 28px; padding: 0; border: 1px solid #263445; background: #111823; color: #94a3b8; font-size: 16px; line-height: 1; }
+    .icon-button:hover { border-color: #10b981; color: #5eead4; }
+    .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px; }
+    button { border: 0; border-radius: 9px; cursor: pointer; font: inherit; font-weight: 700; }
+    .mode { padding: 8px; border: 1px solid #263445; background: #0d131d; color: #cbd5e1; }
+    .mode.active { border-color: #10b981; background: rgba(16, 185, 129, 0.12); color: #5eead4; }
+    .view-tabs { display: flex; gap: 6px; margin-bottom: 8px; }
+    .view-tab { padding: 5px 9px; border: 1px solid transparent; background: transparent; color: #64748b; font-size: 11px; }
+    .view-tab.active { border-color: #1f8f70; background: rgba(16, 185, 129, 0.1); color: #5eead4; }
+    .content-preview, textarea { width: 100%; height: 190px; min-height: 190px; max-height: 190px; overflow: auto; padding: 10px; border: 1px solid #263445; border-radius: 10px; outline: 0; background: #090d13; color: #cbd5e1; }
+    .content-preview { white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.55; }
+    .content-preview h1, .content-preview h2, .content-preview h3 { margin: 0 0 10px; color: #f8fafc; line-height: 1.35; }
+    .content-preview h1 { font-size: 19px; }
+    .content-preview h2 { font-size: 16px; }
+    .content-preview h3 { font-size: 14px; }
+    .content-preview p { margin: 0 0 8px; }
+    .content-preview a { color: #7dd3fc; }
+    .content-preview code { padding: 1px 4px; border-radius: 4px; background: #111823; color: #86efac; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    textarea { resize: none; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre; }
+    textarea:focus { border-color: #10b981; }
+    .meta { display: grid; gap: 2px; margin: 6px 0 8px; color: #64748b; font-size: 10px; }
+    .title-line { overflow: hidden; color: #e2e8f0; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .source-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .source-line a { color: #60a5fa; }
+    .count-line { display: flex; justify-content: flex-end; }
+    .primary { width: 100%; padding: 8px; background: linear-gradient(135deg, #0f6b4f, #10b981); color: #fff; }
+    .secondary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .secondary button { padding: 7px; border: 1px solid #263445; background: #111823; color: #cbd5e1; }
+    .utility { display: flex; justify-content: space-between; margin-top: 6px; }
+    .utility button { padding: 0; background: transparent; color: #60a5fa; font-size: 11px; font-weight: 500; }
+    #status { min-height: 14px; margin-top: 5px; color: #64748b; font-size: 10px; text-align: center; }
   </style>
 </head>
 <body>
-
-  <div class="header">
-    <div class="logo-group">
-      <div class="logo-badge">HD</div>
-      <span class="brand-name">Herdown</span>
+  <header>
+    <div class="brand"><img class="mark" src="icons/icon48.png" alt="Herdown"><span>Herdown</span></div>
+    <div class="header-actions">
+      <a class="site-link" id="website-link" href="https://herdown.com/" target="_blank" rel="noreferrer">打开官网</a>
+      <button class="icon-button" id="settings" type="button" aria-label="设置" title="设置">&#9881;</button>
     </div>
-    <div id="stats-info" style="font-size: 10px; color: #64748b;">本地处理</div>
+  </header>
+
+  <div class="modes">
+    <button class="mode active" id="full-page" type="button">整篇文章</button>
+    <button class="mode" id="selection" type="button">划选内容</button>
   </div>
 
-  <div class="section">
-    <div class="label">
-      <span id="scope-label">提取范围</span>
-      <span id="char-info">准备中</span>
-    </div>
-    <div class="mode-grid">
-      <button class="btn-mode active" id="btn-full">完整网页</button>
-      <button class="btn-mode" id="btn-selection">划选片段</button>
-      <button class="btn-mode" id="btn-picker">元素拾取</button>
-    </div>
+  <div class="view-tabs" role="tablist" aria-label="查看方式">
+    <button class="view-tab active" id="content-view" type="button" role="tab" aria-selected="true">内容预览</button>
+    <button class="view-tab" id="source-view" type="button" role="tab" aria-selected="false">Markdown源码</button>
+  </div>
+  <div class="content-preview" id="content-preview" role="tabpanel">正在读取当前页面...</div>
+  <textarea id="preview" spellcheck="false" aria-label="Markdown源码" hidden></textarea>
+  <div class="meta">
+    <span class="title-line" id="title-label" title="">准备中</span>
+    <span class="source-line" id="source-label"></span>
+    <span class="count-line" id="count-label"></span>
   </div>
 
-  <textarea class="preview-box" id="preview-box" readonly>正在读取网页并整理为干净Markdown...</textarea>
-
-  <div class="action-group">
-    <button class="btn-primary" id="btn-obsidian">
-      存入Obsidian
-    </button>
-    <div class="btn-sub-row">
-      <button class="btn-secondary" id="btn-copy">复制Markdown</button>
-      <button class="btn-secondary" id="btn-download">下载.md文件</button>
-    </div>
+  <button class="primary" id="save-obsidian" type="button">存入Obsidian</button>
+  <div class="secondary">
+    <button id="copy-markdown" type="button">复制Markdown</button>
+    <button id="download-markdown" type="button">下载.md文件</button>
   </div>
-
-  <div class="utility-row">
-    <button class="text-button" id="btn-retry" type="button">重新读取网页</button>
-    <button class="text-button" id="btn-options" type="button">设置</button>
+  <div class="utility">
+    <button id="retry" type="button">重新提取</button>
   </div>
-  <div id="privacy-note" style="margin-top: 10px; font-size: 10px; line-height: 1.5; color: #64748b; text-align: center;">内容只在当前浏览器处理，不上传页面内容</div>
-  <div class="status-bar" id="status-bar"></div>
+  <div id="status" role="status"></div>
 
-  <script src="lib/readability.js"></script>
-  <script src="lib/turndown.js"></script>
-  <script src="lib/turndown-plugin-gfm.js"></script>
-  <script src="herdown-core.bundle.js"></script>
+  <script src="lib/defuddle.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

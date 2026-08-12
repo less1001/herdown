@@ -1,242 +1,155 @@
-// Herdown Chrome Extension Content Script
-// The script is injected only after an explicit user action.
-
-const MAX_PAGE_HTML = 8_000_000;
-let isInspectorActive = false;
-let hoverElement = null;
-
-if (!globalThis.__HERDOWN_CONTENT_SCRIPT_READY__) {
-  globalThis.__HERDOWN_CONTENT_SCRIPT_READY__ = true;
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'GET_PAGE_DATA') {
-    const selection = window.getSelection() ? window.getSelection().toString().trim() : '';
-
-    if (window.location.href.includes('zhihu.com/question/')) {
-      const buttons = document.querySelectorAll('button');
-      buttons.forEach((button) => {
-        if (button?.textContent?.includes('显示全部')) {
-          button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-          button.click();
-        }
-      });
-
-      document.querySelectorAll('.RichContent').forEach((rich) => {
-        const noscript = rich.querySelector('noscript');
-        const innerContent = rich.querySelector('.RichContent-inner');
-        if (noscript && innerContent) {
-          innerContent.innerHTML = noscript.innerHTML;
-          rich.querySelector('.ContentItem-more')?.remove();
-        }
-      });
-    }
-
-    waitForPageReady().then(() => {
-      let targetHtml = document.documentElement.outerHTML;
-
-      if (window.location.href.includes('okjike.com')) {
-        const jikePost = document.querySelector('article') || document.querySelector('[class*="PostItem"]') || document.querySelector('[class*="JikePostCard"]');
-        if (jikePost) {
-          const clonedPost = jikePost.cloneNode(true);
-          const noiseSelectors = [
-            '[class*="actions"]', '[class*="comment"]', '[class*="Comment"]', '[class*="Reaction"]',
-            '[class*="reactor"]', '[class*="Reactor"]', '[class*="interaction"]', '[class*="Interaction"]',
-            'button', '[class*="Avatar"]', '[class*="UserRecommend"]', '[class*="Recommend"]',
-            '[class*="Footer"]', '[class*="toolbar"]', '[class*="Toolbar"]', 'svg'
-          ];
-          noiseSelectors.forEach((selector) => clonedPost.querySelectorAll(selector).forEach((element) => element.remove()));
-          targetHtml = `
-            <html><head><title>${escapeHtml(document.title)}</title></head>
-            <body><div class="jike-purified-content">${clonedPost.innerHTML}</div></body></html>`;
-        }
+if (!globalThis.__HERDOWN_CLIPPER_V2__) {
+  globalThis.__HERDOWN_CLIPPER_V2__ = true;
+  chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+    if (request.action === 'HERDOWN_V2_READ_PAGE') {
+      try {
+        sendResponse(extractPage(request.selectionText || ''));
+      } catch (error) {
+        sendResponse({ ok: false, error: error instanceof Error ? error.message : 'Unable to read this page.' });
       }
-
-      if (window.location.href.includes('x.com') || window.location.href.includes('twitter.com')) {
-        const tweetArticle = document.querySelector('article[data-testid="tweet"]');
-        if (tweetArticle) {
-          const userNameEl = tweetArticle.querySelector('[data-testid="User-Name"]');
-          let authorHandle = '';
-          userNameEl?.querySelectorAll('span').forEach((span) => {
-            if (!authorHandle && span.innerText?.startsWith('@')) authorHandle = span.innerText.trim();
-          });
-
-          const publishedTime = tweetArticle.querySelector('time')?.getAttribute('datetime') || '';
-          const textEl = tweetArticle.querySelector('[data-testid="tweetText"]');
-          let cleanTitle = document.title;
-          let description = '';
-          if (textEl) {
-            const fullText = textEl.innerText.trim();
-            description = fullText.slice(0, 120);
-            const firstLine = fullText.split('\n').map((line) => line.trim()).find(Boolean);
-            if (firstLine) cleanTitle = firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
-          }
-          cleanTitle = cleanTitle.replace(/^\(\d+\)\s+/, '').replace(/\s+\/\s+X$/, '').replace(/\s+\|\s+Twitter$/, '');
-
-          const clonedTweet = tweetArticle.cloneNode(true);
-          ['[role="group"]', '[data-testid="caret"]', '[class*="r-1tlfct8"]'].forEach((selector) => {
-            clonedTweet.querySelectorAll(selector).forEach((element) => element.remove());
-          });
-          clonedTweet.querySelectorAll('svg').forEach((svg) => svg.remove());
-
-          const metadata = safeScriptJson({ author: authorHandle, published: publishedTime, description });
-          targetHtml = `
-            <html><head><title>${escapeHtml(cleanTitle)}</title>
-              <script id="herdown-metadata" type="application/json">${metadata}</script>
-            </head><body><div class="x-purified-tweet">${clonedTweet.innerHTML}</div></body></html>`;
-        }
-      }
-
-      if (window.location.href.includes('csdn.net')) {
-        const csdnContent = document.getElementById('article_content') || document.querySelector('.article_content');
-        if (csdnContent) {
-          const clonedContent = csdnContent.cloneNode(true);
-          ['.hide-article-box', '.csdn-tracking-statistics', '[class*="opt-box"]', '.save_to_devcloud', '.reward-user-box', '.follow-text-box']
-            .forEach((selector) => clonedContent.querySelectorAll(selector).forEach((element) => element.remove()));
-          targetHtml = `
-            <html><head><title>${escapeHtml(document.title)}</title></head>
-            <body><div id="article_content">${clonedContent.innerHTML}</div></body></html>`;
-        }
-      }
-
-      if (window.location.href.includes('mp.weixin.qq.com')) {
-        const wechatContent = document.getElementById('js_content') || document.querySelector('.rich_media_content');
-        if (wechatContent) {
-          const nickname = document.querySelector('.rich_media_meta_nickname')?.innerText?.trim() || '';
-          const author = document.querySelector('.rich_media_meta_text')?.innerText?.trim() || '';
-          const publishTime = document.querySelector('#publish_time')?.innerText?.trim()
-            || document.querySelector('.rich_media_meta_list .publish_time')?.innerText?.trim()
-            || '';
-          const publishTimestamp = document.querySelector('#publish_time')?.getAttribute('data-time') || '';
-          targetHtml = `
-            <html><head><title>${escapeHtml(document.title)}</title>
-              <script>
-                var nickname = ${safeScriptJson(nickname)};
-                var msg_author = ${safeScriptJson(author)};
-                var publish_time = ${safeScriptJson(publishTime)};
-                var ct = ${safeScriptJson(publishTimestamp)};
-              </script>
-            </head><body><div id="js_content">${wechatContent.innerHTML}</div></body></html>`;
-        }
-      }
-
-      if (targetHtml.length > MAX_PAGE_HTML) {
-        sendResponse({ error: 'PAGE_TOO_LARGE' });
-        return;
-      }
-
-      sendResponse({
-        url: window.location.href,
-        title: document.title,
-        html: targetHtml,
-        selection,
-        isZhihuQuestion: window.location.href.includes('zhihu.com/question/')
-      });
-    }).catch((error) => {
-      console.error('[Herdown] Failed to read page:', error);
-      sendResponse({ error: 'PAGE_READ_FAILED' });
-    });
-
-    return true;
-  }
-
-  if (request.action === 'START_ELEMENT_PICKER') {
-    if (isInspectorActive) {
-      sendResponse({ ok: false });
       return false;
     }
-    activateElementPicker();
-    sendResponse({ ok: true });
+    if (request.action === 'HERDOWN_V2_START_PICKER') {
+      startPicker();
+      sendResponse({ ok: true });
+      return false;
+    }
     return false;
-  }
   });
 }
 
-function waitForPageReady(maxWait = 4000) {
-  return new Promise((resolve) => {
-    const startedAt = Date.now();
-    let previousLength = -1;
-    let stableChecks = 0;
+function extractPage(selectionText = '') {
+  const isWeChat = location.hostname === 'mp.weixin.qq.com';
+  const content = isWeChat
+    ? document.querySelector('#js_content, .rich_media_content')
+    : findArticleRoot() || document.body;
+  if (!content) return { ok: false, error: 'No readable article content was found.' };
 
-    const check = () => {
-      const currentLength = document.body?.innerText?.length || 0;
-      if (currentLength === previousLength) stableChecks += 1;
-      else stableChecks = 0;
-      previousLength = currentLength;
+  const clone = content.cloneNode(true);
+  removeNoise(clone, isWeChat);
+  const selectionHtml = selectedHtml() || (selectionText.trim() ? `<p>${escapeHtml(selectionText)}</p>` : '');
+  const title = cleanText(isWeChat
+    ? document.querySelector('#activity-name, .rich_media_title')?.textContent || document.title
+    : document.querySelector('h1')?.textContent || document.title);
+  const metadata = extractMetadata(isWeChat);
+  const published = cleanText(isWeChat
+    ? document.querySelector('#publish_time, .publish_time')?.textContent
+    : document.querySelector('time[datetime], time, [itemprop="datePublished"]')?.getAttribute('datetime') || document.querySelector('time, [itemprop="datePublished"]')?.textContent);
+  const description = firstParagraph(clone);
+  return {
+    ok: true,
+    kind: isWeChat ? 'wechat' : 'article',
+    url: location.href,
+    title,
+    author: metadata.author,
+    publisher: metadata.publisher,
+    published,
+    description,
+    html: clone.innerHTML,
+    selectionHtml
+  };
+}
 
-      if (stableChecks >= 2 || Date.now() - startedAt >= maxWait) {
-        resolve();
-        return;
-      }
-      setTimeout(check, 120);
-    };
-    check();
+function extractMetadata(isWeChat) {
+  return {
+    author: cleanText(isWeChat
+      ? document.querySelector('#js_author_name')?.textContent
+      : document.querySelector('[rel="author"], .author, [itemprop="author"]')?.textContent),
+    publisher: cleanText(isWeChat
+      ? document.querySelector('#js_name, .rich_media_meta_nickname')?.textContent
+      : '')
+  };
+}
+
+function removeNoise(root, isWeChat) {
+  const selectors = [
+    'script', 'style', 'noscript', 'iframe', 'form', 'button', 'svg', 'video', 'audio', 'canvas',
+    'nav', 'aside', 'footer', '[role="navigation"]', '[role="complementary"]',
+    '.advertisement', '.ads', '.ad', '.ad-container', '[class*="advert"]', '[id*="advert"]',
+    '[class*="recommend"]', '[class*="comment"]', '[class*="toolbar"]', '[class*="share"]', '[class*="qr_code"]'
+  ];
+  if (isWeChat) selectors.push('.js_praise_container', '.reward_area', '.rich_media_tool', '.rich_media_area_extra', '#js_report_article', '#js_tags', '.profile_container');
+  selectors.forEach((selector) => root.querySelectorAll(selector).forEach((element) => element.remove()));
+  root.querySelectorAll('[data-src]').forEach((image) => {
+    if (image.tagName?.toLowerCase() === 'img' && image.getAttribute('data-src')) image.setAttribute('src', image.getAttribute('data-src'));
   });
+}
+
+function findArticleRoot() {
+  const selectors = [
+    'article', '[itemprop="articleBody"]', '.article-content', '.post-content', '.entry-content',
+    '.article-body', '.post-body', '[role="main"]', 'main'
+  ];
+  const candidates = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+  return candidates
+    .filter((candidate) => candidate instanceof HTMLElement)
+    .sort((left, right) => (right.innerText?.length || 0) - (left.innerText?.length || 0))[0] || null;
+}
+
+function selectedHtml() {
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || selection.isCollapsed) return '';
+  const wrapper = document.createElement('div');
+  wrapper.appendChild(selection.getRangeAt(0).cloneContents());
+  return wrapper.innerHTML;
 }
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+  const node = document.createElement('div');
+  node.textContent = value;
+  return node.innerHTML;
 }
 
-function safeScriptJson(value) {
-  return JSON.stringify(value).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+function firstParagraph(root) {
+  const candidate = Array.from(root.querySelectorAll('p, h2, h3, div')).map((node) => cleanText(node.textContent)).find((value) => value.length >= 20);
+  return candidate ? candidate.slice(0, 180) : '';
 }
 
-function activateElementPicker() {
-  isInspectorActive = true;
+function cleanText(value) {
+  return String(value || '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
+function startPicker() {
+  if (globalThis.__HERDOWN_PICKER_V2__) return;
+  globalThis.__HERDOWN_PICKER_V2__ = true;
   const style = document.createElement('style');
-  style.id = 'herdown-inspector-style';
-  style.textContent = `
-    .herdown-inspect-hover {
-      outline: 2px dashed #10b981 !important;
-      outline-offset: 2px !important;
-      background-color: rgba(16, 185, 129, 0.08) !important;
-      cursor: crosshair !important;
-    }
-  `;
-  document.head.appendChild(style);
-
-  function onMouseMove(event) {
-    if (!isInspectorActive) return;
-    hoverElement?.classList.remove('herdown-inspect-hover');
-    hoverElement = event.target;
-    if (hoverElement && hoverElement !== document.body && hoverElement !== document.documentElement) {
-      hoverElement.classList.add('herdown-inspect-hover');
-    }
-  }
-
-  function onClick(event) {
-    if (!isInspectorActive) return;
+  style.id = 'herdown-picker-style-v2';
+  style.textContent = '.herdown-picker-v2 { outline: 2px solid #10b981 !important; outline-offset: 2px !important; cursor: crosshair !important; }';
+  document.documentElement.appendChild(style);
+  let hovered = null;
+  const stop = () => {
+    hovered?.classList.remove('herdown-picker-v2');
+    style.remove();
+    document.removeEventListener('mousemove', move, true);
+    document.removeEventListener('click', choose, true);
+    document.removeEventListener('keydown', keydown, true);
+    globalThis.__HERDOWN_PICKER_V2__ = false;
+  };
+  const move = (event) => {
+    hovered?.classList.remove('herdown-picker-v2');
+    hovered = event.target;
+    if (hovered instanceof Element) hovered.classList.add('herdown-picker-v2');
+  };
+  const choose = (event) => {
     event.preventDefault();
     event.stopPropagation();
-
-    const pickedData = {
-      url: window.location.href,
-      title: document.title,
-      html: hoverElement?.outerHTML || ''
-    };
-    deactivate();
-    if (pickedData.html) {
-      chrome.storage.local.set({ pendingPicker: pickedData }).catch((error) => {
-        console.error('[Herdown] Could not save picked element:', error);
-      });
+    if (hovered instanceof Element) {
+      const clone = hovered.cloneNode(true);
+      removeNoise(clone, location.hostname === 'mp.weixin.qq.com');
+      const metadata = extractMetadata(location.hostname === 'mp.weixin.qq.com');
+      chrome.storage.local.set({ herdownPendingPickerV2: {
+        ok: true,
+        kind: location.hostname === 'mp.weixin.qq.com' ? 'wechat' : 'article',
+        url: location.href,
+        title: cleanText(document.querySelector('h1, #activity-name, .rich_media_title')?.textContent || document.title),
+        ...metadata,
+        published: '', description: firstParagraph(clone), html: clone.innerHTML, selectionHtml: ''
+      } });
     }
-  }
-
-  function onKeyDown(event) {
-    if (event.key === 'Escape') deactivate();
-  }
-
-  function deactivate() {
-    isInspectorActive = false;
-    hoverElement?.classList.remove('herdown-inspect-hover');
-    document.removeEventListener('mousemove', onMouseMove, true);
-    document.removeEventListener('click', onClick, true);
-    document.removeEventListener('keydown', onKeyDown, true);
-    document.getElementById('herdown-inspector-style')?.remove();
-    hoverElement = null;
-  }
-
-  document.addEventListener('mousemove', onMouseMove, true);
-  document.addEventListener('click', onClick, true);
-  document.addEventListener('keydown', onKeyDown, true);
+    stop();
+  };
+  const keydown = (event) => { if (event.key === 'Escape') stop(); };
+  document.addEventListener('mousemove', move, true);
+  document.addEventListener('click', choose, true);
+  document.addEventListener('keydown', keydown, true);
 }

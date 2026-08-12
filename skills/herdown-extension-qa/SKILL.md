@@ -41,4 +41,4 @@ description: Optimize and acceptance-test the Herdown browser extension clipping
 
 8. 发布前记录
 
-报告每个网址的Herdown结果、Obsidian基线、通过项、失败项和剩余风险。确认打包文件、Git提交、GitHub推送和Cloudflare公开版本对应同一个版本号。
+报告每个网址的Herdown结果、Obsidian基线、通过项、失败项和剩余风险。本地优化阶段只确认源码、版本号和Chrome本地加载目录一致。只有用户明确验收通过后，才生成Chrome上传包或更新网站入口；未得到明确授权，不得Git提交、推送或Cloudflare发布。
