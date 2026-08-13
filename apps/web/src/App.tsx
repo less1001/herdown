@@ -1933,7 +1933,7 @@ npx @herdown/cli "<URL>" -o output.md -k "<YOUR_API_KEY>"`;
       <header className="herdown-site-header sticky top-0 z-50 backdrop-blur-md bg-[#070a0e]/80 border-b border-[#1e293b]">
         <div className="relative max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center gap-2">
           <a href={localizedHref('/', language)} className="flex shrink-0 items-center gap-2 sm:gap-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/60" aria-label={ui.home}>
-            <img src="/favicon.svg" alt="Herdown" className="h-9 w-9 rounded-xl shadow-lg shadow-[#0f6b4f]/20" />
+            <img src="/favicon.png?v=1.2.2" alt="Herdown" className="h-9 w-9 rounded-xl shadow-lg shadow-[#0f6b4f]/20" />
             <div>
               <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white font-sans">
                 Herdown
